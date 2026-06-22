@@ -178,3 +178,24 @@ Full verification refresh:
 - Confirmed a live damaged-product workflow stored chat, 5-star feedback, accepted agent action, and analytics updates.
 - Confirmed direct SQLite counts: 59 conversations, 109 messages, 13 feedback records, and 10 knowledge documents.
 - Updated `FINAL_TEST_PLAN.md` and `DEMO_SCRIPT.md` with the latest verification evidence.
+
+## 22 June 2026
+
+Completed:
+
+- Prepared GitHub/deployment readiness materials.
+- Added `DEPLOYMENT_PLAN.md` with recommended local demo, Vercel/frontend, backend hosting, and SQLite deployment notes.
+- Added `FINAL_SCREENSHOT_CHECKLIST.md` for final report and presentation evidence.
+- Added `FINAL_REPORT_TODO.md` for remaining final-report sections and priorities.
+- Strengthened root `.gitignore` for environment files, dependency folders, build output, logs, and OS metadata.
+- Confirmed `.env`, SQLite database files, `node_modules`, and `dist` are ignored by Git.
+- Re-ran production build and lint successfully.
+- Confirmed backend health still reports SQLite, Mastra, and Gemini configuration correctly.
+- Created initial local Git commit: `aa83e66`.
+
+Current status:
+
+- Project now has a local Git backup.
+- Source code and documentation are ready for GitHub repository creation.
+- Real Gemini API key remains local only and is not committed.
+- Next manual step is to create or choose a GitHub repository for push.
