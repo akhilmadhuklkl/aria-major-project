@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react'
-import { Plus, Search, ChevronDown, X } from 'lucide-react'
+import { useMemo, useState, type FormEvent } from 'react'
+import { Plus, Search, X } from 'lucide-react'
 import type { KnowledgeItem, NewKnowledgeItem } from '../../types'
 import { KnowledgeTable } from './KnowledgeTable'
 import { KnowledgeSummary } from './KnowledgeSummary'
@@ -21,6 +21,16 @@ export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBasePr
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const visibleItems = useMemo(
+    () => items.filter((item) => (
+      item.title.toLowerCase().includes(query.toLowerCase())
+      && (categoryFilter === 'all' || item.category === categoryFilter)
+      && (statusFilter === 'all' || item.status === statusFilter)
+    )),
+    [categoryFilter, items, query, statusFilter],
+  )
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -48,8 +58,18 @@ export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBasePr
       </div>
       <div className="knowledge-toolbar">
         <label className="search-box"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search knowledge" /></label>
-        <button className="filter-button">All categories <ChevronDown size={15} /></button>
-        <button className="filter-button">All statuses <ChevronDown size={15} /></button>
+        <select className="filter-select" value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} aria-label="Filter by category">
+          <option value="all">All categories</option>
+          <option value="FAQ">FAQ</option>
+          <option value="Policy">Policy</option>
+          <option value="Procedure">Procedure</option>
+          <option value="Product">Product</option>
+        </select>
+        <select className="filter-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
+          <option value="all">All statuses</option>
+          <option value="Indexed">Indexed</option>
+          <option value="Review">Review</option>
+        </select>
       </div>
       {isAdding && (
         <form className="knowledge-form" onSubmit={submit}>
@@ -81,8 +101,8 @@ export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBasePr
           <button className="primary-button" disabled={saving}>{saving ? 'Saving...' : 'Save knowledge'}</button>
         </form>
       )}
-      <KnowledgeTable items={items} />
-      <KnowledgeSummary />
+      <KnowledgeTable items={visibleItems} />
+      <KnowledgeSummary items={items} />
     </section>
   )
 }

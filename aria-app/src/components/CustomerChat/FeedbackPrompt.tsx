@@ -7,9 +7,10 @@ export interface FeedbackPromptProps {
   setRating: (value: number) => void
   feedbackSent: boolean
   submitFeedback: () => void
+  submitting: boolean
 }
 
-export function FeedbackPrompt({ messages, rating, setRating, feedbackSent, submitFeedback }: FeedbackPromptProps) {
+export function FeedbackPrompt({ messages, rating, setRating, feedbackSent, submitFeedback, submitting }: FeedbackPromptProps) {
   if (messages.length <= 1) return null
 
   return (
@@ -20,9 +21,22 @@ export function FeedbackPrompt({ messages, rating, setRating, feedbackSent, subm
         <>
           <div><strong>Was this response helpful?</strong><span>Rate the last ARIA response.</span></div>
           <div className="rating-stars">
-            {[1, 2, 3, 4, 5].map((star) => <button key={star} onClick={() => setRating(star)} className={rating >= star ? 'active' : ''}><Star size={18} /></button>)}
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                aria-label={`Rate ${star} out of 5`}
+                disabled={submitting}
+                onClick={() => setRating(star)}
+                className={rating >= star ? 'active' : ''}
+              >
+                <Star size={18} />
+              </button>
+            ))}
           </div>
-          <button className="secondary-button" disabled={!rating} onClick={submitFeedback}>Submit</button>
+          <button className="secondary-button" disabled={!rating || submitting} onClick={submitFeedback}>
+            {submitting ? 'Saving...' : 'Submit'}
+          </button>
         </>
       )}
     </div>

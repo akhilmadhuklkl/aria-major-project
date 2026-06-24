@@ -10,6 +10,7 @@ export interface CustomerChatProps {
   setRating: (value: number) => void
   feedbackSent: boolean
   submitFeedback: () => void
+  feedbackLoading: boolean
   loading: boolean
   error: string
   mode: string
@@ -25,6 +26,7 @@ export function CustomerChat({
   setRating,
   feedbackSent,
   submitFeedback,
+  feedbackLoading,
   loading,
   error,
   mode,
@@ -41,6 +43,7 @@ export function CustomerChat({
         setRating={setRating}
         feedbackSent={feedbackSent}
         submitFeedback={submitFeedback}
+        feedbackLoading={feedbackLoading}
         loading={loading}
         error={error}
       />

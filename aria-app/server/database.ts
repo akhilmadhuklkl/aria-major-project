@@ -225,7 +225,7 @@ export function searchKnowledge(message: string, limit = 3) {
     .filter((term) => term.length > 2 && !ignoredTerms.has(term))
   const rows = listKnowledge()
 
-  return rows
+  const scoredRows = rows
     .map((row) => {
       const title = row.title.toLowerCase()
       const category = row.category.toLowerCase()
@@ -240,5 +240,9 @@ export function searchKnowledge(message: string, limit = 3) {
     })
     .filter((row) => row.score > 0)
     .sort((first, second) => second.score - first.score || second.uses - first.uses)
-    .slice(0, limit)
+
+  const strongestScore = scoredRows[0]?.score ?? 0
+  const strongMatchThreshold = Math.max(2, Math.ceil(strongestScore * 0.5))
+  const strongMatches = scoredRows.filter((row) => row.score >= strongMatchThreshold)
+  return (strongMatches.length > 0 ? strongMatches : scoredRows).slice(0, limit)
 }

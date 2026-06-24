@@ -12,6 +12,7 @@ export interface ChatHistoryProps {
   setRating: (value: number) => void
   feedbackSent: boolean
   submitFeedback: () => void
+  feedbackLoading: boolean
   loading: boolean
   error: string
 }
@@ -25,6 +26,7 @@ export function ChatHistory({
   setRating,
   feedbackSent,
   submitFeedback,
+  feedbackLoading,
   loading,
   error,
 }: ChatHistoryProps) {
@@ -36,15 +38,30 @@ export function ChatHistory({
       </div>
       <div className="customer-message-list">
         {messages.map((message, index) => (
-          <div key={`${message.from}-${index}`} className={`customer-bubble ${message.from}`}>
+          <div key={message.id ?? `${message.from}-${index}`} className={`customer-bubble ${message.from}`}>
             {message.from === 'bot' && <div className="bubble-avatar"><Bot size={15} /></div>}
-            <p>{message.text}</p>
+            <div className="customer-message-content">
+              <p>{message.text}</p>
+              {message.from === 'bot' && message.confidence !== undefined && (
+                <div className="response-evidence">
+                  <span>{Math.round(message.confidence * 100)}% confidence</span>
+                  {message.sources?.map((source) => <span key={source}>{source}</span>)}
+                </div>
+              )}
+            </div>
           </div>
         ))}
         {loading ? <div className="chat-state">ARIA is retrieving verified support context...</div> : null}
         {error ? <div className="chat-state error">{error}</div> : null}
       </div>
-      <FeedbackPrompt messages={messages} rating={rating} setRating={setRating} feedbackSent={feedbackSent} submitFeedback={submitFeedback} />
+      <FeedbackPrompt
+        messages={messages}
+        rating={rating}
+        setRating={setRating}
+        feedbackSent={feedbackSent}
+        submitFeedback={submitFeedback}
+        submitting={feedbackLoading}
+      />
       <div className="customer-composer">
         <input
           value={input}
@@ -52,7 +69,7 @@ export function ChatHistory({
           onKeyDown={(event) => event.key === 'Enter' && send()}
           placeholder="Ask a support question..."
         />
-        <button className="primary-button icon-only" disabled={loading} onClick={send} title="Send message"><Send size={17} /></button>
+        <button className="primary-button icon-only" disabled={loading || !input.trim()} onClick={send} title="Send message"><Send size={17} /></button>
       </div>
     </div>
   )

@@ -11,6 +11,7 @@ export interface AgentWorkspaceProps {
   status: string
   onAction: (action: 'accepted' | 'edited' | 'rejected') => void
   regenerate: () => void
+  actionLoading: boolean
 }
 
 export function AgentWorkspace({
@@ -21,12 +22,20 @@ export function AgentWorkspace({
   status,
   onAction,
   regenerate,
+  actionLoading,
 }: AgentWorkspaceProps) {
   return (
     <section className="workspace-grid">
       <ConversationList selected={selected} onSelect={onSelect} />
       <ChatPanel selected={selected} />
-      <AIPanel suggestion={suggestion} setSuggestion={setSuggestion} status={status} onAction={onAction} regenerate={regenerate} />
+      <AIPanel
+        suggestion={suggestion}
+        setSuggestion={setSuggestion}
+        status={status}
+        onAction={onAction}
+        regenerate={regenerate}
+        actionLoading={actionLoading}
+      />
     </section>
   )
 }

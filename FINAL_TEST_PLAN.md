@@ -65,13 +65,13 @@ This test plan verifies that ARIA works as a full-stack AI-assisted customer sup
 | ID | Workflow | Expected Result | Status |
 |---|---|---|---|
 | UI-01 | Open application | Main dashboard loads without crash | Passed |
-| UI-02 | Customer chat | User can ask a question and view answer | Backend passed; manual UI check pending |
-| UI-03 | Rating submission | User can submit a rating after AI response | Backend passed; manual UI check pending |
-| UI-04 | Agent workspace | Agent can review suggested response | Manual UI check pending |
-| UI-05 | Agent action | Agent can accept/edit/reject response | Backend passed; manual UI check pending |
-| UI-06 | Knowledge base | Knowledge records are visible | Backend passed; manual UI check pending |
-| UI-07 | Add knowledge | New knowledge record can be saved | API available; manual UI check pending |
-| UI-08 | Analytics dashboard | Metrics and charts are visible | Backend passed; manual UI check pending |
+| UI-02 | Customer chat | User can ask a question and view answer, confidence, and sources | Passed |
+| UI-03 | Rating submission | User can submit a rating after AI response | Passed |
+| UI-04 | Agent workspace | Agent can review and edit the suggested response | Passed |
+| UI-05 | Agent action | Agent can accept/edit/reject response without duplicate submission | Passed |
+| UI-06 | Knowledge base | Knowledge records, search, filters, and empty states work | Passed |
+| UI-07 | Add knowledge | New knowledge record can be saved | API passed; form validation verified |
+| UI-08 | Analytics dashboard | Persisted metrics and charts are visible | Passed |
 
 ## Database Validation
 
@@ -129,9 +129,28 @@ Validation date: 21 June 2026, 6:23 PM
 
 | Area | Status | Note |
 |---|---|---|
-| Manual browser walkthrough | Pending | Use the demo script to manually verify clicks, forms, and charts before final presentation |
+| Manual browser walkthrough | Passed | Customer chat, feedback, agent action, knowledge filters, analytics, and responsive layout verified on 24 June 2026 |
 | Deployment validation | Pending | Complete after choosing and configuring the deployment platform |
 | Final report screenshots | Pending | Capture after UI walkthrough and deployment decision |
+
+## 24 June 2026 Completion-Pass Evidence
+
+| Check | Result |
+|---|---|
+| Production build | Passed with only the existing non-blocking large-chunk warning |
+| Lint | Passed |
+| Backend health | Passed: SQLite, Mastra remote path, and Gemini configuration reported operational |
+| Retrieval regression | Passed: 8 of 8 expected primary sources |
+| Customer response evidence | Passed: confidence and retrieved source displayed in the UI |
+| Customer feedback | Passed: 5-star feedback stored and confirmation displayed |
+| Agent action | Passed: Accept action stored and success status displayed |
+| Knowledge filters | Passed: Policy filter returned only policy records |
+| Knowledge empty state | Passed |
+| Knowledge summary | Passed: 10 indexed sources and live retrieval-use total displayed |
+| Analytics | Passed: 65 conversations, 17 feedback records, 5.0 average rating, and 87 quality score displayed |
+| Desktop browser | Passed with no console errors |
+| Mobile browser | Passed at 390 x 844 with no horizontal overflow |
+| Gemini availability | Provider returned a temporary high-demand error during one direct test; ARIA fallback remained operational and grounded |
 
 ## Acceptance Criteria
 

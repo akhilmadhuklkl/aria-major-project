@@ -7,9 +7,10 @@ export interface AIPanelProps {
   status: string
   onAction: (action: 'accepted' | 'edited' | 'rejected') => void
   regenerate: () => void
+  actionLoading: boolean
 }
 
-export function AIPanel({ suggestion, setSuggestion, status, onAction, regenerate }: AIPanelProps) {
+export function AIPanel({ suggestion, setSuggestion, status, onAction, regenerate, actionLoading }: AIPanelProps) {
   return (
     <aside className="ai-panel">
       <div className="ai-title">
@@ -22,7 +23,7 @@ export function AIPanel({ suggestion, setSuggestion, status, onAction, regenerat
       </div>
       <div className="suggestion-block">
         <div className="section-label"><span>Suggested response</span><small>{status}</small></div>
-        <textarea value={suggestion} onChange={(event) => setSuggestion(event.target.value)} />
+        <textarea value={suggestion} disabled={actionLoading} onChange={(event) => setSuggestion(event.target.value)} />
       </div>
       <div className="sources-block">
         <div className="section-label"><span>Sources used</span><small>3 references</small></div>
@@ -31,10 +32,10 @@ export function AIPanel({ suggestion, setSuggestion, status, onAction, regenerat
         <Source icon={MessageCircle} title="Conversation memory" detail="2 relevant past interactions" />
       </div>
       <div className="ai-actions">
-        <button className="primary-button" onClick={() => onAction('accepted')}><Check size={16} /> Accept</button>
-        <button className="secondary-button" onClick={() => onAction('edited')}><Edit3 size={16} /> Edit & send</button>
-        <button className="secondary-button" onClick={regenerate}><RefreshCw size={16} /> Regenerate</button>
-        <button className="reject-button" onClick={() => onAction('rejected')}><X size={16} /> Reject</button>
+        <button className="primary-button" disabled={actionLoading} onClick={() => onAction('accepted')}><Check size={16} /> Accept</button>
+        <button className="secondary-button" disabled={actionLoading} onClick={() => onAction('edited')}><Edit3 size={16} /> Edit & send</button>
+        <button className="secondary-button" disabled={actionLoading} onClick={regenerate}><RefreshCw size={16} /> Regenerate</button>
+        <button className="reject-button" disabled={actionLoading} onClick={() => onAction('rejected')}><X size={16} /> Reject</button>
       </div>
       <div className="learning-note"><Activity size={16} /><p><strong>Adaptive learning active</strong><span>Agent actions improve future retrieval and response scoring.</span></p></div>
     </aside>

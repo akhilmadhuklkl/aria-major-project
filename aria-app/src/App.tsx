@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem } from './types'
 import { conversations as conversationsData, knowledgeItems } from './constants'
 import { api } from './api'
@@ -27,6 +27,8 @@ export default function App() {
   const [chatError, setChatError] = useState('')
   const [rating, setRating] = useState(0)
   const [feedbackSent, setFeedbackSent] = useState(false)
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [agentActionLoading, setAgentActionLoading] = useState(false)
   const [knowledgeQuery, setKnowledgeQuery] = useState('')
   const [remoteKnowledge, setRemoteKnowledge] = useState<KnowledgeItem[]>(knowledgeItems)
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
@@ -41,11 +43,6 @@ export default function App() {
         // Keep the seeded prototype usable when the API is offline.
       })
   }, [])
-
-  const filteredKnowledge = useMemo(
-    () => remoteKnowledge.filter((item) => item.title.toLowerCase().includes(knowledgeQuery.toLowerCase())),
-    [knowledgeQuery, remoteKnowledge],
-  )
 
   async function sendCustomerMessage() {
     const message = customerInput.trim()
@@ -80,7 +77,9 @@ export default function App() {
   }
 
   async function submitCustomerFeedback() {
-    if (!rating || !lastAssistantMessageId || !customerConversationId) return
+    if (!rating || !lastAssistantMessageId || !customerConversationId || feedbackLoading) return
+    setFeedbackLoading(true)
+    setChatError('')
     try {
       await api.submitFeedback({
         rating,
@@ -91,6 +90,8 @@ export default function App() {
       setAnalytics(await api.getAnalytics())
     } catch (error) {
       setChatError(error instanceof Error ? error.message : 'Feedback could not be saved.')
+    } finally {
+      setFeedbackLoading(false)
     }
   }
 
@@ -102,12 +103,14 @@ export default function App() {
   }
 
   async function submitAgentAction(action: 'accepted' | 'edited' | 'rejected') {
+    if (agentActionLoading) return
     const statusByAction = {
       accepted: 'Accepted and recorded as positive feedback',
       edited: 'Saved as an agent correction',
       rejected: 'Rejected - negative feedback recorded',
     }
-    setSuggestionStatus(statusByAction[action])
+    setAgentActionLoading(true)
+    setSuggestionStatus('Saving agent action...')
     try {
       await api.submitAgentAction({
         conversationId: selectedConversation.id,
@@ -115,8 +118,11 @@ export default function App() {
         editedResponse: action === 'edited' ? suggestion : undefined,
       })
       setAnalytics(await api.getAnalytics())
-    } catch {
-      setSuggestionStatus(`${statusByAction[action]} (pending API sync)`)
+      setSuggestionStatus(statusByAction[action])
+    } catch (error) {
+      setSuggestionStatus(error instanceof Error ? error.message : 'Agent action could not be saved.')
+    } finally {
+      setAgentActionLoading(false)
     }
   }
 
@@ -140,6 +146,7 @@ export default function App() {
               status={suggestionStatus}
               onAction={submitAgentAction}
               regenerate={regenerateSuggestion}
+              actionLoading={agentActionLoading}
             />
           )}
           {view === 'customer' && (
@@ -152,6 +159,7 @@ export default function App() {
               setRating={setRating}
               feedbackSent={feedbackSent}
               submitFeedback={submitCustomerFeedback}
+              feedbackLoading={feedbackLoading}
               loading={chatLoading}
               error={chatError}
               mode="Persistent API"
@@ -159,7 +167,7 @@ export default function App() {
             />
           )}
           {view === 'knowledge' && (
-            <KnowledgeBase query={knowledgeQuery} setQuery={setKnowledgeQuery} items={filteredKnowledge} onAdd={addKnowledge} />
+            <KnowledgeBase query={knowledgeQuery} setQuery={setKnowledgeQuery} items={remoteKnowledge} onAdd={addKnowledge} />
           )}
           {view === 'analytics' && <Analytics summary={analytics} />}
         </main>

@@ -11,6 +11,11 @@ export function KnowledgeTable({ items }: KnowledgeTableProps) {
       <table>
         <thead><tr><th>Document</th><th>Category</th><th>Status</th><th>Used in responses</th><th>Last updated</th><th /></tr></thead>
         <tbody>
+          {items.length === 0 && (
+            <tr>
+              <td className="table-empty" colSpan={6}>No knowledge records match the current search and filters.</td>
+            </tr>
+          )}
           {items.map((item) => (
             <tr key={item.title}>
               <td><div className="doc-name"><FileText size={17} /><span><strong>{item.title}</strong><small>Business support knowledge</small></span></div></td>
