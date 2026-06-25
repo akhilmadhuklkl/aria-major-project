@@ -35,6 +35,8 @@ npm run build
 npm run lint
 npm run start:server
 npm run index:knowledge
+npm run evaluate:retrieval
+npm run evaluate:adaptation
 ```
 
 ## Local Knowledge Embeddings
@@ -72,6 +74,29 @@ results with the existing keyword retriever.
 Customer chat responses display and persist the retrieval method, source names,
 semantic similarity scores, and the actual response provider (`Mastra + Gemini`
 or the local knowledge fallback).
+
+## Feedback Adaptation
+
+ARIA calculates per-source quality statistics from customer ratings and agent
+accept, edit, and reject actions. The standalone adaptation ranker combines
+semantic relevance with a deliberately small feedback adjustment:
+
+```text
+adjusted score = semantic similarity + feedback adjustment
+```
+
+Feedback influence is capped at `+/- 0.03` and reduced when only a few feedback
+records exist. This allows reliable evidence to reorder close semantic matches
+without allowing popularity or one rating to override a clearly relevant source.
+
+Run the adaptation safety evaluation with:
+
+```bash
+npm run evaluate:adaptation
+```
+
+Live chat currently continues to use pure semantic ranking. Connecting the
+verified adaptation ranker to live retrieval is the next step.
 
 ## Mastra Setup for Final Version
 

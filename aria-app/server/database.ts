@@ -337,6 +337,96 @@ export function listEmbeddedKnowledge() {
   }))
 }
 
+export type KnowledgeSourceFeedbackStats = {
+  title: string
+  feedbackCount: number
+  averageQuality: number
+  averageRating: number
+  acceptedCount: number
+  editedCount: number
+  rejectedCount: number
+}
+
+export function getKnowledgeSourceFeedbackStats() {
+  const knownTitles = new Set(listKnowledge().map((item) => item.title))
+  const rows = db.prepare(`
+    SELECT
+      messages.sources,
+      feedback.rating,
+      feedback.feedback_type AS feedbackType,
+      feedback.quality_score AS qualityScore
+    FROM feedback
+    JOIN messages ON messages.id = feedback.message_id
+    WHERE messages.sources IS NOT NULL
+      AND messages.sources != '[]'
+  `).all() as Array<{
+    sources: string
+    rating: number | null
+    feedbackType: string
+    qualityScore: number
+  }>
+
+  const aggregates = new Map<string, {
+    feedbackCount: number
+    qualityTotal: number
+    ratingCount: number
+    ratingTotal: number
+    acceptedCount: number
+    editedCount: number
+    rejectedCount: number
+  }>()
+
+  for (const row of rows) {
+    const title = parseSourceTitles(row.sources).find((source) => knownTitles.has(source))
+    if (!title) continue
+
+    const aggregate = aggregates.get(title) ?? {
+      feedbackCount: 0,
+      qualityTotal: 0,
+      ratingCount: 0,
+      ratingTotal: 0,
+      acceptedCount: 0,
+      editedCount: 0,
+      rejectedCount: 0,
+    }
+    aggregate.feedbackCount += 1
+    aggregate.qualityTotal += row.qualityScore
+    if (row.rating !== null) {
+      aggregate.ratingCount += 1
+      aggregate.ratingTotal += row.rating
+    }
+    if (row.feedbackType === 'accepted') aggregate.acceptedCount += 1
+    if (row.feedbackType === 'edited') aggregate.editedCount += 1
+    if (row.feedbackType === 'rejected') aggregate.rejectedCount += 1
+    aggregates.set(title, aggregate)
+  }
+
+  return Array.from(aggregates, ([title, aggregate]) => ({
+    title,
+    feedbackCount: aggregate.feedbackCount,
+    averageQuality: aggregate.feedbackCount
+      ? aggregate.qualityTotal / aggregate.feedbackCount
+      : 60,
+    averageRating: aggregate.ratingCount
+      ? aggregate.ratingTotal / aggregate.ratingCount
+      : 0,
+    acceptedCount: aggregate.acceptedCount,
+    editedCount: aggregate.editedCount,
+    rejectedCount: aggregate.rejectedCount,
+  }))
+}
+
+function parseSourceTitles(value: string) {
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string')
+      : []
+  } catch {
+    return []
+  }
+}
+
 export function searchKnowledge(message: string, limit = 3) {
   const ignoredTerms = new Set([
     'the', 'and', 'for', 'you', 'your', 'how', 'long', 'does', 'take', 'after', 'before', 'with',

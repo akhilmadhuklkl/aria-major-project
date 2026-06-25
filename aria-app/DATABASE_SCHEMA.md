@@ -68,4 +68,10 @@ keyword search as a runtime fallback if the embedding system is unavailable.
 Customer ratings are converted to a score from 0-100. Agent actions adjust the
 score: accepted responses receive a positive adjustment, while rejected responses
 receive a negative adjustment. These stored signals power the analytics dashboard
-and will later influence Mastra retrieval and response evaluation.
+and are aggregated against the primary valid knowledge source used by each
+assistant response.
+
+The feedback adaptation ranker uses average source quality and feedback count.
+Evidence is reduced using a five-record prior and capped at a maximum ranking
+adjustment of `+/- 0.03`. Semantic similarity therefore remains the dominant
+retrieval signal.

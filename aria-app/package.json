@@ -10,6 +10,7 @@
     "start:server": "tsx server/index.ts",
     "index:knowledge": "tsx server/scripts/index-knowledge.ts",
     "evaluate:retrieval": "tsx server/scripts/evaluate-retrieval.ts",
+    "evaluate:adaptation": "tsx server/scripts/evaluate-adaptation.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

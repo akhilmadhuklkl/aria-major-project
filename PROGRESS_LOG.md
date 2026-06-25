@@ -260,3 +260,19 @@ Semantic embedding milestone:
 - Verified persisted semantic evidence can be read back after a backend restart.
 - Verified desktop and 390 x 844 mobile layouts display semantic evidence without horizontal overflow.
 - Semantic vector retrieval is now complete for the approved project scope; long-term conversation memory remains separate future work.
+
+Feedback adaptation milestone:
+
+- Added per-source feedback statistics from persisted messages and feedback records.
+- Restricted attribution to the primary valid knowledge source to avoid inflating secondary-source evidence.
+- Added average quality, average rating, accepted, edited, and rejected counts per source.
+- Added a standalone feedback adaptation ranker.
+- Defined neutral quality as `60`, a five-record evidence prior, and a maximum adjustment of `+/- 0.03`.
+- Verified positive feedback can reorder two closely matched semantic sources.
+- Verified extensive positive feedback cannot override a clearly stronger semantic match.
+- Verified a single positive rating is reduced by evidence weighting.
+- Verified neutral feedback produces no ranking change.
+- Verified every adjustment remains within the configured bound.
+- Passed 5 of 5 adaptation safety checks.
+- Re-ran semantic regression: 8 of 8 support cases and 3 of 3 unrelated-query rejections passed.
+- Kept live chat on pure semantic ranking until the standalone adaptation layer is reviewed and connected in the next step.

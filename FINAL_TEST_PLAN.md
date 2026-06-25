@@ -173,6 +173,20 @@ Validation date: 21 June 2026, 6:23 PM
 | Browser evidence | Passed: UI displayed semantic method, provider, source, and score with no console errors |
 | Mobile evidence | Passed: evidence chips wrapped at 390 x 844 with no horizontal overflow |
 
+## Feedback Adaptation Validation - 25 June 2026
+
+| Check | Result |
+|---|---|
+| Source-quality aggregation | Passed: ratings and agent actions aggregated against the primary valid knowledge source |
+| Close-match reordering | Passed: feedback reordered semantic scores `0.40` and `0.41` |
+| Semantic dominance | Passed: a `0.62` relevant source remained above a heavily rewarded `0.36` source |
+| Small-sample protection | Passed: one perfect rating produced only a `0.005` adjustment |
+| Neutral feedback | Passed: quality score `60` produced no adjustment |
+| Hard adjustment bound | Passed: every adjustment remained within `+/- 0.03` |
+| Adaptation evaluation | Passed: 5 of 5 safety checks |
+| Semantic regression | Passed: 8 of 8 support cases and 3 of 3 unrelated-query rejections |
+| Live retrieval integration | Pending: standalone adaptation ranker intentionally not connected yet |
+
 ## Acceptance Criteria
 
 The project is final-demo ready when:
