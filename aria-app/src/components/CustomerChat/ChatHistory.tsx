@@ -45,7 +45,16 @@ export function ChatHistory({
               {message.from === 'bot' && message.confidence !== undefined && (
                 <div className="response-evidence">
                   <span>{Math.round(message.confidence * 100)}% confidence</span>
-                  {message.sources?.map((source) => <span key={source}>{source}</span>)}
+                  {message.retrievalMethod && message.retrievalMethod !== 'none' && (
+                    <span>{message.retrievalMethod} retrieval</span>
+                  )}
+                  {message.generationProvider && (
+                    <span>{message.generationProvider === 'mastra-gemini' ? 'Mastra + Gemini' : 'Local fallback'}</span>
+                  )}
+                  {message.sources?.map((source) => {
+                    const score = message.sourceScores?.find((item) => item.title === source)?.score
+                    return <span key={source}>{source}{score ? ` ${Math.round(score * 100)}%` : ''}</span>
+                  })}
                 </div>
               )}
             </div>

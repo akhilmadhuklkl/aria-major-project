@@ -46,6 +46,9 @@ export interface ChatMessage {
   conversationId?: number
   confidence?: number
   sources?: string[]
+  sourceScores?: Array<{ title: string; score: number }>
+  retrievalMethod?: 'semantic' | 'keyword' | 'none'
+  generationProvider?: 'mastra-gemini' | 'local-knowledge'
 }
 
 export interface AnalyticsSummary {

@@ -22,6 +22,9 @@ The schema can later be migrated to PostgreSQL without changing the frontend API
 - `content`
 - `confidence`
 - `sources`: JSON list
+- `source_scores`: JSON list of source titles and similarity scores
+- `retrieval_method`: semantic, keyword, or none
+- `generation_provider`: Mastra/Gemini or local knowledge fallback
 - `should_escalate`
 - `created_at`
 
@@ -47,9 +50,18 @@ The schema can later be migrated to PostgreSQL without changing the frontend API
 - `uses`
 - `updated_at`
 
-The backend supports listing, creating, and keyword-searching these knowledge
-documents. The current interim agent uses the search result titles as response
-sources and increments `uses` when a source is applied to a generated reply.
+## Knowledge Embeddings
+
+- `knowledge_document_id`: primary and foreign key
+- `model`: local embedding model identifier
+- `dimensions`: vector length
+- `vector`: normalized vector stored as JSON
+- `content_hash`: SHA-256 hash used to skip unchanged records
+- `updated_at`
+
+Indexed knowledge records are converted into local 384-dimensional MiniLM
+vectors. Live chat uses cosine similarity for semantic retrieval and retains
+keyword search as a runtime fallback if the embedding system is unavailable.
 
 ## Adaptive Quality Scoring
 

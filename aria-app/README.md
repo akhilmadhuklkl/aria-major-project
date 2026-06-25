@@ -34,7 +34,44 @@ npm run dev
 npm run build
 npm run lint
 npm run start:server
+npm run index:knowledge
 ```
+
+## Local Knowledge Embeddings
+
+ARIA uses Transformers.js with `Xenova/all-MiniLM-L6-v2` to generate local
+sentence embeddings without sending knowledge content to another API.
+
+Run the indexer after installing dependencies or changing knowledge records:
+
+```bash
+npm run index:knowledge
+```
+
+The command stores one normalized 384-dimensional vector per indexed knowledge
+record in SQLite. Content hashes prevent unchanged records from being embedded
+again. The downloaded model is cached under `.cache/transformers` and is excluded
+from Git.
+
+The live chat flow now uses semantic similarity search as its primary retrieval
+method. Keyword retrieval activates automatically if the local embedding runtime
+fails. Questions below the semantic threshold are not forced through keyword
+matching and are escalated safely.
+
+Evaluate the standalone semantic retriever with paraphrased support questions:
+
+```bash
+npm run evaluate:retrieval
+```
+
+The retriever embeds each query, compares it with stored knowledge vectors using
+cosine similarity, ranks the strongest matches, and rejects results below the
+configured similarity threshold. The evaluation command also compares semantic
+results with the existing keyword retriever.
+
+Customer chat responses display and persist the retrieval method, source names,
+semantic similarity scores, and the actual response provider (`Mastra + Gemini`
+or the local knowledge fallback).
 
 ## Mastra Setup for Final Version
 

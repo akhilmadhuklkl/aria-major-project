@@ -66,9 +66,30 @@ db.exec(`
     uses INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS knowledge_embeddings (
+    knowledge_document_id INTEGER PRIMARY KEY,
+    model TEXT NOT NULL,
+    dimensions INTEGER NOT NULL,
+    vector TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (knowledge_document_id) REFERENCES knowledge_documents(id) ON DELETE CASCADE
+  );
 `)
 
+ensureColumn('messages', 'source_scores', 'TEXT')
+ensureColumn('messages', 'retrieval_method', 'TEXT')
+ensureColumn('messages', 'generation_provider', 'TEXT')
+
 seedDatabase()
+
+function ensureColumn(table: string, column: string, definition: string) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  if (!columns.some((item) => item.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+  }
+}
 
 function seedDatabase() {
   const now = new Date().toISOString()
@@ -212,6 +233,108 @@ export function createKnowledgeDocument(input: { title: string; category: string
     SELECT id, title, category, content, status, uses, updated_at AS updatedAt
     FROM knowledge_documents WHERE id = ?
   `).get(Number(created.lastInsertRowid)) as KnowledgeDocument
+}
+
+export type KnowledgeEmbeddingRecord = {
+  knowledgeDocumentId: number
+  model: string
+  dimensions: number
+  vector: number[]
+  contentHash: string
+  updatedAt: string
+}
+
+export function listKnowledgeEmbeddingCandidates() {
+  return db.prepare(`
+    SELECT
+      knowledge_documents.id,
+      knowledge_documents.title,
+      knowledge_documents.category,
+      knowledge_documents.content,
+      knowledge_documents.status,
+      knowledge_embeddings.content_hash AS contentHash
+    FROM knowledge_documents
+    LEFT JOIN knowledge_embeddings
+      ON knowledge_embeddings.knowledge_document_id = knowledge_documents.id
+    WHERE knowledge_documents.status = 'indexed'
+    ORDER BY knowledge_documents.id
+  `).all() as Array<KnowledgeDocument & { contentHash?: string }>
+}
+
+export function upsertKnowledgeEmbedding(input: {
+  knowledgeDocumentId: number
+  model: string
+  vector: number[]
+  contentHash: string
+}) {
+  const now = new Date().toISOString()
+  db.prepare(`
+    INSERT INTO knowledge_embeddings (
+      knowledge_document_id, model, dimensions, vector, content_hash, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(knowledge_document_id) DO UPDATE SET
+      model = excluded.model,
+      dimensions = excluded.dimensions,
+      vector = excluded.vector,
+      content_hash = excluded.content_hash,
+      updated_at = excluded.updated_at
+  `).run(
+    input.knowledgeDocumentId,
+    input.model,
+    input.vector.length,
+    JSON.stringify(input.vector),
+    input.contentHash,
+    now,
+  )
+}
+
+export function getKnowledgeEmbeddingStats() {
+  return db.prepare(`
+    SELECT
+      COUNT(*) AS count,
+      COALESCE(MIN(dimensions), 0) AS minimumDimensions,
+      COALESCE(MAX(dimensions), 0) AS maximumDimensions,
+      COUNT(DISTINCT model) AS modelCount
+    FROM knowledge_embeddings
+  `).get() as {
+    count: number
+    minimumDimensions: number
+    maximumDimensions: number
+    modelCount: number
+  }
+}
+
+export type EmbeddedKnowledgeDocument = KnowledgeDocument & {
+  model: string
+  dimensions: number
+  vector: number[]
+}
+
+export function listEmbeddedKnowledge() {
+  const rows = db.prepare(`
+    SELECT
+      knowledge_documents.id,
+      knowledge_documents.title,
+      knowledge_documents.category,
+      knowledge_documents.content,
+      knowledge_documents.status,
+      knowledge_documents.uses,
+      knowledge_documents.updated_at AS updatedAt,
+      knowledge_embeddings.model,
+      knowledge_embeddings.dimensions,
+      knowledge_embeddings.vector
+    FROM knowledge_embeddings
+    JOIN knowledge_documents
+      ON knowledge_documents.id = knowledge_embeddings.knowledge_document_id
+    WHERE knowledge_documents.status = 'indexed'
+    ORDER BY knowledge_documents.id
+  `).all() as Array<Omit<EmbeddedKnowledgeDocument, 'vector'> & { vector: string }>
+
+  return rows.map((row) => ({
+    ...row,
+    vector: JSON.parse(row.vector) as number[],
+  }))
 }
 
 export function searchKnowledge(message: string, limit = 3) {

@@ -8,11 +8,14 @@
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
     "start:server": "tsx server/index.ts",
+    "index:knowledge": "tsx server/scripts/index-knowledge.ts",
+    "evaluate:retrieval": "tsx server/scripts/evaluate-retrieval.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
     "@mastra/core": "^1.45.0",
     "@mastra/express": "^1.4.0",
     "@types/cors": "^2.8.19",

@@ -152,6 +152,27 @@ Validation date: 21 June 2026, 6:23 PM
 | Mobile browser | Passed at 390 x 844 with no horizontal overflow |
 | Gemini availability | Provider returned a temporary high-demand error during one direct test; ARIA fallback remained operational and grounded |
 
+## Semantic Retrieval Validation - 25 June 2026
+
+| Check | Result |
+|---|---|
+| Stored knowledge embeddings | Passed: 10 records, 384 dimensions, one local MiniLM model |
+| Vector validity | Passed: all values finite and vectors normalized to magnitude 1 |
+| Re-indexing | Passed: 10 of 10 unchanged records skipped using content hashes |
+| Semantic support benchmark | Passed: 8 of 8 paraphrased support questions returned the expected primary source |
+| Keyword comparison | 2 of 8 paraphrased questions returned the expected primary source |
+| Unrelated-query rejection | Passed: 3 of 3 unrelated questions rejected at threshold `0.30` |
+| Cosine similarity checks | Passed: identical `1`, orthogonal `0`, opposite `-1`, mismatched/empty `0` |
+| Live chat integration | Passed: semantic retrieval connected to local and Mastra/Gemini agent paths |
+| Hybrid fallback | Passed: simulated embedding failure returned the expected refund source through keyword retrieval |
+| Live API semantic suite | Passed: 8 of 8 paraphrased support questions returned the expected source through `/api/chat` |
+| Safe escalation | Passed: unrelated weather query returned no sources and `shouldEscalate=true` |
+| Provider resilience | Passed: Gemini quota exhaustion used the local grounded fallback while semantic retrieval remained active |
+| Provider recovery | Passed: a subsequent request returned `generationProvider=mastra-gemini` |
+| Semantic audit persistence | Passed: source scores, retrieval method, and provider stored and read back from SQLite |
+| Browser evidence | Passed: UI displayed semantic method, provider, source, and score with no console errors |
+| Mobile evidence | Passed: evidence chips wrapped at 390 x 844 with no horizontal overflow |
+
 ## Acceptance Criteria
 
 The project is final-demo ready when:

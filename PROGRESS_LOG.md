@@ -226,4 +226,37 @@ Current status:
 
 - Existing frontend, backend, SQLite, knowledge, feedback, and analytics modules have completed their focused functional-polish pass.
 - The local Mastra endpoint and Gemini key are configured. During validation, Gemini returned a temporary high-demand provider error; ARIA correctly continued through its deterministic knowledge-grounded fallback.
-- The next major implementation milestone is the planned multi-agent/agentic workflow, followed by semantic vector retrieval, deployment, and final report/demo preparation.
+- Multi-agent architecture is optional because the approved proposal requires an LLM agent architecture but does not explicitly require multiple agents.
+- The next proposal-aligned milestone is semantic vector retrieval, followed by feedback adaptation, deployment, and final report/demo preparation.
+
+Semantic embedding milestone:
+
+- Installed Transformers.js for local embedding generation.
+- Added the SQLite `knowledge_embeddings` table linked to knowledge documents.
+- Added content hashing so unchanged knowledge records are skipped during re-indexing.
+- Added a reusable local embedding service using `Xenova/all-MiniLM-L6-v2`.
+- Added the `npm run index:knowledge` command.
+- Generated embeddings for all 10 indexed knowledge records.
+- Verified every stored vector contains 384 finite values and has a normalized magnitude of `1`.
+- Re-ran the indexer and confirmed all 10 unchanged records were skipped.
+- Added a standalone semantic knowledge retriever using query embeddings and cosine similarity.
+- Added SQLite loading and parsing for stored knowledge vectors.
+- Calibrated the semantic acceptance threshold to `0.30`.
+- Added the `npm run evaluate:retrieval` benchmark command.
+- Verified semantic retrieval passes 8 of 8 paraphrased support scenarios.
+- Confirmed the existing keyword retriever passes only 2 of the same 8 paraphrased scenarios.
+- Verified semantic retrieval rejects 3 of 3 unrelated weather, poetry, and sports queries.
+- Verified cosine similarity returns the expected values for identical, orthogonal, opposite, mismatched, and empty vectors.
+- Connected semantic retrieval to both the local agent and Mastra/Gemini paths.
+- Added hybrid routing that automatically uses keyword retrieval when semantic embedding execution fails.
+- Confirmed a simulated embedding failure returned the correct refund policy through keyword fallback.
+- Added semantic scores, retrieval method, and actual generation provider to chat responses.
+- Added UI evidence chips for retrieval method, provider, source, and similarity score.
+- Verified all 8 paraphrased scenarios through the live `/api/chat` endpoint using semantic retrieval.
+- Verified an unrelated weather query returned no source and triggered safe escalation.
+- Verified Gemini quota exhaustion triggers the local grounded fallback without disabling semantic retrieval.
+- Verified Gemini later recovered and the UI displayed `Mastra + Gemini` accurately.
+- Added SQLite migration and persistence for source scores, retrieval method, and generation provider.
+- Verified persisted semantic evidence can be read back after a backend restart.
+- Verified desktop and 390 x 844 mobile layouts display semantic evidence without horizontal overflow.
+- Semantic vector retrieval is now complete for the approved project scope; long-term conversation memory remains separate future work.

@@ -4,11 +4,14 @@ import express from 'express'
 import { MastraServer } from '@mastra/express'
 import { createAgentService, getAgentProvider } from './agent-service.js'
 import { calculateQualityScore, createKnowledgeDocument, db, inferTopic, listKnowledge, searchKnowledge } from './database.js'
+import { getKnowledgeEmbeddingStats } from './database.js'
+import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
 import { mastra } from './mastra/index.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
-const agent = createAgentService(searchKnowledge)
+const hybridRetriever = new HybridKnowledgeRetriever(searchKnowledge)
+const agent = createAgentService(hybridRetriever.retrieve)
 const mastraModel = process.env.MASTRA_MODEL ?? 'google/gemini-2.5-flash'
 const mastraServerEnabled = process.env.ENABLE_MASTRA_SERVER === 'true'
 const llmProvider = mastraModel.startsWith('google/')
@@ -26,6 +29,7 @@ if (mastraServerEnabled) {
 }
 
 app.get('/api/health', (_request, response) => {
+  const embeddingStats = getKnowledgeEmbeddingStats()
   const llmProviderConfigured = llmProvider === 'google-gemini'
     ? Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim())
     : llmProvider === 'openai'
@@ -46,6 +50,13 @@ app.get('/api/health', (_request, response) => {
     mastraModel,
     llmProvider,
     llmProviderConfigured,
+    retrieval: {
+      primary: 'semantic',
+      fallback: 'keyword',
+      embeddingModel: 'Xenova/all-MiniLM-L6-v2',
+      storedEmbeddings: embeddingStats.count,
+      dimensions: embeddingStats.maximumDimensions,
+    },
   })
 })
 
@@ -58,6 +69,7 @@ app.get('/api/interim-status', (_request, response) => {
       'Express API connected to the frontend',
       'SQLite persistence for conversations, messages, feedback, and knowledge',
       'Knowledge-grounded response generation with confidence and source tracking',
+      'Semantic vector retrieval with automatic keyword fallback',
       'Feedback capture from customer ratings and agent actions',
       'Analytics calculated from persisted database records',
       'Mastra-compatible remote agent endpoint configured through MASTRA_AGENT_URL',
@@ -65,7 +77,7 @@ app.get('/api/interim-status', (_request, response) => {
     ],
     pendingForFinal: [
       'Live provider API key and full Mastra Studio setup',
-      'Semantic vector retrieval and long-term memory',
+      'Long-term conversation memory',
       'Authentication, deployment, and extended testing',
     ],
   })
@@ -103,14 +115,20 @@ app.post('/api/chat', async (request, response) => {
   const assistantCreatedAt = new Date().toISOString()
 
   db.prepare(`
-    INSERT INTO messages (id, conversation_id, role, content, confidence, sources, should_escalate, created_at)
-    VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?)
+    INSERT INTO messages (
+      id, conversation_id, role, content, confidence, sources, source_scores,
+      retrieval_method, generation_provider, should_escalate, created_at
+    )
+    VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     assistantMessageId,
     conversationId,
     result.answer,
     result.confidence,
     JSON.stringify(result.sources),
+    JSON.stringify(result.sourceScores),
+    result.retrievalMethod,
+    result.generationProvider,
     result.shouldEscalate ? 1 : 0,
     assistantCreatedAt,
   )
@@ -139,7 +157,17 @@ app.get('/api/conversations', (_request, response) => {
 
 app.get('/api/conversations/:id/messages', (request, response) => {
   const rows = db.prepare(`
-    SELECT id, conversation_id AS conversationId, role, content, confidence, sources, should_escalate AS shouldEscalate,
+    SELECT
+      id,
+      conversation_id AS conversationId,
+      role,
+      content,
+      confidence,
+      sources,
+      source_scores AS sourceScores,
+      retrieval_method AS retrievalMethod,
+      generation_provider AS generationProvider,
+      should_escalate AS shouldEscalate,
       created_at AS createdAt
     FROM messages WHERE conversation_id = ? ORDER BY created_at ASC
   `).all(Number(request.params.id)).map((row) => {
@@ -147,6 +175,7 @@ app.get('/api/conversations/:id/messages', (request, response) => {
     return {
       ...message,
       sources: message.sources ? JSON.parse(String(message.sources)) : [],
+      sourceScores: message.sourceScores ? JSON.parse(String(message.sourceScores)) : [],
       shouldEscalate: Boolean(message.shouldEscalate),
     }
   })

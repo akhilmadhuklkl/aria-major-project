@@ -2,6 +2,9 @@ export type AgentResponse = {
   answer: string
   confidence: number
   sources: string[]
+  sourceScores: Array<{ title: string; score: number }>
+  retrievalMethod: 'semantic' | 'keyword' | 'none'
+  generationProvider: 'mastra-gemini' | 'local-knowledge'
   shouldEscalate: boolean
 }
 
@@ -9,13 +12,15 @@ export interface AgentService {
   generateResponse(query: string): Promise<AgentResponse>
 }
 
-type KnowledgeSnippet = {
+export type KnowledgeSnippet = {
   title: string
   category: string
   content: string
+  score?: number
+  retrievalMethod?: 'semantic' | 'keyword'
 }
 
-type KnowledgeRetriever = (query: string) => KnowledgeSnippet[]
+export type KnowledgeRetriever = (query: string) => Promise<KnowledgeSnippet[]>
 
 const responses = [
   {
@@ -71,7 +76,7 @@ const responses = [
 export class LocalAgentService implements AgentService {
   private readonly retrieveKnowledge: KnowledgeRetriever
 
-  constructor(retrieveKnowledge: KnowledgeRetriever = () => []) {
+  constructor(retrieveKnowledge: KnowledgeRetriever = async () => []) {
     this.retrieveKnowledge = retrieveKnowledge
   }
 
@@ -80,8 +85,14 @@ export class LocalAgentService implements AgentService {
     const result = responses.find((response) =>
       response.match.some((keyword) => normalized.includes(keyword)),
     )
-    const knowledge = this.retrieveKnowledge(query)
+    const knowledge = await this.retrieveKnowledge(query)
     const sources = knowledge.length > 0 ? knowledge.map((item) => item.title) : result?.sources ?? []
+    const sourceScores = knowledge.flatMap((item) => (
+      item.score === undefined
+        ? []
+        : [{ title: item.title, score: Number(item.score.toFixed(4)) }]
+    ))
+    const retrievalMethod = knowledge[0]?.retrievalMethod ?? 'none'
 
     if (!result) {
       if (knowledge.length > 0) {
@@ -90,6 +101,9 @@ export class LocalAgentService implements AgentService {
           answer: `Based on the ${primary.title.toLowerCase()}, ${primary.content} I recommend checking the customer details and escalating only if the request falls outside this policy.`,
           confidence: 0.78,
           sources,
+          sourceScores,
+          retrievalMethod,
+          generationProvider: 'local-knowledge',
           shouldEscalate: false,
         }
       }
@@ -99,6 +113,9 @@ export class LocalAgentService implements AgentService {
           'I do not have enough verified business context to answer confidently. I can connect you with a support agent who can investigate this request.',
         confidence: 0.48,
         sources: [],
+        sourceScores: [],
+        retrievalMethod: 'none',
+        generationProvider: 'local-knowledge',
         shouldEscalate: true,
       }
     }
@@ -107,6 +124,9 @@ export class LocalAgentService implements AgentService {
       answer: result.answer,
       confidence: knowledge.length > 0 ? 0.94 : 0.91,
       sources,
+      sourceScores,
+      retrievalMethod,
+      generationProvider: 'local-knowledge',
       shouldEscalate: false,
     }
   }
@@ -117,7 +137,7 @@ export class RemoteMastraAgentService implements AgentService {
   private readonly fallback: AgentService
   private readonly retrieveKnowledge: KnowledgeRetriever
 
-  constructor(endpoint: string, fallback: AgentService, retrieveKnowledge: KnowledgeRetriever = () => []) {
+  constructor(endpoint: string, fallback: AgentService, retrieveKnowledge: KnowledgeRetriever = async () => []) {
     this.endpoint = endpoint
     this.fallback = fallback
     this.retrieveKnowledge = retrieveKnowledge
@@ -125,7 +145,7 @@ export class RemoteMastraAgentService implements AgentService {
 
   async generateResponse(query: string): Promise<AgentResponse> {
     try {
-      const knowledge = this.retrieveKnowledge(query)
+      const knowledge = await this.retrieveKnowledge(query)
       const knowledgeContext = knowledge.length > 0
         ? knowledge.map((item) => `- ${item.title} (${item.category}): ${item.content}`).join('\n')
         : '- No matching knowledge record was found.'
@@ -155,6 +175,13 @@ Answer using only the verified knowledge above. If the knowledge is missing or u
         answer: text,
         confidence: knowledge.length > 0 ? 0.88 : 0.62,
         sources: knowledge.length > 0 ? knowledge.map((item) => item.title) : ['Mastra agent'],
+        sourceScores: knowledge.flatMap((item) => (
+          item.score === undefined
+            ? []
+            : [{ title: item.title, score: Number(item.score.toFixed(4)) }]
+        )),
+        retrievalMethod: knowledge[0]?.retrievalMethod ?? 'none',
+        generationProvider: 'mastra-gemini',
         shouldEscalate: knowledge.length === 0,
       }
     } catch {

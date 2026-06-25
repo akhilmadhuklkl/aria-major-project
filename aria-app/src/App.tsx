@@ -67,6 +67,9 @@ export default function App() {
           conversationId: result.conversationId,
           confidence: result.confidence,
           sources: result.sources,
+          sourceScores: result.sourceScores,
+          retrievalMethod: result.retrievalMethod,
+          generationProvider: result.generationProvider,
         },
       ])
     } catch (error) {

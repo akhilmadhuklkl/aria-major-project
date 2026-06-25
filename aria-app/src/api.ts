@@ -8,6 +8,9 @@ type ChatResponse = {
   answer: string
   confidence: number
   sources: string[]
+  sourceScores: Array<{ title: string; score: number }>
+  retrievalMethod: 'semantic' | 'keyword' | 'none'
+  generationProvider: 'mastra-gemini' | 'local-knowledge'
   shouldEscalate: boolean
 }
 
