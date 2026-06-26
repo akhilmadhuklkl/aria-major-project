@@ -46,9 +46,18 @@ export interface ChatMessage {
   conversationId?: number
   confidence?: number
   sources?: string[]
-  sourceScores?: Array<{ title: string; score: number }>
+  sourceScores?: SourceScore[]
   retrievalMethod?: 'semantic' | 'keyword' | 'none'
   generationProvider?: 'mastra-gemini' | 'local-knowledge'
+}
+
+export interface SourceScore {
+  title: string
+  score: number
+  semanticScore?: number
+  feedbackAdjustment?: number
+  feedbackCount?: number
+  averageQuality?: number
 }
 
 export interface AnalyticsSummary {
@@ -59,5 +68,26 @@ export interface AnalyticsSummary {
   correctionRate: number
   feedbackRecords: number
   topics: TopicData[]
+  learningSignals: LearningSignals
+  strongestSources: LearningSource[]
+  reviewSources: LearningSource[]
+}
+
+export interface LearningSignals {
+  learnedSourceCount: number
+  trackedSourceCount: number
+  agentActionCount: number
+  averageSourceQuality: number
+}
+
+export interface LearningSource {
+  title: string
+  feedbackCount: number
+  averageQuality: number
+  averageRating: number
+  acceptedCount: number
+  editedCount: number
+  rejectedCount: number
+  feedbackAdjustment: number
 }
 

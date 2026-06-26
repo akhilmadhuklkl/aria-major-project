@@ -2,7 +2,7 @@ export type AgentResponse = {
   answer: string
   confidence: number
   sources: string[]
-  sourceScores: Array<{ title: string; score: number }>
+  sourceScores: SourceScore[]
   retrievalMethod: 'semantic' | 'keyword' | 'none'
   generationProvider: 'mastra-gemini' | 'local-knowledge'
   shouldEscalate: boolean
@@ -17,10 +17,23 @@ export type KnowledgeSnippet = {
   category: string
   content: string
   score?: number
+  semanticScore?: number
+  feedbackAdjustment?: number
+  feedbackCount?: number
+  averageQuality?: number
   retrievalMethod?: 'semantic' | 'keyword'
 }
 
 export type KnowledgeRetriever = (query: string) => Promise<KnowledgeSnippet[]>
+
+export type SourceScore = {
+  title: string
+  score: number
+  semanticScore?: number
+  feedbackAdjustment?: number
+  feedbackCount?: number
+  averageQuality?: number
+}
 
 const responses = [
   {
@@ -87,11 +100,7 @@ export class LocalAgentService implements AgentService {
     )
     const knowledge = await this.retrieveKnowledge(query)
     const sources = knowledge.length > 0 ? knowledge.map((item) => item.title) : result?.sources ?? []
-    const sourceScores = knowledge.flatMap((item) => (
-      item.score === undefined
-        ? []
-        : [{ title: item.title, score: Number(item.score.toFixed(4)) }]
-    ))
+    const sourceScores = formatSourceScores(knowledge)
     const retrievalMethod = knowledge[0]?.retrievalMethod ?? 'none'
 
     if (!result) {
@@ -175,11 +184,7 @@ Answer using only the verified knowledge above. If the knowledge is missing or u
         answer: text,
         confidence: knowledge.length > 0 ? 0.88 : 0.62,
         sources: knowledge.length > 0 ? knowledge.map((item) => item.title) : ['Mastra agent'],
-        sourceScores: knowledge.flatMap((item) => (
-          item.score === undefined
-            ? []
-            : [{ title: item.title, score: Number(item.score.toFixed(4)) }]
-        )),
+        sourceScores: formatSourceScores(knowledge),
         retrievalMethod: knowledge[0]?.retrievalMethod ?? 'none',
         generationProvider: 'mastra-gemini',
         shouldEscalate: knowledge.length === 0,
@@ -208,4 +213,25 @@ function extractMastraText(body: Record<string, unknown>) {
   const result = body.result as Record<string, unknown> | undefined
   if (typeof result?.text === 'string') return result.text
   return ''
+}
+
+function formatSourceScores(knowledge: KnowledgeSnippet[]): SourceScore[] {
+  return knowledge.flatMap((item) => {
+    if (item.score === undefined) return []
+
+    return [{
+      title: item.title,
+      score: roundScore(item.score),
+      semanticScore: item.semanticScore === undefined ? undefined : roundScore(item.semanticScore),
+      feedbackAdjustment: item.feedbackAdjustment === undefined
+        ? undefined
+        : roundScore(item.feedbackAdjustment),
+      feedbackCount: item.feedbackCount,
+      averageQuality: item.averageQuality === undefined ? undefined : roundScore(item.averageQuality),
+    }]
+  })
+}
+
+function roundScore(value: number) {
+  return Number(value.toFixed(4))
 }

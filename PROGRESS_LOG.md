@@ -275,4 +275,45 @@ Feedback adaptation milestone:
 - Verified every adjustment remains within the configured bound.
 - Passed 5 of 5 adaptation safety checks.
 - Re-ran semantic regression: 8 of 8 support cases and 3 of 3 unrelated-query rejections passed.
-- Kept live chat on pure semantic ranking until the standalone adaptation layer is reviewed and connected in the next step.
+
+## 26 June 2026
+
+Completed:
+
+- Connected the verified feedback adaptation ranker to the live hybrid retrieval flow.
+- Live semantic matches now carry the original semantic score, feedback adjustment, adjusted score, feedback count, and average quality.
+- Kept feedback influence capped at `+/- 0.03` so feedback can help close matches without overriding clearly stronger semantic relevance.
+- Updated customer chat source evidence to show learned score adjustments only when feedback affects a result.
+- Verified live retriever output for a damaged-product query:
+  - Source: `Damaged product resolution`
+  - Semantic score: `0.4354`
+  - Feedback adjustment: `+0.01125`
+  - Final adjusted score: `0.4467`
+  - Feedback count: `6`
+- Re-ran lint successfully.
+- Re-ran semantic retrieval evaluation successfully: 8 of 8 support cases passed and 3 of 3 unrelated queries were rejected.
+- Re-ran feedback adaptation evaluation successfully: 5 of 5 safety checks passed.
+- Re-ran production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Current status:
+
+- Feedback learning is now connected to the live response path.
+- The main remaining final-phase items are analytics polish, deployment preparation, final screenshots, final report completion, and presentation/demo rehearsal.
+
+Analytics polish milestone:
+
+- Extended the analytics API with feedback-learning signals:
+  - learned source count
+  - tracked source count
+  - agent action count
+  - average source quality
+  - strongest knowledge sources
+  - review-needed knowledge sources
+- Added dashboard metrics for average rating, learning sources, AI acceptance rate, and source quality.
+- Added a learning-source section showing strong feedback signals and sources that need review.
+- Replaced static dashboard insights with data-driven learning-loop summaries.
+- Verified analytics API returns 79 conversations, 17 feedback records, 3 learned sources, 9 agent actions, and 89 average source quality.
+- Verified desktop analytics UI displays learning sources, strong signals, review-needed state, and the refund-policy source with no horizontal overflow.
+- Verified 390px mobile layout displays analytics learning sections with no horizontal overflow.
+- Verified browser console has no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.

@@ -52,8 +52,14 @@ export function ChatHistory({
                     <span>{message.generationProvider === 'mastra-gemini' ? 'Mastra + Gemini' : 'Local fallback'}</span>
                   )}
                   {message.sources?.map((source) => {
-                    const score = message.sourceScores?.find((item) => item.title === source)?.score
-                    return <span key={source}>{source}{score ? ` ${Math.round(score * 100)}%` : ''}</span>
+                    const sourceScore = message.sourceScores?.find((item) => item.title === source)
+                    return (
+                      <span key={source}>
+                        {source}
+                        {sourceScore ? ` ${Math.round(sourceScore.score * 100)}%` : ''}
+                        {formatFeedbackAdjustment(sourceScore?.feedbackAdjustment)}
+                      </span>
+                    )
                   })}
                 </div>
               )}
@@ -82,4 +88,11 @@ export function ChatHistory({
       </div>
     </div>
   )
+}
+
+function formatFeedbackAdjustment(adjustment?: number) {
+  if (!adjustment) return ''
+  const signedAdjustment = Math.round(adjustment * 100)
+  if (signedAdjustment === 0) return ''
+  return ` learned ${signedAdjustment > 0 ? '+' : ''}${signedAdjustment}%`
 }

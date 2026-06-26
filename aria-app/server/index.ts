@@ -3,8 +3,17 @@ import cors from 'cors'
 import express from 'express'
 import { MastraServer } from '@mastra/express'
 import { createAgentService, getAgentProvider } from './agent-service.js'
-import { calculateQualityScore, createKnowledgeDocument, db, inferTopic, listKnowledge, searchKnowledge } from './database.js'
+import {
+  calculateQualityScore,
+  createKnowledgeDocument,
+  db,
+  getKnowledgeSourceFeedbackStats,
+  inferTopic,
+  listKnowledge,
+  searchKnowledge,
+} from './database.js'
 import { getKnowledgeEmbeddingStats } from './database.js'
+import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
 import { mastra } from './mastra/index.js'
 
@@ -293,6 +302,36 @@ app.get('/api/analytics/summary', (_request, response) => {
   const topicRows = db.prepare(`
     SELECT topic, COUNT(*) AS conversations FROM conversations GROUP BY topic ORDER BY conversations DESC
   `).all()
+  const sourceStats = getKnowledgeSourceFeedbackStats()
+  const adaptedSources = sourceStats.map((source) => ({
+    title: source.title,
+    feedbackCount: source.feedbackCount,
+    averageQuality: Math.round(source.averageQuality),
+    averageRating: Number(source.averageRating.toFixed(1)),
+    acceptedCount: source.acceptedCount,
+    editedCount: source.editedCount,
+    rejectedCount: source.rejectedCount,
+    feedbackAdjustment: Number(calculateFeedbackAdjustment(source).toFixed(4)),
+  }))
+  const learnedSourceCount = adaptedSources.filter((source) => source.feedbackAdjustment !== 0).length
+  const strongestSources = adaptedSources
+    .filter((source) => source.feedbackCount > 0)
+    .sort((first, second) => (
+      second.averageQuality - first.averageQuality
+      || second.feedbackCount - first.feedbackCount
+    ))
+    .slice(0, 3)
+  const reviewSources = adaptedSources
+    .filter((source) => source.averageQuality < neutralQualityScore || source.editedCount > 0 || source.rejectedCount > 0)
+    .sort((first, second) => (
+      first.averageQuality - second.averageQuality
+      || second.rejectedCount - first.rejectedCount
+      || second.editedCount - first.editedCount
+    ))
+    .slice(0, 3)
+  const agentActionCount = accepted.count + corrected.count + (
+    db.prepare("SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'rejected'").get() as { count: number }
+  ).count
 
   response.json({
     conversations: conversationCount.count,
@@ -302,6 +341,16 @@ app.get('/api/analytics/summary', (_request, response) => {
     correctionRate: feedbackStats.count ? Math.round((corrected.count / feedbackStats.count) * 100) : 0,
     feedbackRecords: feedbackStats.count,
     topics: topicRows,
+    learningSignals: {
+      learnedSourceCount,
+      trackedSourceCount: adaptedSources.length,
+      agentActionCount,
+      averageSourceQuality: adaptedSources.length
+        ? Math.round(adaptedSources.reduce((total, source) => total + source.averageQuality, 0) / adaptedSources.length)
+        : 0,
+    },
+    strongestSources,
+    reviewSources,
   })
 })
 

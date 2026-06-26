@@ -1,6 +1,7 @@
 import type { KnowledgeDocument } from './database.js'
 import type { KnowledgeRetriever, KnowledgeSnippet } from './agent-service.js'
 import { SemanticKnowledgeRetriever, type SemanticKnowledgeMatch } from './semantic-retrieval.js'
+import { FeedbackAdaptationRanker } from './feedback-adaptation.js'
 
 type KeywordRetriever = (query: string, limit?: number) => Array<KnowledgeDocument & { score?: number }>
 type SemanticRetriever = {
@@ -10,24 +11,33 @@ type SemanticRetriever = {
 
 export class HybridKnowledgeRetriever {
   private readonly semanticRetriever: SemanticRetriever
+  private readonly feedbackRanker: FeedbackAdaptationRanker
   private readonly keywordRetriever: KeywordRetriever
 
   constructor(
     keywordRetriever: KeywordRetriever,
     semanticRetriever: SemanticRetriever = new SemanticKnowledgeRetriever(),
+    feedbackRanker: FeedbackAdaptationRanker = new FeedbackAdaptationRanker(),
   ) {
     this.keywordRetriever = keywordRetriever
     this.semanticRetriever = semanticRetriever
+    this.feedbackRanker = feedbackRanker
   }
 
   retrieve: KnowledgeRetriever = async (query) => {
     try {
       const semanticMatches = await this.semanticRetriever.search(query)
-      return semanticMatches.map((item) => ({
+      const adaptedMatches = this.feedbackRanker.rank(semanticMatches)
+
+      return adaptedMatches.map((item) => ({
         title: item.title,
         category: item.category,
         content: item.content,
-        score: item.similarity,
+        score: item.adjustedScore,
+        semanticScore: item.similarity,
+        feedbackAdjustment: item.feedbackAdjustment,
+        feedbackCount: item.feedbackCount,
+        averageQuality: item.averageQuality,
         retrievalMethod: 'semantic' as const,
       }))
     } catch (error) {

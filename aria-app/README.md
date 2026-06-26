@@ -12,6 +12,7 @@ ARIA is a React, Express, and SQLite prototype that demonstrates how an AI-assis
 - Knowledge-backed local AI fallback for reliable offline demos.
 - Customer rating and agent action feedback capture.
 - Analytics dashboard generated from stored records.
+- Learning-loop analytics for feedback-backed knowledge sources and review-needed sources.
 - Mastra-compatible remote agent adapter through `MASTRA_AGENT_URL`.
 
 ## Run Locally
@@ -95,8 +96,10 @@ Run the adaptation safety evaluation with:
 npm run evaluate:adaptation
 ```
 
-Live chat currently continues to use pure semantic ranking. Connecting the
-verified adaptation ranker to live retrieval is the next step.
+Live chat applies the verified adaptation ranker after semantic retrieval. The
+API response preserves the original semantic score, feedback adjustment, adjusted
+score, feedback count, and average quality so the learning loop can be audited
+during the final demo.
 
 ## Mastra Setup for Final Version
 

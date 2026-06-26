@@ -185,7 +185,34 @@ Validation date: 21 June 2026, 6:23 PM
 | Hard adjustment bound | Passed: every adjustment remained within `+/- 0.03` |
 | Adaptation evaluation | Passed: 5 of 5 safety checks |
 | Semantic regression | Passed: 8 of 8 support cases and 3 of 3 unrelated-query rejections |
-| Live retrieval integration | Pending: standalone adaptation ranker intentionally not connected yet |
+| Live retrieval integration | Passed on 26 June 2026: live hybrid retrieval now ranks by adjusted score |
+
+## Live Feedback Adaptation Validation - 26 June 2026
+
+| Check | Result |
+|---|---|
+| Live retrieval connection | Passed: `HybridKnowledgeRetriever` applies feedback adaptation after semantic retrieval |
+| Score evidence | Passed: source evidence includes adjusted score, semantic score, feedback adjustment, feedback count, and average quality |
+| Live smoke test | Passed: damaged-product query returned `Damaged product resolution` with semantic score `0.4354`, feedback adjustment `+0.01125`, and adjusted score `0.4467` |
+| Retrieval regression | Passed: 8 of 8 support cases and 3 of 3 unrelated-query rejections |
+| Adaptation safety | Passed: 5 of 5 safety checks |
+| Lint | Passed |
+| Production build | Passed with only the existing non-blocking Vite large-chunk warning |
+
+## Analytics Learning-Loop Validation - 26 June 2026
+
+| Check | Result |
+|---|---|
+| Analytics API | Passed: summary returns learning signals, strongest sources, and review-needed sources |
+| Learning data | Passed: 79 conversations, 17 feedback records, 3 learned sources, 9 agent actions, and 89 average source quality |
+| Strong source evidence | Passed: `Refund and return policy`, `Damaged product resolution`, and `Loyalty points adjustment` shown as feedback-backed sources |
+| Review-needed state | Passed: dashboard shows an empty review-needed state when no weak source is flagged |
+| Dynamic insights | Passed: static insights replaced with data-driven feedback and agent-action summaries |
+| Desktop layout | Passed: analytics learning sections render with no horizontal overflow |
+| Mobile layout | Passed: 390px mobile layout renders learning sections with no horizontal overflow |
+| Browser console | Passed: no warnings or errors |
+| Lint | Passed |
+| Production build | Passed with only the existing non-blocking Vite large-chunk warning |
 
 ## Acceptance Criteria
 

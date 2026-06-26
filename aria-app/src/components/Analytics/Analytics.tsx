@@ -2,6 +2,7 @@ import { ChevronDown } from 'lucide-react'
 import { MetricStrip } from './MetricStrip'
 import { ChartsSection } from './ChartsSection'
 import { InsightsSection } from './InsightsSection'
+import { LearningSources } from './LearningSources'
 import type { AnalyticsSummary } from '../../types'
 
 export function Analytics({ summary }: { summary?: AnalyticsSummary }) {
@@ -13,7 +14,8 @@ export function Analytics({ summary }: { summary?: AnalyticsSummary }) {
       </div>
       <MetricStrip summary={summary} />
       <ChartsSection topics={summary?.topics} quality={summary?.averageQuality} />
-      <InsightsSection />
+      <LearningSources strongestSources={summary?.strongestSources} reviewSources={summary?.reviewSources} />
+      <InsightsSection summary={summary} />
     </section>
   )
 }

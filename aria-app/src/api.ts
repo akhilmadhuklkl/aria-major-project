@@ -1,4 +1,4 @@
-import type { AnalyticsSummary, KnowledgeItem, NewKnowledgeItem } from './types'
+import type { AnalyticsSummary, KnowledgeItem, NewKnowledgeItem, SourceScore } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 
@@ -8,7 +8,7 @@ type ChatResponse = {
   answer: string
   confidence: number
   sources: string[]
-  sourceScores: Array<{ title: string; score: number }>
+  sourceScores: SourceScore[]
   retrievalMethod: 'semantic' | 'keyword' | 'none'
   generationProvider: 'mastra-gemini' | 'local-knowledge'
   shouldEscalate: boolean
