@@ -384,3 +384,13 @@ Knowledge base UI polish:
 - Verified 390px mobile layout displays the Knowledge Base and summary cards with no horizontal overflow.
 - Verified browser console has no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Full UI consistency verification:
+
+- Re-ran lint and production build successfully after the completed page-polish pass.
+- Verified the desktop Agent Workspace, Customer Chat, Knowledge Base, and Analytics pages at the default browser size.
+- Confirmed the main responsive layout, navigation, page headers, status badges, data panels, chat panels, knowledge table, analytics metrics, and learning-loop panels render correctly.
+- Verified the same four pages at a 390px mobile viewport.
+- Confirmed there is no page-level horizontal overflow on mobile; the Knowledge Base data table remains contained inside its scrollable table wrapper.
+- Verified browser console logs contain no warnings or errors.
+- Reset the browser viewport back to desktop size after mobile verification.
