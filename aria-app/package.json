@@ -11,6 +11,7 @@
     "index:knowledge": "tsx server/scripts/index-knowledge.ts",
     "evaluate:retrieval": "tsx server/scripts/evaluate-retrieval.ts",
     "evaluate:adaptation": "tsx server/scripts/evaluate-adaptation.ts",
+    "validate:final": "tsx server/scripts/validate-final.ts",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"

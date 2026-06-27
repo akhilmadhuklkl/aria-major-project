@@ -43,6 +43,28 @@ Target submission: 24 July 2026
 | Screenshot checklist | `FINAL_SCREENSHOT_CHECKLIST.md` |
 | Interim content | `INTERIM_REPORT_21CSA699A_ARIA.md` |
 
+## Final-Stage Presentation And Viva Preparation
+
+After the project reaches final completion, combine the important Markdown files
+into one connected preparation guide for presentation, demo explanation, viva
+answers, and possible out-of-syllabus questions.
+
+Source files to combine:
+
+- `INTERIM_REPORT_21CSA699A_ARIA.md`
+- `PROGRESS_LOG.md`
+- `FINAL_TEST_PLAN.md`
+- `DEMO_SCRIPT.md`
+- `DEPLOYMENT_PLAN.md`
+- `FINAL_REPORT_TODO.md`
+- `FINAL_SCREENSHOT_CHECKLIST.md`
+- `PROJECT_PLAN.md`
+
+The combined guide should connect related content across files so it is easy to
+revise the project story, explain implementation decisions, defend testing and
+validation, and answer questions about Mastra, Gemini, semantic retrieval,
+feedback learning, SQLite persistence, deployment, limitations, and future scope.
+
 ## Priority Order
 
 1. Capture screenshots.
@@ -50,4 +72,5 @@ Target submission: 24 July 2026
 3. Add final testing and validation section.
 4. Add results and screenshots.
 5. Decide deployment section wording.
-6. Final proofreading and formatting.
+6. Create combined presentation and viva preparation guide from Markdown sources.
+7. Final proofreading and formatting.

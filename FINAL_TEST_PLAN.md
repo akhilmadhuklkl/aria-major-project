@@ -214,6 +214,27 @@ Validation date: 21 June 2026, 6:23 PM
 | Lint | Passed |
 | Production build | Passed with only the existing non-blocking Vite large-chunk warning |
 
+## Automated Final Validation - 27 June 2026
+
+Command:
+
+```bash
+npm run validate:final
+```
+
+| Check | Result |
+|---|---|
+| Backend health | Passed: `status=operational`, `database=sqlite` |
+| Semantic retrieval metadata | Passed: primary retrieval is semantic with 10 stored embeddings |
+| Knowledge records | Passed: 10 records available |
+| Grounded chat response | Passed: damaged-product query returned `Damaged product resolution` with confidence `0.88` |
+| Semantic source evidence | Passed: semantic method and source-score evidence returned |
+| Customer feedback storage | Passed: 5-star feedback stored |
+| Agent action storage | Passed: accepted action stored |
+| Unrelated-query escalation | Passed: retrieval method `none`, escalation enabled |
+| Analytics learning summary | Passed: conversations, feedback records, and tracked learning sources returned |
+| Overall result | Passed: 9 of 9 checks |
+
 ## Acceptance Criteria
 
 The project is final-demo ready when:

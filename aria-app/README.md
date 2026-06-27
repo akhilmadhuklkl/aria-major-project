@@ -38,7 +38,21 @@ npm run start:server
 npm run index:knowledge
 npm run evaluate:retrieval
 npm run evaluate:adaptation
+npm run validate:final
 ```
+
+## Final Validation
+
+With the backend running locally, run:
+
+```bash
+npm run validate:final
+```
+
+The command checks backend health, semantic retrieval metadata, knowledge
+records, grounded chat generation, source-score evidence, feedback storage,
+agent-action storage, unrelated-query escalation, and analytics learning
+signals. Set `VALIDATION_API_URL` to validate a different backend URL.
 
 ## Local Knowledge Embeddings
 

@@ -317,3 +317,28 @@ Analytics polish milestone:
 - Verified 390px mobile layout displays analytics learning sections with no horizontal overflow.
 - Verified browser console has no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+## 27 June 2026
+
+Completed:
+
+- Added the `npm run validate:final` command for automated final-readiness validation.
+- The validation runner checks:
+  - backend health
+  - semantic retrieval metadata
+  - knowledge records
+  - grounded chat generation
+  - semantic source evidence
+  - customer feedback storage
+  - agent action storage
+  - unrelated-query escalation
+  - analytics learning summary
+- Verified the validation command passes 9 of 9 checks against the local API.
+- Re-ran lint successfully.
+- Re-ran production build successfully with only the existing non-blocking Vite large-chunk warning.
+- Updated the README and final test plan with the new validation workflow.
+
+Current status:
+
+- ARIA now has a repeatable one-command backend validation check for final demo readiness.
+- Remaining non-Mastra items are mainly final report material, screenshots, demo rehearsal, and deployment decisions.
