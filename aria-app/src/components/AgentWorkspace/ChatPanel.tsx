@@ -1,4 +1,4 @@
-import { ChevronDown, MoreHorizontal, Send, Clock3, Edit3 } from 'lucide-react'
+import { ChevronDown, Clock3, Edit3, MoreHorizontal, Send } from 'lucide-react'
 import type { Conversation } from '../../types'
 import { Message } from '../Common/Message'
 
@@ -11,7 +11,7 @@ export function ChatPanel({ selected }: ChatPanelProps) {
     <div className="chat-panel">
       <div className="chat-header">
         <div className={`avatar tone-${selected.id}`}>{selected.initials}</div>
-        <div><h2>{selected.customer}</h2><span>{selected.subject} · Order #AR-20491</span></div>
+        <div><h2>{selected.customer}</h2><span>{selected.subject} | Order #AR-20491</span></div>
         <button className="status-button"><i /> Open <ChevronDown size={15} /></button>
         <button className="icon-button"><MoreHorizontal size={18} /></button>
       </div>

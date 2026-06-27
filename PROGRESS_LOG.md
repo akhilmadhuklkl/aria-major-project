@@ -353,3 +353,13 @@ Customer chat UI polish:
 - Verified the 390px mobile layout has no horizontal overflow and keeps the chat header visible while hiding the side context panel.
 - Verified browser console has no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Agent workspace UI polish:
+
+- Refined the Agent Workspace shell, queue panel, selected conversation rows, chat header, message bubbles, composer, AI assistant panel, source rows, and adaptive-learning note.
+- Corrected the customer chat header separator in the agent conversation panel.
+- Kept the existing agent workflows unchanged: accept, edit/send, regenerate, and reject actions still use the same handlers.
+- Verified desktop Agent Workspace displays the polished shell, `ARIA assistant`, corrected order header, and 3 source rows with no horizontal overflow.
+- Verified 390px mobile layout hides the queue panel, keeps the chat and AI assistant panels available, and has no horizontal overflow.
+- Verified browser console has no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
