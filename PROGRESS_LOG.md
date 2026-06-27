@@ -373,3 +373,14 @@ Analytics UI polish:
 - Verified 390px mobile layout displays the analytics sections with no horizontal overflow.
 - Verified browser console has no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Knowledge base UI polish:
+
+- Refined the Knowledge Base page with a stronger knowledge-module header, source icon, and retrieval-ready status.
+- Polished the search/filter toolbar, add-knowledge form, knowledge table, status tags, and summary cards.
+- Updated table microcopy to connect knowledge records directly to ARIA retrieval grounding.
+- Preserved all existing search, category filter, status filter, and add-knowledge behavior.
+- Verified desktop Knowledge Base displays retrieval-ready status, 10 knowledge rows, grounding-source copy, and 3 summary cards with no horizontal overflow.
+- Verified 390px mobile layout displays the Knowledge Base and summary cards with no horizontal overflow.
+- Verified browser console has no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.

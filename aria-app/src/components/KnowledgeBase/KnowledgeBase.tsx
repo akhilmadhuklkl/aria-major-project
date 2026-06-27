@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Plus, Search, X } from 'lucide-react'
+import { BookOpenCheck, Plus, Search, ShieldCheck, X } from 'lucide-react'
 import type { KnowledgeItem, NewKnowledgeItem } from '../../types'
 import { KnowledgeTable } from './KnowledgeTable'
 import { KnowledgeSummary } from './KnowledgeSummary'
@@ -49,9 +49,13 @@ export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBasePr
   }
 
   return (
-    <section className="page-view">
-      <div className="page-intro">
-        <div><h2>Business knowledge</h2><p>Manage the policies, procedures, and FAQs used to ground ARIA responses.</p></div>
+    <section className="page-view knowledge-view">
+      <div className="page-intro knowledge-intro">
+        <div className="knowledge-title">
+          <div className="knowledge-mark"><BookOpenCheck size={18} /></div>
+          <div><h2>Business knowledge</h2><p>Manage the policies, procedures, and FAQs used to ground ARIA responses.</p></div>
+        </div>
+        <div className="knowledge-status"><ShieldCheck size={14} /> Retrieval ready</div>
         <button className="primary-button" onClick={() => setIsAdding((current) => !current)}>
           {isAdding ? <X size={16} /> : <Plus size={16} />} {isAdding ? 'Close' : 'Add knowledge'}
         </button>

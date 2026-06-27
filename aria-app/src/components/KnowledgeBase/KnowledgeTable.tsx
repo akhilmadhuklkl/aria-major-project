@@ -18,7 +18,7 @@ export function KnowledgeTable({ items }: KnowledgeTableProps) {
           )}
           {items.map((item) => (
             <tr key={item.title}>
-              <td><div className="doc-name"><FileText size={17} /><span><strong>{item.title}</strong><small>Business support knowledge</small></span></div></td>
+              <td><div className="doc-name"><FileText size={17} /><span><strong>{item.title}</strong><small>Grounding source for ARIA retrieval</small></span></div></td>
               <td>{item.category}</td>
               <td><span className={`status-tag ${item.status.toLowerCase()}`}><i /> {item.status}</span></td>
               <td>{item.uses}</td>
