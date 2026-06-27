@@ -1,6 +1,5 @@
-import { Send } from 'lucide-react'
+import { Bot, BrainCircuit, CheckCircle2, Database, Send, ShieldCheck, Sparkles } from 'lucide-react'
 import type { ChatMessage } from '../../types'
-import { Bot } from 'lucide-react'
 import { FeedbackPrompt } from './FeedbackPrompt'
 
 export interface ChatHistoryProps {
@@ -34,7 +33,8 @@ export function ChatHistory({
     <div className="customer-chat">
       <div className="customer-chat-header">
         <div className="ai-icon"><Bot size={18} /></div>
-        <div><h2>ARIA Support</h2><span><i /> Typically replies instantly</span></div>
+        <div><h2>ARIA Support</h2><span><i /> Verified AI support assistant</span></div>
+        <div className="chat-header-status"><ShieldCheck size={14} /> Grounded</div>
       </div>
       <div className="customer-message-list">
         {messages.map((message, index) => (
@@ -44,17 +44,18 @@ export function ChatHistory({
               <p>{message.text}</p>
               {message.from === 'bot' && message.confidence !== undefined && (
                 <div className="response-evidence">
-                  <span>{Math.round(message.confidence * 100)}% confidence</span>
+                  <span className="evidence-chip confidence"><CheckCircle2 size={12} /> {Math.round(message.confidence * 100)}% confidence</span>
                   {message.retrievalMethod && message.retrievalMethod !== 'none' && (
-                    <span>{message.retrievalMethod} retrieval</span>
+                    <span className="evidence-chip retrieval"><BrainCircuit size={12} /> {message.retrievalMethod} retrieval</span>
                   )}
                   {message.generationProvider && (
-                    <span>{message.generationProvider === 'mastra-gemini' ? 'Mastra + Gemini' : 'Local fallback'}</span>
+                    <span className="evidence-chip provider"><Sparkles size={12} /> {message.generationProvider === 'mastra-gemini' ? 'Mastra + Gemini' : 'Local fallback'}</span>
                   )}
                   {message.sources?.map((source) => {
                     const sourceScore = message.sourceScores?.find((item) => item.title === source)
                     return (
-                      <span key={source}>
+                      <span key={source} className="evidence-chip source">
+                        <Database size={12} />
                         {source}
                         {sourceScore ? ` ${Math.round(sourceScore.score * 100)}%` : ''}
                         {formatFeedbackAdjustment(sourceScore?.feedbackAdjustment)}

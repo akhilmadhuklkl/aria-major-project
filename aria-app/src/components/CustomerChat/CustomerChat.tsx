@@ -1,3 +1,5 @@
+import { Activity, BrainCircuit, Database, MessageSquareText } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { ChatMessage } from '../../types'
 import { ChatHistory } from './ChatHistory'
 
@@ -48,14 +50,37 @@ export function CustomerChat({
         error={error}
       />
       <aside className="customer-context">
-        <div><h2>Customer chat prototype</h2><p>This view demonstrates the direct customer experience, feedback collection, and automatic response flow.</p></div>
-        <dl>
-          <div><dt>Conversation state</dt><dd>Active</dd></div>
-          <div><dt>AI mode</dt><dd>{mode}</dd></div>
-          <div><dt>Feedback captured</dt><dd>{feedbackSent ? 'Yes' : 'Pending'}</dd></div>
-          <div><dt>Knowledge sources</dt><dd>{sourceCount} indexed</dd></div>
-        </dl>
+        <div className="customer-context-intro">
+          <h2>Live support channel</h2>
+          <p>Grounded responses, retrieval evidence, and feedback learning are visible in the same customer flow.</p>
+        </div>
+        <div className="context-status-grid">
+          <StatusItem icon={Activity} label="Conversation" value="Active" tone="positive" />
+          <StatusItem icon={BrainCircuit} label="AI mode" value={mode} />
+          <StatusItem icon={MessageSquareText} label="Feedback" value={feedbackSent ? 'Captured' : 'Pending'} tone={feedbackSent ? 'positive' : 'warning'} />
+          <StatusItem icon={Database} label="Sources" value={`${sourceCount} indexed`} />
+        </div>
       </aside>
     </section>
+  )
+}
+
+function StatusItem({
+  icon: Icon,
+  label,
+  value,
+  tone = 'neutral',
+}: {
+  icon: LucideIcon
+  label: string
+  value: string
+  tone?: 'positive' | 'warning' | 'neutral'
+}) {
+  return (
+    <div className={`context-status-item ${tone}`}>
+      <Icon size={15} />
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
   )
 }

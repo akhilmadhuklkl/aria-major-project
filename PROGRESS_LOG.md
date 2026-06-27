@@ -342,3 +342,14 @@ Current status:
 
 - ARIA now has a repeatable one-command backend validation check for final demo readiness.
 - Remaining non-Mastra items are mainly final report material, screenshots, demo rehearsal, and deployment decisions.
+
+Customer chat UI polish:
+
+- Refined the Customer Chat shell with a more polished support-console card, stronger header, and grounded-status badge.
+- Redesigned response evidence chips with separate visual treatment for confidence, semantic retrieval, response provider, and knowledge sources.
+- Improved message bubbles, bot avatar treatment, feedback prompt styling, rating hover/active states, and composer focus state.
+- Reworked the customer side context panel into compact live-status cards for conversation state, AI mode, feedback, and indexed sources.
+- Verified a live support query displays confidence, retrieval method, provider, and `Order delivery FAQ` source evidence with no desktop horizontal overflow.
+- Verified the 390px mobile layout has no horizontal overflow and keeps the chat header visible while hiding the side context panel.
+- Verified browser console has no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
