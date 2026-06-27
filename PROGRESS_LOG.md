@@ -363,3 +363,13 @@ Agent workspace UI polish:
 - Verified 390px mobile layout hides the queue panel, keeps the chat and AI assistant panels available, and has no horizontal overflow.
 - Verified browser console has no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Analytics UI polish:
+
+- Refined the Analytics page with a stronger dashboard header, analytics mark, and learning-loop active status.
+- Polished metric cards, chart panels, learning-source panels, and insight cards with improved borders, spacing, background treatment, and elevation.
+- Preserved the existing analytics data flow and learning-loop summaries without changing API behavior.
+- Verified desktop Analytics displays the learning-loop status, 4 metric cards, 2 chart panels, 2 learning panels, strong signals, and review-needed state with no horizontal overflow.
+- Verified 390px mobile layout displays the analytics sections with no horizontal overflow.
+- Verified browser console has no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
