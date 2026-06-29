@@ -447,3 +447,22 @@ Mastra Platform preparation:
 - Added `MASTRA_PLATFORM_CHECKLIST.md` for the July 1 Mastra Platform continuation.
 - Documented platform setup steps, environment variables, observability checks, fallback path, and final acceptance criteria.
 - Kept secret values as placeholders only.
+
+API documentation:
+
+- Added `aria-app/API_REFERENCE.md` with the complete Express API endpoint list.
+- Documented request bodies, response examples, validation behavior, SQLite side effects, feedback-learning behavior, analytics response shape, environment variables, and final demo API checks.
+- Linked the API reference from the root README and app README so it is easy to find during final report and viva preparation.
+
+Database documentation:
+
+- Added `aria-app/DATABASE_SCHEMA.md` for final-report database design and viva preparation.
+- Documented SQLite tables, relationships, column meanings, seeded support knowledge, semantic embedding storage, feedback quality scoring, retrieval/adaptation rules, and validation commands.
+- Linked the database schema document from the root README and app README.
+
+System workflow documentation:
+
+- Added `aria-app/SYSTEM_WORKFLOWS.md` for final-report system design, implementation, workflow, and demo-flow preparation.
+- Documented customer chat, customer feedback, agent workspace, knowledge base, semantic retrieval, feedback adaptation, analytics, Mastra/Gemini fallback, Help/Settings, theme/layout, and final demo workflows.
+- Added Mermaid diagrams and implementation mappings from UI handlers to API endpoints and SQLite persistence.
+- Linked the workflow document from the root README and app README.

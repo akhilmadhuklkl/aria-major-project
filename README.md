@@ -53,6 +53,15 @@ npm run evaluate:retrieval
 npm run evaluate:adaptation
 ```
 
+## Key Project Documents
+
+- `aria-app/API_REFERENCE.md` documents the Express API endpoints used by the frontend, validation scripts, SQLite persistence, feedback loop, and analytics dashboard.
+- `aria-app/DATABASE_SCHEMA.md` documents the SQLite tables, relationships, semantic embedding storage, and feedback-learning data flow.
+- `aria-app/SYSTEM_WORKFLOWS.md` documents the end-to-end application workflows and final demo flow.
+- `aria-app/MASTRA_PLATFORM_CHECKLIST.md` tracks the Mastra Platform continuation after credits reset.
+- `aria-app/FINAL_TEST_PLAN.md` records final validation coverage.
+- `PROGRESS_LOG.md` records the implementation timeline.
+
 ## Secret Safety
 
 Do not commit `.env`, API keys, local SQLite databases, model caches, `node_modules`, or production build output. These are ignored by Git.
