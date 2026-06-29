@@ -432,3 +432,12 @@ Fixed dashboard shell scrolling:
 - Verified sidebar and topbar remain at viewport top during main content scrolling.
 - Verified no horizontal overflow and no browser console warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Repository documentation and environment safety:
+
+- Added a root `README.md` so the GitHub repository clearly explains the ARIA major project and points to the runnable `aria-app` workspace.
+- Rewrote the app README with current final-phase setup, environment, run, validation, semantic retrieval, feedback adaptation, Mastra, production build, and Git safety instructions.
+- Updated `.env.example` with `VALIDATION_API_URL` and the supported `GOOGLE_API_KEY` alias while keeping all API key values empty.
+- Updated the deployment plan to reflect the current GitHub-backed, local-demo-ready status.
+- Verified `.env`, database files, build output, dependencies, and model cache are ignored by Git.
+- Ran a documentation secret-pattern scan and found no committed real API keys.

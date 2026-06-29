@@ -1,7 +1,7 @@
 # ARIA Deployment Plan
 
 Project: Adaptive Response Intelligence Assistant  
-Current recommended status: local demo-ready, deployment preparation pending
+Current recommended status: local demo-ready, GitHub-backed, deployment decision pending
 
 ## Goal
 
@@ -15,7 +15,7 @@ Deploy ARIA safely without exposing secrets and without breaking the working loc
 | Backend | Express API | Working locally |
 | Database | SQLite | Working locally |
 | AI orchestration | Mastra | Working locally |
-| LLM provider | Google Gemini | Working locally |
+| LLM provider | Google Gemini with local fallback | Configured locally; fallback keeps demos stable |
 
 ## Recommended Deployment Strategy
 
@@ -46,7 +46,7 @@ Never commit `.env`. Configure these only in local `.env` or hosting provider se
 PORT=8787
 ENABLE_MASTRA_SERVER=true
 MASTRA_MODEL=google/gemini-2.5-flash
-GOOGLE_GENERATIVE_AI_API_KEY=secret
+GOOGLE_GENERATIVE_AI_API_KEY=
 MASTRA_AGENT_URL=http://localhost:8787/api/agents/aria-support-agent/generate
 ```
 
@@ -60,12 +60,20 @@ MASTRA_AGENT_URL=http://localhost:8787/api/agents/aria-support-agent/generate
 | SQLite database ignored | Complete |
 | Production build passes | Complete |
 | Lint passes | Complete |
-| Live Gemini/Mastra validation passes | Complete |
-| GitHub initial commit | Pending |
+| Final validation command passes | Complete |
+| GitHub repository published and synced | Complete |
 | Public deployment platform selected | Pending |
 | Production environment variables configured | Pending |
 | Public URL verified | Pending |
 
 ## Recommended Next Action
 
-Create a GitHub backup first. After that, decide whether deployment is required for the final submission or whether the verified local demo is acceptable.
+Keep the local demo as the primary verified submission path. After Mastra Cloud credits reset, complete the Mastra Platform setup and then decide whether a public deployment URL is required for the final submission.
+
+Before any public deployment:
+
+1. Confirm whether the evaluator requires a hosted URL or accepts a local demo.
+2. Re-run `npm run lint`, `npm run build`, and `npm run validate:final`.
+3. Configure secrets only in the hosting provider, never in Git.
+4. Verify the deployed frontend can reach the deployed backend.
+5. Verify chat, feedback, knowledge, analytics, and Mastra/Gemini fallback behavior.

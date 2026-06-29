@@ -2,168 +2,217 @@
 
 Adaptive Response Intelligence Assistant for customer support optimization.
 
-ARIA is a React, Express, and SQLite prototype that demonstrates how an AI-assisted support system can generate grounded responses, collect human feedback, and show performance analytics.
+ARIA is a React, Express, SQLite, Mastra-ready support assistant prototype. It demonstrates how a customer support system can generate grounded responses, store feedback, adapt source ranking, and show operational analytics.
 
-## Current Interim Features
+## Current Features
 
-- Agent workspace for reviewing AI-generated replies.
-- Customer chat connected to the backend API.
-- SQLite persistence for conversations, messages, feedback, and knowledge documents.
-- Knowledge-backed local AI fallback for reliable offline demos.
-- Customer rating and agent action feedback capture.
-- Analytics dashboard generated from stored records.
-- Learning-loop analytics for feedback-backed knowledge sources and review-needed sources.
-- Mastra-compatible remote agent adapter through `MASTRA_AGENT_URL`.
+- React TypeScript frontend with fixed dashboard shell.
+- Agent Workspace for reviewing, editing, accepting, regenerating, and rejecting AI suggestions.
+- Customer Chat connected to the backend API.
+- Knowledge Base for indexed support policies, FAQs, and procedures.
+- Analytics dashboard with response quality, learning signals, source quality, and topic metrics.
+- Help and Settings modals for demo guidance and system status.
+- Light/dark mode toggle with persisted user preference.
+- Express backend API.
+- SQLite persistence for conversations, messages, feedback, agent actions, knowledge records, and embeddings.
+- Semantic retrieval using local MiniLM embeddings through Transformers.js.
+- Feedback adaptation ranker with bounded source-quality adjustment.
+- Mastra-compatible AI endpoint support with local fallback behavior.
+- Gemini provider configuration support for final live LLM generation.
+
+## Prerequisites
+
+- Node.js 22 or newer is recommended because this project uses Node's built-in SQLite support.
+- npm
+- Optional: Google Gemini API key from Google AI Studio
+
+## Environment Setup
+
+Create a local `.env` file from the safe template:
+
+```bash
+copy .env.example .env
+```
+
+Minimum local setup:
+
+```env
+PORT=8787
+```
+
+Optional Gemini and Mastra setup:
+
+```env
+ENABLE_MASTRA_SERVER=true
+MASTRA_MODEL=google/gemini-2.5-flash
+GOOGLE_GENERATIVE_AI_API_KEY=
+MASTRA_AGENT_URL=http://localhost:8787/api/agents/aria-support-agent/generate
+```
+
+Never commit `.env` or real API keys.
 
 ## Run Locally
 
+Install dependencies:
+
 ```bash
 npm install
+```
+
+Start frontend and backend together:
+
+```bash
 npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+Frontend:
 
-Backend health check: `http://localhost:8787/api/health`
+```text
+http://localhost:5173
+```
 
-Interim readiness check: `http://localhost:8787/api/interim-status`
+Backend:
 
-## Scripts
+```text
+http://localhost:8787/api
+```
+
+Health check:
+
+```text
+http://localhost:8787/api/health
+```
+
+## Useful Scripts
 
 ```bash
 npm run dev
-npm run build
-npm run lint
+npm run dev:client
+npm run dev:server
 npm run start:server
 npm run index:knowledge
 npm run evaluate:retrieval
 npm run evaluate:adaptation
 npm run validate:final
+npm run lint
+npm run build
+npm run preview
 ```
 
 ## Final Validation
 
-With the backend running locally, run:
+With the backend running locally, execute:
 
 ```bash
 npm run validate:final
 ```
 
-The command checks backend health, semantic retrieval metadata, knowledge
-records, grounded chat generation, source-score evidence, feedback storage,
-agent-action storage, unrelated-query escalation, and analytics learning
-signals. Set `VALIDATION_API_URL` to validate a different backend URL.
+The final validation checks:
 
-## Local Knowledge Embeddings
+- backend health
+- SQLite database status
+- semantic retrieval metadata
+- knowledge records
+- grounded chat response
+- source evidence
+- customer feedback storage
+- agent action storage
+- unrelated-query escalation
+- analytics learning summary
 
-ARIA uses Transformers.js with `Xenova/all-MiniLM-L6-v2` to generate local
-sentence embeddings without sending knowledge content to another API.
+To validate a different backend URL:
 
-Run the indexer after installing dependencies or changing knowledge records:
+```bash
+set VALIDATION_API_URL=http://localhost:8787/api
+npm run validate:final
+```
+
+## Semantic Retrieval
+
+ARIA uses Transformers.js with `Xenova/all-MiniLM-L6-v2` to generate local sentence embeddings. Indexed knowledge records are stored as normalized 384-dimensional vectors in SQLite.
+
+Index or refresh knowledge embeddings:
 
 ```bash
 npm run index:knowledge
 ```
 
-The command stores one normalized 384-dimensional vector per indexed knowledge
-record in SQLite. Content hashes prevent unchanged records from being embedded
-again. The downloaded model is cached under `.cache/transformers` and is excluded
-from Git.
-
-The live chat flow now uses semantic similarity search as its primary retrieval
-method. Keyword retrieval activates automatically if the local embedding runtime
-fails. Questions below the semantic threshold are not forced through keyword
-matching and are escalated safely.
-
-Evaluate the standalone semantic retriever with paraphrased support questions:
+Evaluate semantic retrieval:
 
 ```bash
 npm run evaluate:retrieval
 ```
 
-The retriever embeds each query, compares it with stored knowledge vectors using
-cosine similarity, ranks the strongest matches, and rejects results below the
-configured similarity threshold. The evaluation command also compares semantic
-results with the existing keyword retriever.
-
-Customer chat responses display and persist the retrieval method, source names,
-semantic similarity scores, and the actual response provider (`Mastra + Gemini`
-or the local knowledge fallback).
+The evaluator tests paraphrased support questions and unrelated questions. Semantic retrieval is the primary retrieval method. Keyword retrieval remains as a fallback if the embedding runtime is unavailable.
 
 ## Feedback Adaptation
 
-ARIA calculates per-source quality statistics from customer ratings and agent
-accept, edit, and reject actions. The standalone adaptation ranker combines
-semantic relevance with a deliberately small feedback adjustment:
+ARIA combines semantic similarity with a bounded feedback adjustment:
 
 ```text
 adjusted score = semantic similarity + feedback adjustment
 ```
 
-Feedback influence is capped at `+/- 0.03` and reduced when only a few feedback
-records exist. This allows reliable evidence to reorder close semantic matches
-without allowing popularity or one rating to override a clearly relevant source.
+Feedback adjustment is capped at `+/- 0.03`, so customer ratings and agent actions can reorder close matches without overriding clearly relevant knowledge.
 
-Run the adaptation safety evaluation with:
+Evaluate adaptation safety:
 
 ```bash
 npm run evaluate:adaptation
 ```
 
-Live chat applies the verified adaptation ranker after semantic retrieval. The
-API response preserves the original semantic score, feedback adjustment, adjusted
-score, feedback count, and average quality so the learning loop can be audited
-during the final demo.
+## Mastra Integration
 
-## Mastra Setup for Final Version
+The frontend always calls ARIA's backend API. This means the UI does not need to change when switching between local fallback generation, local Mastra, or a future Mastra Cloud endpoint.
 
-The current build works without a live LLM key. To expose local Mastra endpoints
-from the Express server, set:
+Local Mastra server mode:
 
-```bash
+```env
 ENABLE_MASTRA_SERVER=true
 MASTRA_MODEL=google/gemini-2.5-flash
-GOOGLE_GENERATIVE_AI_API_KEY=your-provider-key
+GOOGLE_GENERATIVE_AI_API_KEY=
 ```
 
-Then start the server and call:
+Mastra-compatible endpoint:
 
-```bash
+```text
 POST http://localhost:8787/api/agents/aria-support-agent/generate
 ```
 
-Confirm the backend can see the AI configuration at:
+Connect chat generation to a Mastra endpoint:
 
-```bash
-GET http://localhost:8787/api/health
-```
-
-The response should include:
-
-```json
-{
-  "llmProvider": "google-gemini",
-  "llmProviderConfigured": true
-}
-```
-
-If the provider key is missing, Mastra starts correctly but response generation
-returns an API-key error. The default local knowledge agent remains available
-for demos while credentials or Mastra Cloud credits are pending.
-
-To connect the ARIA chat API to a Mastra endpoint, set:
-
-```bash
+```env
 MASTRA_AGENT_URL=http://localhost:8787/api/agents/aria-support-agent/generate
 ```
 
-The local fallback agent remains active if Mastra is unavailable. To connect a
-cloud Mastra agent later:
+If Mastra or Gemini is unavailable, ARIA keeps the demo stable through the local knowledge fallback.
 
-1. Initialize Mastra in the project.
-2. Create an ARIA support agent.
-3. Expose the agent generate endpoint.
-4. Set `MASTRA_AGENT_URL` to that endpoint.
-5. Restart the Express API.
+## Production Build
 
-The frontend does not need to change because it already calls `/api/chat`.
+Create a production build:
+
+```bash
+npm run build
+```
+
+Preview the built frontend:
+
+```bash
+npm run preview
+```
+
+The backend must still be running separately for API-backed workflows.
+
+## Git Safety
+
+The following must stay uncommitted:
+
+- `.env`
+- API keys
+- `node_modules/`
+- `dist/`
+- SQLite database files under `data/`
+- `.cache/`
+- logs
+
+Use `.env.example` for documentation and `.env` for local secrets.
