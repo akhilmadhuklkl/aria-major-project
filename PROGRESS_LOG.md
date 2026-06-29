@@ -394,3 +394,41 @@ Full UI consistency verification:
 - Confirmed there is no page-level horizontal overflow on mobile; the Knowledge Base data table remains contained inside its scrollable table wrapper.
 - Verified browser console logs contain no warnings or errors.
 - Reset the browser viewport back to desktop size after mobile verification.
+
+Help and settings sidebar completion:
+
+- Converted the Help and Settings sidebar buttons from visual placeholders into functional read-only modals.
+- Added a Help modal with a concise final-demo flow covering Customer Chat, Agent Workspace, Knowledge Base, and Analytics.
+- Added a Settings modal showing backend API, SQLite database, semantic retrieval, Mastra Cloud readiness, and learning-summary status.
+- Added Escape-key close, backdrop close, and close-button behavior.
+- Verified Help and Settings open correctly on desktop.
+- Verified the Settings modal opens at a 390px mobile viewport with no horizontal overflow.
+- Verified browser console logs contain no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Light and dark mode UX:
+
+- Added a circular theme toggle next to the ARIA logo and title in the left sidebar.
+- Used moon and sun icons to reflect the current theme state.
+- Added persisted light/dark mode state so the selected theme remains after page refresh.
+- Added dark-mode styling for the app shell, sidebar, topbar, workspace panels, chat surfaces, knowledge base, analytics dashboard, modals, buttons, tables, and status elements.
+- Verified the toggle changes the rendered theme from light to dark and updates its accessible label.
+- Verified the selected theme persists after reload.
+- Verified the theme toggle remains available at a 390px mobile viewport with no horizontal overflow.
+- Re-audited Agent Workspace, Customer Chat, Knowledge Base, Analytics, Help, and Settings in dark mode to confirm cards, widgets, panels, tables, and modals render with dark-mode surfaces.
+- Fixed the Agent Workspace status button so it no longer retains a light-mode background in dark mode.
+- Fixed Customer Chat neutral context cards so AI mode and source-count widgets no longer retain light-mode backgrounds in dark mode.
+- Fixed Analytics chart tooltip and chart grid styling so hover states also render correctly in dark mode.
+- Verified browser console logs contain no warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+Fixed dashboard shell scrolling:
+
+- Updated the app shell to use a fixed-height dashboard layout.
+- Kept the left sidebar and top horizontal bar fixed in place.
+- Made the main content area the only page-level scroll container.
+- Added a section-change scroll reset so each navigation target opens from the top of the main content area.
+- Verified the browser window remains at `scrollY = 0` while `.main-content` scrolls internally.
+- Verified sidebar and topbar remain at viewport top during main content scrolling.
+- Verified no horizontal overflow and no browser console warnings or errors.
+- Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.

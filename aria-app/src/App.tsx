@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem } from './types'
 import { conversations as conversationsData, knowledgeItems } from './constants'
 import { api } from './api'
+import { AppModal } from './components/Layout/AppModal'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Topbar } from './components/Layout/Topbar'
 import { AgentWorkspace } from './components/AgentWorkspace/AgentWorkspace'
@@ -12,6 +13,11 @@ import './App.css'
 
 export default function App() {
   const [view, setView] = useState<View>('inbox')
+  const [activeModal, setActiveModal] = useState<'help' | 'settings'>()
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light'
+    return window.localStorage.getItem('aria-theme') === 'dark' ? 'dark' : 'light'
+  })
   const [selectedConversation, setSelectedConversation] = useState<Conversation>(conversationsData[0])
   const [suggestion, setSuggestion] = useState(
     'Hi Maya, I checked your refund request and it was approved on June 6. Most banks post refunds within 5-7 business days, so it should appear by June 15. If it is not visible after that date, reply here and we will trace it with the payment provider.',
@@ -43,6 +49,25 @@ export default function App() {
         // Keep the seeded prototype usable when the API is offline.
       })
   }, [])
+
+  useEffect(() => {
+    if (!activeModal) return
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setActiveModal(undefined)
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [activeModal])
+
+  useEffect(() => {
+    window.localStorage.setItem('aria-theme', theme)
+  }, [theme])
+
+  useEffect(() => {
+    document.querySelector('.main-content')?.scrollTo({ top: 0 })
+  }, [view])
 
   async function sendCustomerMessage() {
     const message = customerInput.trim()
@@ -135,8 +160,15 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <Sidebar view={view} onChange={setView} />
+    <div className="app-shell" data-theme={theme}>
+      <Sidebar
+        view={view}
+        onChange={setView}
+        onHelp={() => setActiveModal('help')}
+        onSettings={() => setActiveModal('settings')}
+        theme={theme}
+        onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+      />
       <div className="app-body">
         <Topbar view={view} />
         <main className="main-content">
@@ -175,6 +207,14 @@ export default function App() {
           {view === 'analytics' && <Analytics summary={analytics} />}
         </main>
       </div>
+      {activeModal && (
+        <AppModal
+          type={activeModal}
+          knowledgeItems={remoteKnowledge}
+          analytics={analytics}
+          onClose={() => setActiveModal(undefined)}
+        />
+      )}
     </div>
   )
 }
