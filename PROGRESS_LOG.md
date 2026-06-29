@@ -441,3 +441,9 @@ Repository documentation and environment safety:
 - Updated the deployment plan to reflect the current GitHub-backed, local-demo-ready status.
 - Verified `.env`, database files, build output, dependencies, and model cache are ignored by Git.
 - Ran a documentation secret-pattern scan and found no committed real API keys.
+
+Mastra Platform preparation:
+
+- Added `MASTRA_PLATFORM_CHECKLIST.md` for the July 1 Mastra Platform continuation.
+- Documented platform setup steps, environment variables, observability checks, fallback path, and final acceptance criteria.
+- Kept secret values as placeholders only.
