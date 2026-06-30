@@ -133,6 +133,43 @@ Validation date: 21 June 2026, 6:23 PM
 | Deployment validation | Pending | Complete after choosing and configuring the deployment platform |
 | Final report screenshots | Pending | Capture after UI walkthrough and deployment decision |
 
+## Mastra Cloud Deployment Validation - 30 June 2026
+
+| Check | Result |
+|---|---|
+| GitHub link | Passed: Mastra Platform linked to `akhilmadhuklkl/aria-major-project` |
+| Monorepo setup | Passed: project root and deploy path set to `aria-app` |
+| Mastra Server deployment | Passed: Server target is Active and Ready |
+| Mastra Studio deployment | Passed: Studio target is Active and Ready |
+| Server URL | Passed: `https://major-project.server.mastra.cloud` opens the Mastra Server page |
+| Agent registry | Passed: `/api/agents` lists `aria-support-agent` / `ARIA Support Agent` |
+| Local backend connection | Passed: `/api/health` reports `agentProvider=mastra-remote` |
+| Customer chat flow | Passed: refund query returned a grounded response through `Mastra + Gemini` |
+| Source evidence | Passed: response showed `Refund and return policy`, semantic retrieval, and learned adjustment |
+| Metrics | Passed: Mastra Metrics recorded `1` agent run and `419` total tokens |
+| Traces | Passed: trace showed successful `ARIA Support Agent` execution with `gemini-2.5-flash` |
+| Logs | Passed with note: one non-blocking license validation warning appeared while the agent run still succeeded |
+
+Validated cloud generate endpoint:
+
+```text
+https://major-project.server.mastra.cloud/api/agents/aria-support-agent/generate
+```
+
+Validated customer prompt:
+
+```text
+How long does a refund take after approval?
+```
+
+Observed UI evidence:
+
+- `88% confidence`
+- `semantic retrieval`
+- `Mastra + Gemini`
+- `Refund and return policy`
+- learned feedback adjustment displayed in the source evidence chip
+
 ## 24 June 2026 Completion-Pass Evidence
 
 | Check | Result |

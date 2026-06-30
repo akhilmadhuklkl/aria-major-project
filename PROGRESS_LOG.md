@@ -476,3 +476,19 @@ Mastra Platform deployment fix:
 - Kept `server/mastra` as compatibility re-exports.
 - Added `.mastra/` ignore rules for Git and ESLint so local Mastra build output is not committed or linted.
 - Verified the React production build passes and lint passes after the Mastra entrypoint change.
+
+Mastra Cloud deployment and observability:
+
+- Linked Mastra Platform project `Major Project` to GitHub repository `akhilmadhuklkl/aria-major-project`.
+- Configured the repository as a monorepo with project root and deploy path set to `aria-app`.
+- Added Mastra Platform environment variables for Gemini and model selection.
+- Resolved Mastra Cloud build issues by adding `src/mastra/index.ts` and top-level `tsconfig.json` module-resolution settings.
+- Deployed both Mastra Server and Mastra Studio successfully.
+- Confirmed server URL `https://major-project.server.mastra.cloud` is live.
+- Confirmed `/api/agents` exposes agent id `aria-support-agent`.
+- Connected local ARIA backend to `https://major-project.server.mastra.cloud/api/agents/aria-support-agent/generate`.
+- Verified `/api/health` reports `agentProvider=mastra-remote`.
+- Verified Customer Chat response for refund query shows `Mastra + Gemini`, semantic retrieval, confidence, source evidence, and feedback-learning adjustment.
+- Verified Mastra Metrics recorded 1 agent run and 419 tokens.
+- Verified Mastra Traces recorded a successful `ARIA Support Agent` execution using `gemini-2.5-flash`.
+- Observed one non-blocking Mastra license-validation log warning while the agent run still completed successfully.

@@ -12,8 +12,12 @@ Target date: July 1, 2026 or later
 | Mastra project named `Major Project` created | Complete |
 | Local ARIA backend has Mastra-compatible endpoint support | Complete |
 | Gemini API key configured locally | Complete |
-| Mastra Cloud credits | Pending reset |
-| Cloud deployment/observability | Pending |
+| Mastra Cloud credits | Available for deployment |
+| GitHub repository linked | Complete |
+| Mastra Server deployment | Complete |
+| Mastra Studio deployment | Complete |
+| Cloud deployment/observability | Complete |
+| Local ARIA backend connected to Mastra Cloud | Complete |
 
 ## Before Opening Mastra Platform
 
@@ -117,6 +121,37 @@ Expected result:
 ```text
 ARIA can demonstrate Mastra-connected response generation or show local fallback behavior clearly if cloud limits block the request.
 ```
+
+## Verified Mastra Cloud Setup - 30 June 2026
+
+| Item | Verified Value |
+|---|---|
+| GitHub repository | `akhilmadhuklkl/aria-major-project` |
+| Project root | `aria-app` |
+| Deploy path | `aria-app` |
+| Branch | `master` |
+| Server URL | `https://major-project.server.mastra.cloud` |
+| Agent id | `aria-support-agent` |
+| Generate endpoint | `https://major-project.server.mastra.cloud/api/agents/aria-support-agent/generate` |
+| Model | `google/gemini-2.5-flash` |
+| Local backend health | `agentProvider=mastra-remote` |
+
+Verified customer query:
+
+```text
+How long does a refund take after approval?
+```
+
+Observed result:
+
+- ARIA returned the approved refund answer with `5-7 business days`.
+- UI showed `88% confidence`.
+- UI showed `semantic retrieval`.
+- UI showed `Mastra + Gemini`.
+- UI showed `Refund and return policy` source evidence with learned feedback adjustment.
+- Mastra Metrics showed `1` agent run and `419` total tokens.
+- Mastra Traces showed successful `ARIA Support Agent` execution using `gemini-2.5-flash`.
+- Mastra Logs showed one non-blocking license validation warning, but the agent run completed successfully.
 
 ## Fallback Plan
 
