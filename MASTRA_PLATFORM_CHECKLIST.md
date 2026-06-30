@@ -83,6 +83,25 @@ npm run validate:final
 - provider path
 - no frontend console errors
 
+## Mastra Cloud Build Notes
+
+Mastra Platform builds expect the Mastra project entrypoint at:
+
+```text
+aria-app/src/mastra/index.ts
+```
+
+ARIA keeps the Express API under `aria-app/server`, but the Mastra agent configuration is shared through `aria-app/src/mastra` so both Mastra Cloud and the local Express adapter can use the same agent definition.
+
+If a deploy fails with:
+
+```text
+npx --yes mastra build failed
+Missing required file ... src/mastra/index.ts
+```
+
+push the latest code containing `src/mastra/index.ts`, then redeploy from the Mastra Platform Deploys page.
+
 ## Observability Checks
 
 After sending a test request:

@@ -466,3 +466,13 @@ System workflow documentation:
 - Documented customer chat, customer feedback, agent workspace, knowledge base, semantic retrieval, feedback adaptation, analytics, Mastra/Gemini fallback, Help/Settings, theme/layout, and final demo workflows.
 - Added Mermaid diagrams and implementation mappings from UI handlers to API endpoints and SQLite persistence.
 - Linked the workflow document from the root README and app README.
+
+Mastra Platform deployment fix:
+
+- Investigated the first Mastra Platform deployment failure after linking GitHub.
+- Confirmed the platform build failed because `npx --yes mastra build` expects `aria-app/src/mastra/index.ts`.
+- Added the expected `src/mastra` entrypoint and ARIA support agent definition.
+- Updated the Express backend to import the shared Mastra configuration.
+- Kept `server/mastra` as compatibility re-exports.
+- Added `.mastra/` ignore rules for Git and ESLint so local Mastra build output is not committed or linted.
+- Verified the React production build passes and lint passes after the Mastra entrypoint change.

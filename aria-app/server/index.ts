@@ -15,7 +15,7 @@ import {
 import { getKnowledgeEmbeddingStats } from './database.js'
 import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
-import { mastra } from './mastra/index.js'
+import { mastra } from '../src/mastra/index.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
