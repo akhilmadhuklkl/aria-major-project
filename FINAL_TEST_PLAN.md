@@ -170,6 +170,36 @@ Observed UI evidence:
 - `Refund and return policy`
 - learned feedback adjustment displayed in the source evidence chip
 
+## July 1 Final Verification Refresh
+
+| Check | Result |
+|---|---|
+| Git status | Passed: local `master` is clean and synced with `origin/master` |
+| Mastra Cloud health | Passed: `https://major-project.server.mastra.cloud/health` returned `success=true` |
+| Local backend health | Passed: `status=operational`, `agentProvider=mastra-remote`, `database=sqlite` |
+| Provider configuration | Passed: Gemini provider is configured and Mastra model is `google/gemini-2.5-flash` |
+| Semantic retrieval metadata | Passed: primary retrieval is semantic with 10 stored 384-dimensional embeddings |
+| Automated final validation | Passed: `npm run validate:final` completed 9 of 9 checks |
+| Grounded chat response | Passed: damaged-product validation returned source evidence and confidence `0.94` |
+| Customer feedback storage | Passed: 5-star feedback stored for conversation `95` |
+| Agent action storage | Passed: accepted action stored for conversation `95` |
+| Unrelated-query escalation | Passed: unrelated weather query returned no sources and `shouldEscalate=true` |
+| Analytics learning summary | Passed: 96 conversations, 32 feedback records, and 3 tracked learning sources |
+| Retrieval regression | Passed: 8 of 8 support prompts and 3 of 3 unrelated-query rejections |
+| Feedback adaptation regression | Passed: 5 of 5 bounded-learning safety checks |
+| Lint | Passed |
+| Production build | Passed with only the existing non-blocking Vite large-chunk warning |
+
+Command evidence:
+
+```bash
+npm run validate:final
+npm run evaluate:retrieval
+npm run evaluate:adaptation
+npm run lint
+npm run build
+```
+
 ## 24 June 2026 Completion-Pass Evidence
 
 | Check | Result |
