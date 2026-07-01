@@ -406,19 +406,12 @@ Help and settings sidebar completion:
 - Verified browser console logs contain no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
 
-Light and dark mode UX:
+Single-theme UI decision:
 
-- Added a circular theme toggle next to the ARIA logo and title in the left sidebar.
-- Used moon and sun icons to reflect the current theme state.
-- Added persisted light/dark mode state so the selected theme remains after page refresh.
-- Added dark-mode styling for the app shell, sidebar, topbar, workspace panels, chat surfaces, knowledge base, analytics dashboard, modals, buttons, tables, and status elements.
-- Verified the toggle changes the rendered theme from light to dark and updates its accessible label.
-- Verified the selected theme persists after reload.
-- Verified the theme toggle remains available at a 390px mobile viewport with no horizontal overflow.
-- Re-audited Agent Workspace, Customer Chat, Knowledge Base, Analytics, Help, and Settings in dark mode to confirm cards, widgets, panels, tables, and modals render with dark-mode surfaces.
-- Fixed the Agent Workspace status button so it no longer retains a light-mode background in dark mode.
-- Fixed Customer Chat neutral context cards so AI mode and source-count widgets no longer retain light-mode backgrounds in dark mode.
-- Fixed Analytics chart tooltip and chart grid styling so hover states also render correctly in dark mode.
+- Removed the previous color-mode button from the left sidebar.
+- Removed persisted theme state and localStorage usage.
+- Removed dark-mode-specific CSS selectors and kept ARIA as a single light-mode interface.
+- Kept the fixed dashboard shell, sidebar, topbar, page layouts, cards, modals, tables, and responsive behavior intact.
 - Verified browser console logs contain no warnings or errors.
 - Re-ran lint and production build successfully with only the existing non-blocking Vite large-chunk warning.
 

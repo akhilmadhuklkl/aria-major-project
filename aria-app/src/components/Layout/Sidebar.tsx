@@ -1,4 +1,4 @@
-import { CircleHelp, Moon, MoreHorizontal, Settings, Sparkles, Sun } from 'lucide-react'
+import { CircleHelp, MoreHorizontal, Settings, Sparkles } from 'lucide-react'
 import type { View } from '../../types'
 import { navItems } from '../../constants'
 
@@ -7,26 +7,14 @@ export interface SidebarProps {
   onChange: (view: View) => void
   onHelp: () => void
   onSettings: () => void
-  theme: 'light' | 'dark'
-  onToggleTheme: () => void
 }
 
-export function Sidebar({ view, onChange, onHelp, onSettings, theme, onToggleTheme }: SidebarProps) {
-  const isDark = theme === 'dark'
-
+export function Sidebar({ view, onChange, onHelp, onSettings }: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="brand" aria-label="ARIA">
         <div className="brand-mark"><Sparkles size={19} /></div>
         <span>ARIA</span>
-        <button
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="theme-toggle"
-          onClick={onToggleTheme}
-          title={isDark ? 'Light mode' : 'Dark mode'}
-        >
-          {isDark ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
       </div>
       <nav className="nav-list">
         {navItems.map((item) => {

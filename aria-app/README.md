@@ -12,7 +12,7 @@ ARIA is a React, Express, SQLite, Mastra-ready support assistant prototype. It d
 - Knowledge Base for indexed support policies, FAQs, and procedures.
 - Analytics dashboard with response quality, learning signals, source quality, and topic metrics.
 - Help and Settings modals for demo guidance and system status.
-- Light/dark mode toggle with persisted user preference.
+- Single light-mode dashboard interface for a consistent final demo experience.
 - Express backend API.
 - SQLite persistence for conversations, messages, feedback, agent actions, knowledge records, and embeddings.
 - Semantic retrieval using local MiniLM embeddings through Transformers.js.

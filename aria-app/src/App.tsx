@@ -14,10 +14,6 @@ import './App.css'
 export default function App() {
   const [view, setView] = useState<View>('inbox')
   const [activeModal, setActiveModal] = useState<'help' | 'settings'>()
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window === 'undefined') return 'light'
-    return window.localStorage.getItem('aria-theme') === 'dark' ? 'dark' : 'light'
-  })
   const [selectedConversation, setSelectedConversation] = useState<Conversation>(conversationsData[0])
   const [suggestion, setSuggestion] = useState(
     'Hi Maya, I checked your refund request and it was approved on June 6. Most banks post refunds within 5-7 business days, so it should appear by June 15. If it is not visible after that date, reply here and we will trace it with the payment provider.',
@@ -60,10 +56,6 @@ export default function App() {
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [activeModal])
-
-  useEffect(() => {
-    window.localStorage.setItem('aria-theme', theme)
-  }, [theme])
 
   useEffect(() => {
     document.querySelector('.main-content')?.scrollTo({ top: 0 })
@@ -160,14 +152,12 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme}>
+    <div className="app-shell">
       <Sidebar
         view={view}
         onChange={setView}
         onHelp={() => setActiveModal('help')}
         onSettings={() => setActiveModal('settings')}
-        theme={theme}
-        onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
       />
       <div className="app-body">
         <Topbar view={view} />

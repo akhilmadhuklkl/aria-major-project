@@ -300,18 +300,16 @@ flowchart LR
 
 These modals help during presentation because they summarize system readiness without requiring the evaluator to inspect code.
 
-## Theme and Layout Workflow
+## Layout Workflow
 
-ARIA includes a fixed dashboard shell and persistent light/dark mode.
+ARIA uses a fixed light-mode dashboard shell for a consistent final demo and report screenshot experience.
 
 ```mermaid
 flowchart TD
-  A["User toggles theme"] --> B["React theme state"]
-  B --> C["data-theme attribute"]
-  C --> D["CSS theme variables"]
-  D --> E["All pages render light or dark surfaces"]
-  B --> F["localStorage preference"]
-  F --> G["Theme restored after reload"]
+  A["User selects a sidebar section"] --> B["React view state"]
+  B --> C["Topbar title updates"]
+  B --> D["Main content area renders selected module"]
+  D --> E["Main content scroll resets to top"]
 ```
 
 Layout behavior:
