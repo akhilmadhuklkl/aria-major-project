@@ -298,14 +298,31 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 
 @media (max-width: 700px) {
+  .app-shell, .app-body, .main-content { max-width: 100vw; overflow-x: hidden; }
   .sidebar { width: 52px; flex-basis: 52px; padding-inline: 6px; }
   .brand-mark { width: 34px; }
   .topbar { height: 62px; padding: 0 12px; }
   .topbar .search-box { display: none; }
-  .main-content { padding: 7px; }
-  .workspace-grid { grid-template-columns: 1fr; }
+  .main-content { padding: 7px 8px 7px 7px; }
+  .workspace-grid { width: 100%; max-width: calc(100vw - 68px); min-width: 0; grid-template-columns: minmax(0, 1fr); }
   .queue-panel { display: none; }
+  .chat-panel, .ai-panel { max-width: 100%; overflow-x: hidden; }
   .chat-panel { border-right: 0; min-height: 620px; }
+  .chat-header { grid-template-columns: 34px minmax(0, 1fr); }
+  .chat-header > .icon-button { display: none; }
+  .chat-header h2, .chat-header span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chat-header .status-button { display: none; }
+  .chat-history { padding-inline: 12px; overflow-x: hidden; }
+  .message { max-width: min(100%, 280px); }
+  .message.agent { margin-left: 0; }
+  .message p { overflow-wrap: anywhere; }
+  .system-event { max-width: 100%; overflow-wrap: anywhere; }
+  .composer { margin-inline: 10px; }
+  .composer-footer { gap: 8px; }
+  .composer-footer span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .composer-footer .primary-button { width: 42px; flex: 0 0 42px; padding: 0; font-size: 0; }
+  .ai-actions { grid-template-columns: 1fr; }
+  .ai-panel textarea, .source-row, .learning-note { max-width: 100%; }
   .customer-layout { grid-template-columns: 1fr; padding-top: 0; }
   .customer-context { display: none; }
   .feedback-prompt { flex-wrap: wrap; }
