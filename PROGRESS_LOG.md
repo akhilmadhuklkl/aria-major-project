@@ -104,7 +104,7 @@ Current status:
 - Mastra generation endpoint is structurally available; live response generation is blocked only by missing provider credentials.
 - Gemini is the recommended provider for the next integration step because it has a free developer tier.
 - Live Gemini integration is now working locally through Mastra.
-- Mastra Cloud deployment remains pending until platform credits reset on 01 July 2026.
+- Mastra Cloud deployment was completed after the July 1 credit reset, and the live server is now connected to the local ARIA backend.
 
 ## 21 June 2026
 

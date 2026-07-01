@@ -15,7 +15,7 @@ export function AIPanel({ suggestion, setSuggestion, status, onAction, regenerat
     <aside className="ai-panel">
       <div className="ai-title">
         <div><div className="ai-icon"><Sparkles size={17} /></div><div><h2>ARIA assistant</h2><span>Mastra agent preview</span></div></div>
-        <button className="icon-button"><MoreHorizontal size={17} /></button>
+        <button className="icon-button" aria-label="ARIA assistant options"><MoreHorizontal size={17} /></button>
       </div>
       <div className="confidence-row">
         <div><span>Response confidence</span><strong>92%</strong></div>
@@ -23,7 +23,7 @@ export function AIPanel({ suggestion, setSuggestion, status, onAction, regenerat
       </div>
       <div className="suggestion-block">
         <div className="section-label"><span>Suggested response</span><small>{status}</small></div>
-        <textarea value={suggestion} disabled={actionLoading} onChange={(event) => setSuggestion(event.target.value)} />
+        <textarea aria-label="Suggested response" value={suggestion} disabled={actionLoading} onChange={(event) => setSuggestion(event.target.value)} />
       </div>
       <div className="sources-block">
         <div className="section-label"><span>Sources used</span><small>3 references</small></div>

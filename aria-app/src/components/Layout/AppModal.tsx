@@ -53,7 +53,7 @@ export function AppModal({ type, knowledgeItems, analytics, onClose }: AppModalP
               <p>{type === 'help' ? 'Quick guide for presenting ARIA clearly.' : 'Read-only project configuration status.'}</p>
             </div>
           </div>
-          <button className="icon-button" onClick={onClose} title="Close"><X size={16} /></button>
+          <button className="icon-button" onClick={onClose} aria-label="Close modal" title="Close"><X size={16} /></button>
         </header>
 
         {type === 'help' ? (
@@ -86,7 +86,7 @@ export function AppModal({ type, knowledgeItems, analytics, onClose }: AppModalP
               <StatusTile icon={Server} label="Backend API" value="Operational" detail="Express API with health, chat, feedback, agent actions, analytics, and knowledge routes." />
               <StatusTile icon={Database} label="Database" value="SQLite active" detail={`${totalSources} knowledge records, ${indexedSources} indexed for retrieval.`} />
               <StatusTile icon={BrainCircuit} label="Retrieval" value="Semantic ready" detail="Stored embeddings and source scoring are enabled for grounded answer generation." />
-              <StatusTile icon={PlugZap} label="Mastra Cloud" value="Pending cloud setup" detail="Local Mastra-ready pathway is available; cloud observability can continue after platform credits reset." />
+              <StatusTile icon={PlugZap} label="Mastra Cloud" value="Cloud connected" detail="Mastra Cloud server and Studio are deployed, with Gemini-backed agent responses and observability traces verified." />
             </div>
             <div className="modal-callout muted">
               <ChartColumn size={18} />

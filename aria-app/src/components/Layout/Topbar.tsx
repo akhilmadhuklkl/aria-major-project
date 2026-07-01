@@ -22,9 +22,9 @@ export function Topbar({ view }: TopbarProps) {
       <div className="topbar-actions">
         <label className="search-box">
           <Search size={17} />
-          <input placeholder="Search conversations" />
+          <input aria-label="Search conversations" placeholder="Search conversations" />
         </label>
-        <button className="icon-button" title="Notifications"><Bell size={18} /><i /></button>
+        <button className="icon-button" aria-label="Notifications" title="Notifications"><Bell size={18} /><i /></button>
       </div>
     </header>
   )

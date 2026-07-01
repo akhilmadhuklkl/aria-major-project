@@ -9,7 +9,7 @@ export function KnowledgeTable({ items }: KnowledgeTableProps) {
   return (
     <div className="table-wrap">
       <table>
-        <thead><tr><th>Document</th><th>Category</th><th>Status</th><th>Used in responses</th><th>Last updated</th><th /></tr></thead>
+        <thead><tr><th>Document</th><th>Category</th><th>Status</th><th>Used in responses</th><th>Last updated</th><th aria-label="Row actions" /></tr></thead>
         <tbody>
           {items.length === 0 && (
             <tr>
@@ -23,7 +23,7 @@ export function KnowledgeTable({ items }: KnowledgeTableProps) {
               <td><span className={`status-tag ${item.status.toLowerCase()}`}><i /> {item.status}</span></td>
               <td>{item.uses}</td>
               <td>{item.updated}</td>
-              <td><button className="icon-button"><MoreHorizontal size={17} /></button></td>
+              <td><button className="icon-button" aria-label={`Actions for ${item.title}`}><MoreHorizontal size={17} /></button></td>
             </tr>
           ))}
         </tbody>

@@ -83,9 +83,10 @@ export function ChatHistory({
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === 'Enter' && send()}
+          aria-label="Customer support question"
           placeholder="Ask a support question..."
         />
-        <button className="primary-button icon-only" disabled={loading || !input.trim()} onClick={send} title="Send message"><Send size={17} /></button>
+        <button className="primary-button icon-only" disabled={loading || !input.trim()} onClick={send} aria-label="Send message" title="Send message"><Send size={17} /></button>
       </div>
     </div>
   )

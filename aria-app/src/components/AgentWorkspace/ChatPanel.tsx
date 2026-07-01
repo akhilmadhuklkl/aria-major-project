@@ -12,8 +12,8 @@ export function ChatPanel({ selected }: ChatPanelProps) {
       <div className="chat-header">
         <div className={`avatar tone-${selected.id}`}>{selected.initials}</div>
         <div><h2>{selected.customer}</h2><span>{selected.subject} | Order #AR-20491</span></div>
-        <button className="status-button"><i /> Open <ChevronDown size={15} /></button>
-        <button className="icon-button"><MoreHorizontal size={18} /></button>
+        <button className="status-button" aria-label="Conversation status: open"><i /> Open <ChevronDown size={15} /></button>
+        <button className="icon-button" aria-label="Conversation options"><MoreHorizontal size={18} /></button>
       </div>
       <div className="chat-history">
         <div className="date-divider"><span>Today</span></div>
@@ -27,9 +27,9 @@ export function ChatPanel({ selected }: ChatPanelProps) {
         <Message from="customer" time="10:15 AM">Thank you. I need to know when I should expect it.</Message>
       </div>
       <div className="composer">
-        <div className="composer-tools"><button><Edit3 size={15} /> Reply</button><button>Internal note</button></div>
-        <textarea placeholder="Write a reply or use the ARIA suggestion..." />
-        <div className="composer-footer"><span>Customer will receive this reply</span><button className="primary-button"><Send size={15} /> Send</button></div>
+        <div className="composer-tools"><button aria-label="Reply mode"><Edit3 size={15} /> Reply</button><button aria-label="Internal note mode">Internal note</button></div>
+        <textarea aria-label="Agent reply" placeholder="Write a reply or use the ARIA suggestion..." />
+        <div className="composer-footer"><span>Customer will receive this reply</span><button className="primary-button" aria-label="Send agent reply"><Send size={15} /> Send</button></div>
       </div>
     </div>
   )
