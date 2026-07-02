@@ -240,6 +240,40 @@ Production build chunk evidence:
 | Icons vendor bundle | 9.42 kB |
 | Rolldown runtime | 0.69 kB |
 
+## July 2 Manual API and Frontend Walkthrough
+
+Manual API walkthrough:
+
+| Check | Result |
+|---|---|
+| `GET /api/health` | Passed: backend operational, SQLite active, Mastra remote connected, 10 embeddings loaded |
+| `GET /api/interim-status` | Passed: milestone/status endpoint responded correctly |
+| `GET /api/knowledge` | Passed: 10 knowledge records available |
+| `POST /api/chat` | Passed: conversation `115` created using semantic retrieval and `Mastra + Gemini` |
+| `GET /api/conversations` | Passed: persisted conversation list returned |
+| `GET /api/conversations/:id/messages` | Passed: conversation `115` returned stored user and assistant messages |
+| `POST /api/feedback` | Passed: 5-star feedback stored with quality score `100` |
+| `POST /api/agent-actions` | Passed: accepted action stored with quality score `75` |
+| `GET /api/analytics/summary` | Passed: analytics reported 115 conversations, 52 feedback records, and 3 tracked sources |
+| Invalid empty chat request | Passed: returned `400 Bad Request` |
+| Invalid knowledge payload | Passed: returned `400 Bad Request` |
+
+Frontend browser walkthrough:
+
+| Area | Result |
+|---|---|
+| Agent Workspace | Passed: queue, selected conversation, AI panel, and Accept/Regenerate/Reject controls visible |
+| Customer Chat | Passed: refund query returned grounded response with `88% confidence`, semantic retrieval, `Mastra + Gemini`, and `Refund and return policy` |
+| Customer feedback | Passed: 5-star rating submitted and UI changed to captured feedback |
+| Knowledge | Passed: records visible, search/filter behavior verified, Add Knowledge panel opens with title/category/status/content fields |
+| Analytics | Passed: metrics, charts, learning signals, source quality, and review-needed panel visible |
+| Help modal | Passed: demo help content opens and closes correctly |
+| Settings modal | Passed: backend, SQLite, semantic retrieval, Mastra Cloud, and learning summary visible |
+| Fixed dashboard shell | Passed: sidebar/topbar remain fixed while main content scrolls internally |
+| Desktop console | Passed: no warnings or errors |
+| Mobile layout | Passed: Agent Workspace, Customer Chat, Knowledge, and Analytics render at 390 x 844 with no horizontal overflow |
+| Mobile console | Passed: no warnings or errors |
+
 ## 24 June 2026 Completion-Pass Evidence
 
 | Check | Result |

@@ -542,3 +542,24 @@ Current status:
 - Build, lint, Mastra-connected backend validation, semantic retrieval, feedback adaptation, and final validation are all passing.
 - The previous Vite production warning is resolved.
 - Remaining final-phase work is mainly final report content, screenshots, demo rehearsal, viva preparation, and optional public frontend deployment.
+
+Manual API and frontend walkthrough:
+
+- Completed a manual API endpoint walkthrough against the local backend.
+- Verified `GET /api/health` reports operational status, SQLite persistence, Mastra remote agent path, Gemini configuration, and 10 semantic embeddings.
+- Verified `GET /api/interim-status`, `GET /api/knowledge`, `GET /api/conversations`, and `GET /api/conversations/:id/messages`.
+- Verified `POST /api/chat` created conversation `115` through semantic retrieval and the Mastra/Gemini provider path.
+- Verified `POST /api/feedback` stores a 5-star customer rating with quality score `100`.
+- Verified `POST /api/agent-actions` stores an accepted agent action with quality score `75`.
+- Verified `GET /api/analytics/summary` updated to 115 conversations, 52 feedback records, and 3 tracked sources after the API walkthrough.
+- Verified invalid empty chat and invalid knowledge payloads correctly return `400 Bad Request`.
+- Completed a production-preview frontend browser walkthrough.
+- Verified Agent Workspace shows queue, selected conversation, AI panel, and Accept, Regenerate, and Reject controls.
+- Verified Customer Chat returns a grounded refund answer with `88% confidence`, semantic retrieval, `Mastra + Gemini`, and `Refund and return policy` source evidence.
+- Verified customer feedback submission changes the UI to captured feedback.
+- Verified Knowledge page records, search/filter behavior, and Add Knowledge panel fields.
+- Verified Analytics dashboard metrics, charts, learning signals, source quality, and review-needed panel.
+- Verified Help and Settings modals open correctly and show demo/system status information.
+- Verified the fixed dashboard shell keeps sidebar and topbar fixed while the main content scrolls internally.
+- Verified desktop and 390 x 844 mobile layouts have no horizontal overflow.
+- Verified browser console reported no warnings or errors during the walkthrough.
