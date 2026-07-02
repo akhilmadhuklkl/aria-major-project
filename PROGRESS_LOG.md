@@ -510,3 +510,35 @@ Final verification refresh:
 - Re-ran feedback adaptation evaluation successfully: 5 of 5 bounded-learning safety checks passed.
 - Re-ran lint successfully.
 - Re-ran production build successfully with only the existing non-blocking Vite large-chunk warning.
+
+## 02 July 2026
+
+Final validation and build-warning cleanup:
+
+- Removed the Vite production large-chunk warning by adding Rolldown code-splitting groups for React, charts, icons, and AI-related vendor modules.
+- Re-ran production build successfully with no Vite chunk-size warning.
+- Confirmed output chunks are split into the app bundle, React vendor bundle, charts vendor bundle, icons vendor bundle, and Rolldown runtime.
+- Re-ran lint successfully.
+- Re-ran local backend health validation with Mastra Cloud connected.
+- Confirmed backend health reports `agentProvider=mastra-remote`, `database=sqlite`, semantic retrieval, 10 stored embeddings, Gemini configuration, and model `google/gemini-2.5-flash`.
+- Re-ran `npm run validate:final` successfully.
+- Passed 9 of 9 final validation checks:
+  - backend health
+  - semantic retrieval metadata
+  - knowledge records
+  - grounded chat response
+  - semantic source evidence
+  - customer feedback storage
+  - agent action storage
+  - unrelated-query escalation
+  - analytics learning summary
+- Latest validation stored 5-star feedback and an accepted agent action for conversation `113`.
+- Analytics validation reported 114 conversations, 48 feedback records, and 3 tracked learning sources.
+- Re-ran semantic retrieval evaluation successfully: 8 of 8 support prompts passed and 3 of 3 unrelated prompts were rejected.
+- Re-ran feedback adaptation evaluation successfully: 5 of 5 bounded-learning safety checks passed.
+
+Current status:
+
+- Build, lint, Mastra-connected backend validation, semantic retrieval, feedback adaptation, and final validation are all passing.
+- The previous Vite production warning is resolved.
+- Remaining final-phase work is mainly final report content, screenshots, demo rehearsal, viva preparation, and optional public frontend deployment.

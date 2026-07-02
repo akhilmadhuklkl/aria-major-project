@@ -200,6 +200,46 @@ npm run lint
 npm run build
 ```
 
+## July 2 Final Validation Refresh
+
+| Check | Result |
+|---|---|
+| Git status before validation | Passed: working tree was clean before the validation pass |
+| Vite production warning | Resolved: production chunks are split using Rolldown `codeSplitting.groups` |
+| Production build | Passed with no Vite large-chunk warning |
+| Lint | Passed |
+| Local backend health | Passed: `status=operational`, `agentProvider=mastra-remote`, `database=sqlite` |
+| Provider configuration | Passed: Gemini provider is configured and Mastra model is `google/gemini-2.5-flash` |
+| Semantic retrieval metadata | Passed: primary retrieval is semantic with 10 stored 384-dimensional embeddings |
+| Automated final validation | Passed: `npm run validate:final` completed 9 of 9 checks |
+| Grounded chat response | Passed: damaged-product validation returned source `Damaged product resolution` with confidence `0.88` |
+| Customer feedback storage | Passed: 5-star feedback stored for conversation `113` |
+| Agent action storage | Passed: accepted action stored for conversation `113` |
+| Unrelated-query escalation | Passed: unrelated weather query returned retrieval method `none` and `shouldEscalate=true` |
+| Analytics learning summary | Passed: 114 conversations, 48 feedback records, and 3 tracked learning sources |
+| Retrieval regression | Passed: 8 of 8 support prompts and 3 of 3 unrelated-query rejections |
+| Feedback adaptation regression | Passed: 5 of 5 bounded-learning safety checks |
+
+Command evidence:
+
+```bash
+npm run build
+npm run lint
+npm run validate:final
+npm run evaluate:retrieval
+npm run evaluate:adaptation
+```
+
+Production build chunk evidence:
+
+| Output chunk | Approximate size |
+|---|---:|
+| App bundle | 36.93 kB |
+| React vendor bundle | 189.64 kB |
+| Charts vendor bundle | 360.47 kB |
+| Icons vendor bundle | 9.42 kB |
+| Rolldown runtime | 0.69 kB |
+
 ## 24 June 2026 Completion-Pass Evidence
 
 | Check | Result |
