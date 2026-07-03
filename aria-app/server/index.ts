@@ -1,7 +1,6 @@
 import './env.js'
 import cors from 'cors'
 import express from 'express'
-import { MastraServer } from '@mastra/express'
 import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
@@ -15,14 +14,14 @@ import {
 import { getKnowledgeEmbeddingStats } from './database.js'
 import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
-import { mastra } from '../src/mastra/index.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
 const hybridRetriever = new HybridKnowledgeRetriever(searchKnowledge)
 const agent = createAgentService(hybridRetriever.retrieve)
 const mastraModel = process.env.MASTRA_MODEL ?? 'google/gemini-2.5-flash'
-const mastraServerEnabled = process.env.ENABLE_MASTRA_SERVER === 'true'
+const hasRemoteMastraAgent = Boolean(process.env.MASTRA_AGENT_URL?.trim())
+const mastraServerEnabled = process.env.ENABLE_MASTRA_SERVER === 'true' && !hasRemoteMastraAgent
 const llmProvider = mastraModel.startsWith('google/')
   ? 'google-gemini'
   : mastraModel.startsWith('openai/')
@@ -33,6 +32,10 @@ app.use(cors())
 app.use(express.json())
 
 if (mastraServerEnabled) {
+  const [{ MastraServer }, { mastra }] = await Promise.all([
+    import('@mastra/express'),
+    import('../src/mastra/index.js'),
+  ])
   const mastraServer = new MastraServer({ app, mastra })
   await mastraServer.init()
 }
