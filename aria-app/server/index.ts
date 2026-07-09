@@ -28,6 +28,45 @@ const llmProvider = mastraModel.startsWith('google/')
     ? 'openai'
     : 'configured-model'
 
+function getLlmProviderConfigured() {
+  if (llmProvider === 'google-gemini') {
+    return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim())
+  }
+
+  if (llmProvider === 'openai') {
+    return Boolean(process.env.OPENAI_API_KEY?.trim())
+  }
+
+  return Boolean(
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim()
+    || process.env.GOOGLE_API_KEY?.trim()
+    || process.env.OPENAI_API_KEY?.trim(),
+  )
+}
+
+function getHealthSnapshot() {
+  const embeddingStats = getKnowledgeEmbeddingStats()
+
+  return {
+    service: 'ARIA API',
+    status: 'operational',
+    agentProvider: getAgentProvider(),
+    database: 'sqlite',
+    mastraReady: true,
+    mastraServerEnabled,
+    mastraModel,
+    llmProvider,
+    llmProviderConfigured: getLlmProviderConfigured(),
+    retrieval: {
+      primary: 'semantic',
+      fallback: 'keyword',
+      embeddingModel: 'Xenova/all-MiniLM-L6-v2',
+      storedEmbeddings: embeddingStats.count,
+      dimensions: embeddingStats.maximumDimensions,
+    },
+  }
+}
+
 app.use(cors())
 app.use(express.json())
 
@@ -41,33 +80,44 @@ if (mastraServerEnabled) {
 }
 
 app.get('/api/health', (_request, response) => {
-  const embeddingStats = getKnowledgeEmbeddingStats()
-  const llmProviderConfigured = llmProvider === 'google-gemini'
-    ? Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim())
-    : llmProvider === 'openai'
-      ? Boolean(process.env.OPENAI_API_KEY?.trim())
-      : Boolean(
-        process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim()
-        || process.env.GOOGLE_API_KEY?.trim()
-        || process.env.OPENAI_API_KEY?.trim(),
-      )
+  response.json(getHealthSnapshot())
+})
+
+app.get('/api/system-status', (_request, response) => {
+  const health = getHealthSnapshot()
+  const knowledge = listKnowledge()
+  const indexedKnowledge = knowledge.filter((item) => item.status === 'indexed').length
+  const conversationCount = db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }
+  const feedbackCount = db.prepare('SELECT COUNT(*) AS count FROM feedback').get() as { count: number }
+  const sourceStats = getKnowledgeSourceFeedbackStats()
 
   response.json({
-    service: 'ARIA API',
-    status: 'operational',
-    agentProvider: getAgentProvider(),
-    database: 'sqlite',
-    mastraReady: true,
-    mastraServerEnabled,
-    mastraModel,
-    llmProvider,
-    llmProviderConfigured,
-    retrieval: {
-      primary: 'semantic',
-      fallback: 'keyword',
-      embeddingModel: 'Xenova/all-MiniLM-L6-v2',
-      storedEmbeddings: embeddingStats.count,
-      dimensions: embeddingStats.maximumDimensions,
+    generatedAt: new Date().toISOString(),
+    backend: {
+      service: health.service,
+      status: health.status,
+      apiBase: `http://127.0.0.1:${port}/api`,
+    },
+    database: {
+      engine: health.database,
+      status: 'active',
+      conversations: conversationCount.count,
+      feedbackRecords: feedbackCount.count,
+      knowledgeRecords: knowledge.length,
+      indexedKnowledgeRecords: indexedKnowledge,
+    },
+    retrieval: health.retrieval,
+    ai: {
+      agentProvider: health.agentProvider,
+      mastraReady: health.mastraReady,
+      mastraServerEnabled: health.mastraServerEnabled,
+      model: health.mastraModel,
+      llmProvider: health.llmProvider,
+      providerConfigured: health.llmProviderConfigured,
+    },
+    learning: {
+      trackedSources: sourceStats.length,
+      learnedSources: sourceStats.filter((source) => calculateFeedbackAdjustment(source) !== 0).length,
     },
   })
 })

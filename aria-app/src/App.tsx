@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem } from './types'
+import type { View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
 import { conversations as conversationsData, knowledgeItems } from './constants'
 import { api } from './api'
 import { AppModal } from './components/Layout/AppModal'
@@ -34,17 +34,26 @@ export default function App() {
   const [knowledgeQuery, setKnowledgeQuery] = useState('')
   const [remoteKnowledge, setRemoteKnowledge] = useState<KnowledgeItem[]>(knowledgeItems)
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
+  const [systemStatus, setSystemStatus] = useState<SystemStatus>()
 
   useEffect(() => {
-    void Promise.all([api.getKnowledge(), api.getAnalytics()])
-      .then(([knowledge, summary]) => {
-        setRemoteKnowledge(knowledge)
-        setAnalytics(summary)
-      })
-      .catch(() => {
-        // Keep the seeded prototype usable when the API is offline.
+    void Promise.allSettled([api.getKnowledge(), api.getAnalytics(), api.getSystemStatus()])
+      .then(([knowledgeResult, analyticsResult, statusResult]) => {
+        if (knowledgeResult.status === 'fulfilled') setRemoteKnowledge(knowledgeResult.value)
+        if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
+        if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
       })
   }, [])
+
+  useEffect(() => {
+    if (activeModal !== 'settings') return
+
+    void api.getSystemStatus()
+      .then(setSystemStatus)
+      .catch(() => {
+        // Existing settings values remain visible if the API is temporarily unavailable.
+      })
+  }, [activeModal])
 
   useEffect(() => {
     if (!activeModal) return
@@ -202,6 +211,7 @@ export default function App() {
           type={activeModal}
           knowledgeItems={remoteKnowledge}
           analytics={analytics}
+          systemStatus={systemStatus}
           onClose={() => setActiveModal(undefined)}
         />
       )}

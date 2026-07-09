@@ -91,3 +91,39 @@ export interface LearningSource {
   feedbackAdjustment: number
 }
 
+export interface SystemStatus {
+  generatedAt: string
+  backend: {
+    service: string
+    status: string
+    apiBase: string
+  }
+  database: {
+    engine: string
+    status: string
+    conversations: number
+    feedbackRecords: number
+    knowledgeRecords: number
+    indexedKnowledgeRecords: number
+  }
+  retrieval: {
+    primary: string
+    fallback: string
+    embeddingModel: string
+    storedEmbeddings: number
+    dimensions: number
+  }
+  ai: {
+    agentProvider: string
+    mastraReady: boolean
+    mastraServerEnabled: boolean
+    model: string
+    llmProvider: string
+    providerConfigured: boolean
+  }
+  learning: {
+    trackedSources: number
+    learnedSources: number
+  }
+}
+

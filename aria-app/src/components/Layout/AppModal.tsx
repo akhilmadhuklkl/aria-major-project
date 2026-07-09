@@ -1,5 +1,6 @@
 import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, PlugZap, Server, Settings, X } from 'lucide-react'
-import type { AnalyticsSummary, KnowledgeItem } from '../../types'
+import type { LucideIcon } from 'lucide-react'
+import type { AnalyticsSummary, KnowledgeItem, SystemStatus } from '../../types'
 
 type ModalType = 'help' | 'settings'
 
@@ -7,6 +8,7 @@ interface AppModalProps {
   type: ModalType
   knowledgeItems: KnowledgeItem[]
   analytics?: AnalyticsSummary
+  systemStatus?: SystemStatus
   onClose: () => void
 }
 
@@ -33,9 +35,21 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
+  const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
+  const databaseStatus = systemStatus
+    ? `${systemStatus.database.engine.toUpperCase()} ${systemStatus.database.status}`
+    : 'SQLite active'
+  const retrievalStatus = systemStatus
+    ? `${systemStatus.retrieval.primary} ready`
+    : 'Semantic ready'
+  const aiStatus = systemStatus?.ai.agentProvider === 'mastra-remote'
+    ? 'Cloud connected'
+    : systemStatus?.ai.mastraReady
+      ? 'Mastra ready'
+      : 'Checking'
 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
@@ -83,17 +97,47 @@ export function AppModal({ type, knowledgeItems, analytics, onClose }: AppModalP
         ) : (
           <div className="modal-section">
             <div className="settings-grid">
-              <StatusTile icon={Server} label="Backend API" value="Operational" detail="Express API with health, chat, feedback, agent actions, analytics, and knowledge routes." />
-              <StatusTile icon={Database} label="Database" value="SQLite active" detail={`${totalSources} knowledge records, ${indexedSources} indexed for retrieval.`} />
-              <StatusTile icon={BrainCircuit} label="Retrieval" value="Semantic ready" detail="Stored embeddings and source scoring are enabled for grounded answer generation." />
-              <StatusTile icon={PlugZap} label="Mastra Cloud" value="Cloud connected" detail="Mastra Cloud server and Studio are deployed, with Gemini-backed agent responses and observability traces verified." />
+              <StatusTile
+                icon={Server}
+                label="Backend API"
+                value={backendStatus}
+                detail={systemStatus
+                  ? `${systemStatus.backend.service} is serving ${systemStatus.backend.apiBase}.`
+                  : 'Express API with health, chat, feedback, agent actions, analytics, and knowledge routes.'}
+              />
+              <StatusTile
+                icon={Database}
+                label="Database"
+                value={databaseStatus}
+                detail={systemStatus
+                  ? `${systemStatus.database.knowledgeRecords} knowledge records, ${systemStatus.database.indexedKnowledgeRecords} indexed, ${systemStatus.database.conversations} conversations, ${systemStatus.database.feedbackRecords} feedback records.`
+                  : `${totalSources} knowledge records, ${indexedSources} indexed for retrieval.`}
+              />
+              <StatusTile
+                icon={BrainCircuit}
+                label="Retrieval"
+                value={retrievalStatus}
+                detail={systemStatus
+                  ? `${systemStatus.retrieval.storedEmbeddings} embeddings stored with ${systemStatus.retrieval.dimensions} dimensions; ${systemStatus.retrieval.fallback} fallback remains available.`
+                  : 'Stored embeddings and source scoring are enabled for grounded answer generation.'}
+              />
+              <StatusTile
+                icon={PlugZap}
+                label="Mastra Cloud"
+                value={aiStatus}
+                detail={systemStatus
+                  ? `${systemStatus.ai.llmProvider} using ${systemStatus.ai.model}; provider key ${systemStatus.ai.providerConfigured ? 'configured' : 'not configured'}.`
+                  : 'Mastra Cloud server and Studio are deployed, with Gemini-backed agent responses and observability traces verified.'}
+              />
             </div>
             <div className="modal-callout muted">
               <ChartColumn size={18} />
               <div>
                 <strong>Learning summary</strong>
                 <span>
-                  {analytics
+                  {systemStatus
+                    ? `${systemStatus.learning.learnedSources} learned sources from ${systemStatus.learning.trackedSources} tracked sources, with ${systemStatus.database.feedbackRecords} feedback records captured.`
+                    : analytics
                     ? `${analytics.conversations} conversations, ${analytics.feedbackRecords} feedback records, ${analytics.learningSignals.trackedSourceCount} tracked sources.`
                     : 'Analytics will load from the backend when the API is available.'}
                 </span>
@@ -107,7 +151,7 @@ export function AppModal({ type, knowledgeItems, analytics, onClose }: AppModalP
 }
 
 interface StatusTileProps {
-  icon: typeof Server
+  icon: LucideIcon
   label: string
   value: string
   detail: string
