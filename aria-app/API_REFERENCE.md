@@ -37,6 +37,7 @@ flowchart LR
 | Method | Endpoint | Purpose | Used By |
 | --- | --- | --- | --- |
 | GET | `/health` | Checks API, SQLite, retrieval, Mastra, and provider-key status. | Setup checks, final validation |
+| GET | `/system-status` | Returns live system, database, retrieval, AI, and learning-loop status for the Settings modal. | Settings modal, demo proof |
 | GET | `/interim-status` | Returns interim milestone readiness and final pending items. | Report/demo evidence |
 | POST | `/chat` | Creates or continues a conversation and generates an assistant response. | Customer Chat |
 | GET | `/conversations` | Lists persisted support conversations. | Agent Workspace |
@@ -108,6 +109,73 @@ Example response:
   }
 }
 ```
+
+## GET /system-status
+
+Returns a consolidated read-only status snapshot used by the Settings modal. This endpoint is useful during demo and viva because it proves the frontend is not showing only static text; it is reading live backend, database, retrieval, AI, and learning-loop status.
+
+Example:
+
+```powershell
+curl http://localhost:8787/api/system-status
+```
+
+Response fields:
+
+| Field | Meaning |
+| --- | --- |
+| `generatedAt` | Timestamp when the status snapshot was created. |
+| `backend` | API service name, operational state, and local API base URL. |
+| `database` | SQLite engine status, conversation count, feedback count, and knowledge count. |
+| `retrieval` | Semantic retrieval mode, fallback mode, embedding model, stored embedding count, and vector dimensions. |
+| `ai` | Active agent provider, Mastra readiness, configured model, provider name, and whether the provider key exists. |
+| `learning` | Number of tracked knowledge sources and sources affected by feedback learning. |
+
+Example response:
+
+```json
+{
+  "generatedAt": "2026-07-09T16:20:00.121Z",
+  "backend": {
+    "service": "ARIA API",
+    "status": "operational",
+    "apiBase": "http://127.0.0.1:8787/api"
+  },
+  "database": {
+    "engine": "sqlite",
+    "status": "active",
+    "conversations": 124,
+    "feedbackRecords": 60,
+    "knowledgeRecords": 10,
+    "indexedKnowledgeRecords": 10
+  },
+  "retrieval": {
+    "primary": "semantic",
+    "fallback": "keyword",
+    "embeddingModel": "Xenova/all-MiniLM-L6-v2",
+    "storedEmbeddings": 10,
+    "dimensions": 384
+  },
+  "ai": {
+    "agentProvider": "mastra-remote",
+    "mastraReady": true,
+    "mastraServerEnabled": false,
+    "model": "google/gemini-2.5-flash",
+    "llmProvider": "google-gemini",
+    "providerConfigured": true
+  },
+  "learning": {
+    "trackedSources": 3,
+    "learnedSources": 3
+  }
+}
+```
+
+Security behavior:
+
+- The endpoint does not expose API keys.
+- It only reports whether a provider key is configured.
+- It is safe to show during demo because it proves integration without leaking secrets.
 
 ## GET /interim-status
 
@@ -463,6 +531,37 @@ Response:
 | `GOOGLE_API_KEY` | No | Supported Gemini key alias. Keep only in `.env`. |
 | `OPENAI_API_KEY` | No | Optional OpenAI provider key. Keep only in `.env`. |
 | `VALIDATION_API_URL` | No | API URL used by the validation script. |
+
+## Endpoint Verification Checklist
+
+Use this table before the final demo to confirm that each backend area is working. The same table can also help answer viva questions about testing and validation.
+
+| Step | Endpoint or Command | Expected Result | What It Proves |
+| --- | --- | --- | --- |
+| 1 | `GET /health` | `status` is `operational`, database is `sqlite`, retrieval is `semantic`. | Backend, SQLite connection, and retrieval metadata are active. |
+| 2 | `GET /system-status` | Shows backend, database, retrieval, AI, and learning fields. | Settings modal uses live backend status instead of static content. |
+| 3 | `GET /knowledge` | Returns the seeded support knowledge records. | Knowledge base persistence and retrieval source data are available. |
+| 4 | `POST /chat` with a refund, product, billing, or delivery question. | Returns an answer, confidence score, source list, source scores, and `retrievalMethod`. | Customer chat, semantic retrieval, source grounding, and AI response generation work together. |
+| 5 | `POST /chat` with an unrelated question. | Returns safe escalation with `retrievalMethod: "none"` and `shouldEscalate: true`. | The system avoids unsupported hallucinated answers. |
+| 6 | `POST /feedback` after a chat response. | Creates a feedback record with a quality score. | Customer rating feedback is persisted. |
+| 7 | `POST /agent-actions` with `accepted`, `edited`, or `rejected`. | Creates an agent-action feedback record. | Agent review decisions are stored as learning signals. |
+| 8 | `GET /analytics/summary` | Shows conversations, feedback records, learning signals, source quality, and topics. | Dashboard metrics are calculated from persisted records. |
+| 9 | `npm run evaluate:retrieval` | All retrieval prompts pass. | Semantic retrieval returns correct business sources and rejects unrelated prompts. |
+| 10 | `npm run evaluate:adaptation` | All adaptation checks pass. | Feedback learning improves source ranking without unsafe behavior. |
+| 11 | `npm run validate:final` | All final validation checks pass. | End-to-end API, persistence, retrieval, feedback, and analytics are verified. |
+
+## Demo Explanation Points
+
+- The frontend never calls Gemini or SQLite directly; it calls the Express API.
+- The Express API owns persistence, retrieval, feedback learning, and Mastra routing.
+- SQLite stores conversations, messages, feedback, and knowledge records.
+- Semantic retrieval finds the most relevant business knowledge before answering.
+- The response includes source evidence, confidence, retrieval method, and generation provider.
+- Customer ratings and agent actions are converted into quality signals.
+- Analytics is calculated from stored records, not hard-coded dashboard values.
+- The Settings modal reads `/system-status` to prove live backend integration.
+- Mastra Cloud is used as the deployed agent layer, with Gemini as the configured model provider.
+- The local fallback keeps the demo stable if provider quota or network access is unavailable.
 
 ## Final Demo Validation
 
