@@ -1,0 +1,121 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 3.4: Database Schema Overview</title>
+  <desc id="desc">Black and white database schema diagram for ARIA SQLite database showing conversations, messages, feedback, knowledge documents, and knowledge embeddings with key relationships.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111111"/>
+    </marker>
+    <style>
+      .page { fill: #ffffff; }
+      .table { fill: #ffffff; stroke: #111111; stroke-width: 2.2; rx: 10; }
+      .header { fill: #ffffff; stroke: #111111; stroke-width: 2.2; }
+      .title { font: 700 30px Arial, Helvetica, sans-serif; fill: #111111; }
+      .subtitle { font: 15px Arial, Helvetica, sans-serif; fill: #111111; }
+      .tableTitle { font: 700 20px Arial, Helvetica, sans-serif; fill: #111111; }
+      .field { font: 15px Arial, Helvetica, sans-serif; fill: #111111; }
+      .key { font: 700 15px Arial, Helvetica, sans-serif; fill: #111111; }
+      .small { font: 13px Arial, Helvetica, sans-serif; fill: #111111; }
+      .relation { stroke: #111111; stroke-width: 2.1; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #111111; stroke-width: 1.8; stroke-dasharray: 8 6; fill: none; marker-end: url(#arrow); }
+      .noteBox { fill: #ffffff; stroke: #111111; stroke-width: 1.8; rx: 8; }
+    </style>
+  </defs>
+
+  <rect class="page" width="1400" height="900"/>
+  <text class="title" x="700" y="55" text-anchor="middle">Database Schema Overview</text>
+  <text class="subtitle" x="700" y="85" text-anchor="middle">SQLite persistence layer used by ARIA for conversations, messages, feedback, knowledge records, and semantic embeddings</text>
+
+  <!-- conversations -->
+  <rect class="table" x="80" y="145" width="310" height="270"/>
+  <rect class="header" x="80" y="145" width="310" height="52"/>
+  <text class="tableTitle" x="235" y="178" text-anchor="middle">conversations</text>
+  <text class="key" x="105" y="225">PK</text><text class="field" x="145" y="225">id</text>
+  <text class="field" x="145" y="252">customer_name</text>
+  <text class="field" x="145" y="279">subject</text>
+  <text class="field" x="145" y="306">status</text>
+  <text class="field" x="145" y="333">priority</text>
+  <text class="field" x="145" y="360">topic</text>
+  <text class="field" x="145" y="387">created_at, updated_at</text>
+
+  <!-- messages -->
+  <rect class="table" x="545" y="145" width="340" height="330"/>
+  <rect class="header" x="545" y="145" width="340" height="52"/>
+  <text class="tableTitle" x="715" y="178" text-anchor="middle">messages</text>
+  <text class="key" x="570" y="225">PK</text><text class="field" x="610" y="225">id</text>
+  <text class="key" x="570" y="252">FK</text><text class="field" x="610" y="252">conversation_id</text>
+  <text class="field" x="610" y="279">role</text>
+  <text class="field" x="610" y="306">content</text>
+  <text class="field" x="610" y="333">confidence</text>
+  <text class="field" x="610" y="360">sources, source_scores</text>
+  <text class="field" x="610" y="387">retrieval_method</text>
+  <text class="field" x="610" y="414">generation_provider</text>
+  <text class="field" x="610" y="441">should_escalate, created_at</text>
+
+  <!-- feedback -->
+  <rect class="table" x="1010" y="145" width="310" height="310"/>
+  <rect class="header" x="1010" y="145" width="310" height="52"/>
+  <text class="tableTitle" x="1165" y="178" text-anchor="middle">feedback</text>
+  <text class="key" x="1035" y="225">PK</text><text class="field" x="1075" y="225">id</text>
+  <text class="key" x="1035" y="252">FK</text><text class="field" x="1075" y="252">message_id</text>
+  <text class="key" x="1035" y="279">FK</text><text class="field" x="1075" y="279">conversation_id</text>
+  <text class="field" x="1075" y="306">rating</text>
+  <text class="field" x="1075" y="333">feedback_type</text>
+  <text class="field" x="1075" y="360">comment</text>
+  <text class="field" x="1075" y="387">edited_response</text>
+  <text class="field" x="1075" y="414">quality_score, created_at</text>
+
+  <!-- knowledge_documents -->
+  <rect class="table" x="250" y="565" width="340" height="245"/>
+  <rect class="header" x="250" y="565" width="340" height="52"/>
+  <text class="tableTitle" x="420" y="598" text-anchor="middle">knowledge_documents</text>
+  <text class="key" x="275" y="645">PK</text><text class="field" x="315" y="645">id</text>
+  <text class="field" x="315" y="672">title</text>
+  <text class="field" x="315" y="699">category</text>
+  <text class="field" x="315" y="726">content</text>
+  <text class="field" x="315" y="753">status</text>
+  <text class="field" x="315" y="780">uses, updated_at</text>
+
+  <!-- knowledge_embeddings -->
+  <rect class="table" x="785" y="565" width="360" height="245"/>
+  <rect class="header" x="785" y="565" width="360" height="52"/>
+  <text class="tableTitle" x="965" y="598" text-anchor="middle">knowledge_embeddings</text>
+  <text class="key" x="810" y="645">PK/FK</text><text class="field" x="875" y="645">knowledge_document_id</text>
+  <text class="field" x="875" y="672">model</text>
+  <text class="field" x="875" y="699">dimensions</text>
+  <text class="field" x="875" y="726">vector</text>
+  <text class="field" x="875" y="753">content_hash</text>
+  <text class="field" x="875" y="780">updated_at</text>
+
+  <!-- Relationships -->
+  <path class="relation" d="M390 260 L545 252"/>
+  <text class="small" x="468" y="240" text-anchor="middle">1 to many</text>
+  <text class="small" x="468" y="278" text-anchor="middle">contains</text>
+
+  <path class="relation" d="M885 252 L1010 252"/>
+  <text class="small" x="948" y="235" text-anchor="middle">1 to many</text>
+  <text class="small" x="948" y="274" text-anchor="middle">rated by</text>
+
+  <path class="relation" d="M390 360 C660 520 895 470 1010 280"/>
+  <text class="small" x="704" y="526" text-anchor="middle">conversation feedback</text>
+
+  <path class="relation" d="M590 688 L785 688"/>
+  <text class="small" x="688" y="671" text-anchor="middle">1 to 1</text>
+  <text class="small" x="688" y="710" text-anchor="middle">has embedding</text>
+
+  <path class="dash" d="M715 475 C705 530 555 540 480 565"/>
+  <text class="small" x="610" y="535" text-anchor="middle">sources reference knowledge</text>
+
+  <path class="dash" d="M1165 455 C1120 530 1090 560 1035 565"/>
+  <text class="small" x="1168" y="530" text-anchor="middle">quality signals</text>
+
+  <!-- Notes -->
+  <rect class="noteBox" x="90" y="735" width="120" height="75"/>
+  <text class="key" x="150" y="765" text-anchor="middle">PK</text>
+  <text class="small" x="150" y="790" text-anchor="middle">Primary Key</text>
+
+  <rect class="noteBox" x="1185" y="735" width="120" height="75"/>
+  <text class="key" x="1245" y="765" text-anchor="middle">FK</text>
+  <text class="small" x="1245" y="790" text-anchor="middle">Foreign Key</text>
+
+  <text class="small" x="700" y="855" text-anchor="middle">Figure 3.4: Database schema overview</text>
+</svg>

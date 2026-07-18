@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 3.3: Use Case Diagram of ARIA</title>
+  <desc id="desc">Black and white UML-style use case diagram showing Customer, Support Agent, and System Admin actors interacting with ARIA use cases.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111111"/>
+    </marker>
+    <style>
+      .page { fill: #ffffff; }
+      .boundary { fill: #ffffff; stroke: #111111; stroke-width: 2.6; rx: 16; }
+      .usecase { fill: #ffffff; stroke: #111111; stroke-width: 2.2; }
+      .actorLine { stroke: #111111; stroke-width: 2.4; fill: none; stroke-linecap: round; }
+      .link { stroke: #111111; stroke-width: 1.9; fill: none; }
+      .include { stroke: #111111; stroke-width: 1.8; stroke-dasharray: 7 5; fill: none; marker-end: url(#arrow); }
+      .title { font: 700 30px Arial, Helvetica, sans-serif; fill: #111111; }
+      .subtitle { font: 15px Arial, Helvetica, sans-serif; fill: #111111; }
+      .section { font: 700 22px Arial, Helvetica, sans-serif; fill: #111111; }
+      .label { font: 700 17px Arial, Helvetica, sans-serif; fill: #111111; }
+      .text { font: 15px Arial, Helvetica, sans-serif; fill: #111111; }
+      .small { font: 13px Arial, Helvetica, sans-serif; fill: #111111; }
+    </style>
+  </defs>
+
+  <rect class="page" width="1400" height="900"/>
+  <text class="title" x="700" y="55" text-anchor="middle">Use Case Diagram of ARIA</text>
+  <text class="subtitle" x="700" y="85" text-anchor="middle">Main actors and system functions in the AI-assisted customer support application</text>
+
+  <!-- System boundary -->
+  <rect class="boundary" x="310" y="130" width="780" height="635"/>
+  <text class="section" x="700" y="168" text-anchor="middle">ARIA System</text>
+
+  <!-- Actors: Customer -->
+  <circle class="actorLine" cx="150" cy="250" r="26"/>
+  <path class="actorLine" d="M150 276 L150 365"/>
+  <path class="actorLine" d="M95 315 L205 315"/>
+  <path class="actorLine" d="M150 365 L105 440"/>
+  <path class="actorLine" d="M150 365 L195 440"/>
+  <text class="label" x="150" y="475" text-anchor="middle">Customer</text>
+
+  <!-- Actors: Support Agent -->
+  <circle class="actorLine" cx="1250" cy="255" r="26"/>
+  <path class="actorLine" d="M1250 281 L1250 370"/>
+  <path class="actorLine" d="M1195 320 L1305 320"/>
+  <path class="actorLine" d="M1250 370 L1205 445"/>
+  <path class="actorLine" d="M1250 370 L1295 445"/>
+  <text class="label" x="1250" y="480" text-anchor="middle">Support Agent</text>
+
+  <!-- Actors: System Admin -->
+  <circle class="actorLine" cx="1250" cy="585" r="26"/>
+  <path class="actorLine" d="M1250 611 L1250 700"/>
+  <path class="actorLine" d="M1195 650 L1305 650"/>
+  <path class="actorLine" d="M1250 700 L1205 775"/>
+  <path class="actorLine" d="M1250 700 L1295 775"/>
+  <text class="label" x="1250" y="810" text-anchor="middle">System / Admin</text>
+
+  <!-- Use cases -->
+  <ellipse class="usecase" cx="500" cy="245" rx="135" ry="46"/>
+  <text class="text" x="500" y="241" text-anchor="middle">Ask Support</text>
+  <text class="text" x="500" y="261" text-anchor="middle">Question</text>
+
+  <ellipse class="usecase" cx="500" cy="370" rx="135" ry="46"/>
+  <text class="text" x="500" y="366" text-anchor="middle">View AI-Assisted</text>
+  <text class="text" x="500" y="386" text-anchor="middle">Response</text>
+
+  <ellipse class="usecase" cx="500" cy="505" rx="135" ry="46"/>
+  <text class="text" x="500" y="501" text-anchor="middle">Submit Feedback</text>
+  <text class="text" x="500" y="521" text-anchor="middle">or Rating</text>
+
+  <ellipse class="usecase" cx="820" cy="225" rx="145" ry="46"/>
+  <text class="text" x="820" y="221" text-anchor="middle">Review AI</text>
+  <text class="text" x="820" y="241" text-anchor="middle">Suggestion</text>
+
+  <ellipse class="usecase" cx="820" cy="345" rx="145" ry="46"/>
+  <text class="text" x="820" y="341" text-anchor="middle">Edit / Regenerate</text>
+  <text class="text" x="820" y="361" text-anchor="middle">AI Response</text>
+
+  <ellipse class="usecase" cx="820" cy="465" rx="145" ry="46"/>
+  <text class="text" x="820" y="461" text-anchor="middle">Accept or Reject</text>
+  <text class="text" x="820" y="481" text-anchor="middle">Suggestion</text>
+
+  <ellipse class="usecase" cx="820" cy="585" rx="145" ry="46"/>
+  <text class="text" x="820" y="581" text-anchor="middle">View Support</text>
+  <text class="text" x="820" y="601" text-anchor="middle">Analytics</text>
+
+  <ellipse class="usecase" cx="520" cy="650" rx="150" ry="46"/>
+  <text class="text" x="520" y="646" text-anchor="middle">Manage Knowledge</text>
+  <text class="text" x="520" y="666" text-anchor="middle">Base</text>
+
+  <ellipse class="usecase" cx="875" cy="690" rx="150" ry="46"/>
+  <text class="text" x="875" y="686" text-anchor="middle">Check Backend</text>
+  <text class="text" x="875" y="706" text-anchor="middle">and AI Status</text>
+
+  <!-- Association lines -->
+  <path class="link" d="M205 270 L370 245"/>
+  <path class="link" d="M205 315 L372 370"/>
+  <path class="link" d="M205 390 L372 505"/>
+
+  <path class="link" d="M1195 280 L960 225"/>
+  <path class="link" d="M1195 320 L965 345"/>
+  <path class="link" d="M1195 360 L965 465"/>
+  <path class="link" d="M1195 425 L965 585"/>
+
+  <path class="link" d="M1195 630 L670 650"/>
+  <path class="link" d="M1195 680 L1025 690"/>
+  <path class="link" d="M1195 585 L965 585"/>
+
+  <!-- Include relationships -->
+  <path class="include" d="M610 272 C675 285 705 300 760 314"/>
+  <text class="small" x="690" y="286" text-anchor="middle">&lt;&lt;includes&gt;&gt;</text>
+
+  <path class="include" d="M635 245 C690 235 720 230 675 225"/>
+  <text class="small" x="672" y="211" text-anchor="middle">&lt;&lt;uses AI&gt;&gt;</text>
+
+  <path class="include" d="M640 505 C710 525 760 545 800 550"/>
+  <text class="small" x="705" y="535" text-anchor="middle">&lt;&lt;updates&gt;&gt;</text>
+
+  <text class="small" x="700" y="825" text-anchor="middle">Figure 3.3: Use case diagram of ARIA</text>
+</svg>

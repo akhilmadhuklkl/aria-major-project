@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Figure 3.2: Data Flow Diagram of ARIA Customer Support Workflow</title>
+  <desc id="desc">Black and white data flow diagram showing how a customer question moves through ARIA frontend, backend API, database, semantic retrieval, Mastra AI, Gemini, response display, feedback storage, and analytics.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111111"/>
+    </marker>
+    <style>
+      .page { fill: #ffffff; }
+      .process { fill: #ffffff; stroke: #111111; stroke-width: 2.2; rx: 12; }
+      .store { fill: #ffffff; stroke: #111111; stroke-width: 2.2; }
+      .external { fill: #ffffff; stroke: #111111; stroke-width: 2.2; rx: 28; }
+      .title { font: 700 30px Arial, Helvetica, sans-serif; fill: #111111; }
+      .subtitle { font: 15px Arial, Helvetica, sans-serif; fill: #111111; }
+      .label { font: 700 18px Arial, Helvetica, sans-serif; fill: #111111; }
+      .text { font: 14px Arial, Helvetica, sans-serif; fill: #111111; }
+      .small { font: 13px Arial, Helvetica, sans-serif; fill: #111111; }
+      .step { font: 700 14px Arial, Helvetica, sans-serif; fill: #111111; }
+      .arrow { stroke: #111111; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #111111; stroke-width: 1.9; stroke-dasharray: 8 6; fill: none; marker-end: url(#arrow); }
+      .storeLine { stroke: #111111; stroke-width: 2.2; fill: none; }
+    </style>
+  </defs>
+
+  <rect class="page" x="0" y="0" width="1400" height="900"/>
+
+  <text class="title" x="700" y="55" text-anchor="middle">Data Flow Diagram of ARIA Customer Support Workflow</text>
+  <text class="subtitle" x="700" y="85" text-anchor="middle">Flow of question, retrieved knowledge, generated response, feedback, and analytics data</text>
+
+  <!-- External actors -->
+  <rect class="external" x="60" y="175" width="210" height="95"/>
+  <text class="label" x="165" y="215" text-anchor="middle">Customer</text>
+  <text class="text" x="165" y="242" text-anchor="middle">submits support question</text>
+
+  <rect class="external" x="60" y="630" width="210" height="95"/>
+  <text class="label" x="165" y="670" text-anchor="middle">Support Agent</text>
+  <text class="text" x="165" y="697" text-anchor="middle">reviews and improves response</text>
+
+  <!-- Main process flow -->
+  <rect class="process" x="350" y="160" width="250" height="120"/>
+  <text class="step" x="375" y="190">1</text>
+  <text class="label" x="475" y="212" text-anchor="middle">Customer Chat UI</text>
+  <text class="text" x="475" y="240" text-anchor="middle">captures question and</text>
+  <text class="text" x="475" y="260" text-anchor="middle">sends API request</text>
+
+  <rect class="process" x="710" y="160" width="250" height="120"/>
+  <text class="step" x="735" y="190">2</text>
+  <text class="label" x="835" y="212" text-anchor="middle">Backend API</text>
+  <text class="text" x="835" y="240" text-anchor="middle">validates request and</text>
+  <text class="text" x="835" y="260" text-anchor="middle">starts support workflow</text>
+
+  <rect class="store" x="1090" y="150" width="230" height="140"/>
+  <path class="storeLine" d="M 1090 185 L 1320 185"/>
+  <text class="label" x="1205" y="175" text-anchor="middle">SQLite Database</text>
+  <text class="text" x="1205" y="215" text-anchor="middle">conversations</text>
+  <text class="text" x="1205" y="238" text-anchor="middle">messages</text>
+  <text class="text" x="1205" y="261" text-anchor="middle">knowledge and feedback</text>
+
+  <rect class="process" x="350" y="390" width="250" height="120"/>
+  <text class="step" x="375" y="420">3</text>
+  <text class="label" x="475" y="442" text-anchor="middle">Semantic Retrieval</text>
+  <text class="text" x="475" y="470" text-anchor="middle">matches question with</text>
+  <text class="text" x="475" y="490" text-anchor="middle">verified knowledge records</text>
+
+  <rect class="process" x="710" y="390" width="250" height="120"/>
+  <text class="step" x="735" y="420">4</text>
+  <text class="label" x="835" y="442" text-anchor="middle">Mastra AI Agent</text>
+  <text class="text" x="835" y="470" text-anchor="middle">receives question and</text>
+  <text class="text" x="835" y="490" text-anchor="middle">retrieved context</text>
+
+  <rect class="process" x="1090" y="390" width="230" height="120"/>
+  <text class="step" x="1115" y="420">5</text>
+  <text class="label" x="1205" y="442" text-anchor="middle">Gemini Model</text>
+  <text class="text" x="1205" y="470" text-anchor="middle">generates grounded</text>
+  <text class="text" x="1205" y="490" text-anchor="middle">support response</text>
+
+  <rect class="process" x="710" y="630" width="250" height="120"/>
+  <text class="step" x="735" y="660">6</text>
+  <text class="label" x="835" y="682" text-anchor="middle">Response Formatter</text>
+  <text class="text" x="835" y="710" text-anchor="middle">adds confidence, sources,</text>
+  <text class="text" x="835" y="730" text-anchor="middle">and retrieval details</text>
+
+  <rect class="process" x="350" y="630" width="250" height="120"/>
+  <text class="step" x="375" y="660">7</text>
+  <text class="label" x="475" y="682" text-anchor="middle">Frontend Display</text>
+  <text class="text" x="475" y="710" text-anchor="middle">shows AI response and</text>
+  <text class="text" x="475" y="730" text-anchor="middle">collects feedback</text>
+
+  <rect class="process" x="1090" y="630" width="230" height="120"/>
+  <text class="step" x="1115" y="660">8</text>
+  <text class="label" x="1205" y="682" text-anchor="middle">Analytics Dashboard</text>
+  <text class="text" x="1205" y="710" text-anchor="middle">updates quality, feedback,</text>
+  <text class="text" x="1205" y="730" text-anchor="middle">and source metrics</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M 270 222 L 350 222"/>
+  <text class="small" x="310" y="207" text-anchor="middle">question</text>
+
+  <path class="arrow" d="M 600 222 L 710 222"/>
+  <text class="small" x="655" y="207" text-anchor="middle">POST chat request</text>
+
+  <path class="arrow" d="M 960 222 L 1090 222"/>
+  <text class="small" x="1025" y="207" text-anchor="middle">store message</text>
+
+  <path class="arrow" d="M 835 280 C 835 335 625 335 535 390"/>
+  <text class="small" x="705" y="325" text-anchor="middle">query knowledge base</text>
+
+  <path class="arrow" d="M 600 450 L 710 450"/>
+  <text class="small" x="655" y="435" text-anchor="middle">matched sources</text>
+
+  <path class="arrow" d="M 960 450 L 1090 450"/>
+  <text class="small" x="1025" y="435" text-anchor="middle">generation request</text>
+
+  <path class="arrow" d="M 1205 510 C 1205 580 1035 580 960 675"/>
+  <text class="small" x="1112" y="596" text-anchor="middle">generated answer</text>
+
+  <path class="arrow" d="M 710 690 L 600 690"/>
+  <text class="small" x="655" y="675" text-anchor="middle">response payload</text>
+
+  <path class="arrow" d="M 350 690 L 270 690"/>
+  <text class="small" x="310" y="675" text-anchor="middle">answer view</text>
+
+  <path class="dash" d="M 475 630 C 400 590 340 610 270 650"/>
+  <text class="small" x="365" y="605" text-anchor="middle">feedback / review</text>
+
+  <path class="arrow" d="M 960 690 L 1090 690"/>
+  <text class="small" x="1025" y="675" text-anchor="middle">metrics</text>
+
+  <path class="dash" d="M 1205 630 C 1205 560 1205 380 1205 290"/>
+  <text class="small" x="1282" y="565" text-anchor="middle">read stored records</text>
+
+  <path class="dash" d="M 475 510 C 540 570 990 570 1120 290"/>
+  <text class="small" x="785" y="575" text-anchor="middle">knowledge records for retrieval</text>
+
+  <text class="small" x="700" y="815" text-anchor="middle">Figure 3.2: Data flow diagram of ARIA customer support workflow</text>
+</svg>
