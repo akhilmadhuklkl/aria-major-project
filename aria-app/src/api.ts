@@ -97,6 +97,13 @@ export const api = {
     }
   },
 
+  deleteKnowledge(ids: number[]) {
+    return request<{ deleted: number }>('/knowledge', {
+      method: 'DELETE',
+      body: JSON.stringify({ ids }),
+    })
+  },
+
   getAnalytics() {
     return request<AnalyticsSummary>('/analytics/summary')
   },

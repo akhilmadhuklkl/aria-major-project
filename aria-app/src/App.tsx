@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
-import { conversations as conversationsData, knowledgeItems } from './constants'
+import type { AgentThreadMessage, View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
+import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
 import { AppModal } from './components/Layout/AppModal'
 import { Sidebar } from './components/Layout/Sidebar'
@@ -15,10 +15,10 @@ export default function App() {
   const [view, setView] = useState<View>('inbox')
   const [activeModal, setActiveModal] = useState<'help' | 'settings'>()
   const [selectedConversation, setSelectedConversation] = useState<Conversation>(conversationsData[0])
-  const [suggestion, setSuggestion] = useState(
-    'Hi Maya, I checked your refund request and it was approved on June 6. Most banks post refunds within 5-7 business days, so it should appear by June 15. If it is not visible after that date, reply here and we will trace it with the payment provider.',
-  )
+  const [suggestions, setSuggestions] = useState<Record<number, string>>(assistantSuggestions)
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
+  const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
+  const [topSearch, setTopSearch] = useState('')
   const [customerMessages, setCustomerMessages] = useState([
     { from: 'bot', text: 'Hello! I am ARIA. How can I help with your order today?' },
   ])
@@ -125,10 +125,38 @@ export default function App() {
   }
 
   function regenerateSuggestion() {
-    setSuggestion(
-      'Hi Maya, your refund was successfully approved on June 6. Please allow 5-7 business days for your bank to process it. If it has not reached your account by June 15, let us know and our payments team will investigate immediately.',
-    )
+    const updated = `${assistantSuggestions[selectedConversation.id]} I have refreshed this suggestion using the current conversation context.`
+    setSuggestions((current) => ({ ...current, [selectedConversation.id]: updated }))
     setSuggestionStatus('Regenerated just now')
+  }
+
+  function addAgentMessage(message: string, type: 'agent' | 'note' = 'agent') {
+    const text = message.trim()
+    if (!text) return
+    const actionText = type === 'note'
+      ? `Internal note saved for ${selectedConversation.customer}.`
+      : `Agent reply sent to ${selectedConversation.customer} and stored in this conversation.`
+    setAgentThreads((current) => ({
+      ...current,
+      [selectedConversation.id]: [
+        ...(current[selectedConversation.id] ?? []),
+        {
+          from: type,
+          text: type === 'note' ? `Internal note: ${text}` : text,
+          time: 'Now',
+        },
+        {
+          from: 'system',
+          text: actionText,
+          time: 'Now',
+        },
+      ],
+    }))
+  }
+
+  function selectAgentConversation(conversation: Conversation) {
+    setSelectedConversation(conversation)
+    setSuggestionStatus('Ready for review')
   }
 
   async function submitAgentAction(action: 'accepted' | 'edited' | 'rejected') {
@@ -141,10 +169,13 @@ export default function App() {
     setAgentActionLoading(true)
     setSuggestionStatus('Saving agent action...')
     try {
+      if (action === 'accepted' || action === 'edited') {
+        addAgentMessage(suggestions[selectedConversation.id] ?? '')
+      }
       await api.submitAgentAction({
         conversationId: selectedConversation.id,
         action,
-        editedResponse: action === 'edited' ? suggestion : undefined,
+        editedResponse: action === 'edited' ? suggestions[selectedConversation.id] : undefined,
       })
       setAnalytics(await api.getAnalytics())
       setSuggestionStatus(statusByAction[action])
@@ -158,6 +189,21 @@ export default function App() {
   async function addKnowledge(input: NewKnowledgeItem) {
     const created = await api.addKnowledge(input)
     setRemoteKnowledge((current) => [created, ...current])
+    void api.getSystemStatus().then(setSystemStatus).catch(() => undefined)
+  }
+
+  async function deleteKnowledge(ids: number[]) {
+    await api.deleteKnowledge(ids)
+    setRemoteKnowledge((current) => current.filter((item) => !item.id || !ids.includes(item.id)))
+    void Promise.allSettled([api.getAnalytics(), api.getSystemStatus()])
+      .then(([analyticsResult, statusResult]) => {
+        if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
+        if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
+      })
+  }
+
+  async function refreshAnalytics() {
+    setAnalytics(await api.getAnalytics())
   }
 
   return (
@@ -169,14 +215,24 @@ export default function App() {
         onSettings={() => setActiveModal('settings')}
       />
       <div className="app-body">
-        <Topbar view={view} />
+        <Topbar
+          key={view}
+          view={view}
+          searchQuery={view === 'knowledge' ? knowledgeQuery : topSearch}
+          onSearch={view === 'knowledge' ? setKnowledgeQuery : setTopSearch}
+          searchEnabled={view === 'inbox' || view === 'knowledge'}
+          searchPlaceholder={view === 'knowledge' ? 'Search knowledge' : 'Search conversations'}
+        />
         <main className="main-content">
           {view === 'inbox' && (
             <AgentWorkspace
               selected={selectedConversation}
-              onSelect={setSelectedConversation}
-              suggestion={suggestion}
-              setSuggestion={setSuggestion}
+              onSelect={selectAgentConversation}
+              messages={agentThreads[selectedConversation.id] ?? []}
+              onSendMessage={addAgentMessage}
+              searchQuery={topSearch}
+              suggestion={suggestions[selectedConversation.id] ?? ''}
+              setSuggestion={(value) => setSuggestions((current) => ({ ...current, [selectedConversation.id]: value }))}
               status={suggestionStatus}
               onAction={submitAgentAction}
               regenerate={regenerateSuggestion}
@@ -201,9 +257,9 @@ export default function App() {
             />
           )}
           {view === 'knowledge' && (
-            <KnowledgeBase query={knowledgeQuery} setQuery={setKnowledgeQuery} items={remoteKnowledge} onAdd={addKnowledge} />
+            <KnowledgeBase query={knowledgeQuery} setQuery={setKnowledgeQuery} items={remoteKnowledge} onAdd={addKnowledge} onDelete={deleteKnowledge} />
           )}
-          {view === 'analytics' && <Analytics summary={analytics} />}
+          {view === 'analytics' && <Analytics summary={analytics} onRefresh={refreshAnalytics} />}
         </main>
       </div>
       {activeModal && (

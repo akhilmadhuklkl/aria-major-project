@@ -6,6 +6,7 @@ import {
   calculateQualityScore,
   createKnowledgeDocument,
   db,
+  deleteKnowledgeDocuments,
   getKnowledgeSourceFeedbackStats,
   inferTopic,
   listKnowledge,
@@ -342,6 +343,36 @@ app.post('/api/knowledge', (request, response) => {
   } catch {
     response.status(409).json({ error: 'a knowledge document with this title already exists' })
   }
+})
+
+app.delete('/api/knowledge/:id', (request, response) => {
+  const id = Number(request.params.id)
+
+  if (!Number.isInteger(id) || id <= 0) {
+    response.status(400).json({ error: 'valid knowledge id is required' })
+    return
+  }
+
+  const result = deleteKnowledgeDocuments([id])
+  if (result.deleted === 0) {
+    response.status(404).json({ error: 'knowledge document was not found' })
+    return
+  }
+
+  response.json(result)
+})
+
+app.delete('/api/knowledge', (request, response) => {
+  const ids = Array.isArray(request.body?.ids)
+    ? request.body.ids.map((id: unknown) => Number(id))
+    : []
+
+  if (ids.length === 0 || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
+    response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
+    return
+  }
+
+  response.json(deleteKnowledgeDocuments(ids))
 })
 
 app.get('/api/analytics/summary', (_request, response) => {

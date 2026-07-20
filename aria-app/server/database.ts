@@ -235,6 +235,22 @@ export function createKnowledgeDocument(input: { title: string; category: string
   `).get(Number(created.lastInsertRowid)) as KnowledgeDocument
 }
 
+export function deleteKnowledgeDocuments(ids: number[]) {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
+
+  if (uniqueIds.length === 0) {
+    return { deleted: 0 }
+  }
+
+  const placeholders = uniqueIds.map(() => '?').join(', ')
+  const result = db.prepare(`
+    DELETE FROM knowledge_documents
+    WHERE id IN (${placeholders})
+  `).run(...uniqueIds)
+
+  return { deleted: result.changes }
+}
+
 export type KnowledgeEmbeddingRecord = {
   knowledgeDocumentId: number
   model: string

@@ -5,10 +5,17 @@ export interface Conversation {
   customer: string
   initials: string
   subject: string
+  orderNumber: string
   preview: string
   time: string
   priority: 'High' | 'Normal'
   unread: boolean
+}
+
+export interface AgentThreadMessage {
+  from: 'customer' | 'agent' | 'system' | 'note'
+  text: string
+  time: string
 }
 
 export interface KnowledgeItem {

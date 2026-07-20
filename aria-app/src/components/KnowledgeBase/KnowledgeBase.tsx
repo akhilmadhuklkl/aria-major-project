@@ -9,9 +9,10 @@ export interface KnowledgeBaseProps {
   setQuery: (value: string) => void
   items: KnowledgeItem[]
   onAdd: (input: NewKnowledgeItem) => Promise<void>
+  onDelete: (ids: number[]) => Promise<void>
 }
 
-export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBaseProps) {
+export function KnowledgeBase({ query, setQuery, items, onAdd, onDelete }: KnowledgeBaseProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [form, setForm] = useState<NewKnowledgeItem>({
     title: '',
@@ -40,11 +41,25 @@ export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBasePr
     try {
       await onAdd(form)
       setForm({ title: '', category: 'FAQ', content: '', status: 'indexed' })
+      setQuery('')
+      setCategoryFilter('all')
+      setStatusFilter('all')
       setIsAdding(false)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Knowledge could not be saved.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function deleteItems(ids: number[]) {
+    setError('')
+
+    try {
+      await onDelete(ids)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Knowledge could not be deleted.')
+      throw caught
     }
   }
 
@@ -105,7 +120,8 @@ export function KnowledgeBase({ query, setQuery, items, onAdd }: KnowledgeBasePr
           <button className="primary-button" disabled={saving}>{saving ? 'Saving...' : 'Save knowledge'}</button>
         </form>
       )}
-      <KnowledgeTable items={visibleItems} />
+      {error && !isAdding && <p className="inline-error knowledge-error">{error}</p>}
+      <KnowledgeTable items={visibleItems} onDelete={deleteItems} />
       <KnowledgeSummary items={items} />
     </section>
   )
