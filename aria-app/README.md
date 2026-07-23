@@ -102,11 +102,10 @@ npm run preview
 ## Documentation
 
 - [`API_REFERENCE.md`](./API_REFERENCE.md): backend endpoint documentation, request/response examples, validation behavior, and demo API checks.
+- [`ARCHITECTURE.md`](./ARCHITECTURE.md): full-stack architecture, AI integration, persistence, and module layout.
 - [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md): SQLite schema, entity relationships, data flow, retrieval storage, and feedback-learning persistence.
+- [`FRONTEND_ARCHITECTURE.md`](./FRONTEND_ARCHITECTURE.md): frontend layout, screens, components, state flow, and UX structure.
 - [`SYSTEM_WORKFLOWS.md`](./SYSTEM_WORKFLOWS.md): end-to-end workflows for chat, agent actions, knowledge, retrieval, feedback learning, analytics, Mastra fallback, and final demo.
-- [`MASTRA_PLATFORM_CHECKLIST.md`](../MASTRA_PLATFORM_CHECKLIST.md): Mastra Platform setup path for the final phase.
-- [`DEPLOYMENT_PLAN.md`](../DEPLOYMENT_PLAN.md): deployment options and final hosting notes.
-- [`FINAL_TEST_PLAN.md`](../FINAL_TEST_PLAN.md): final validation checklist and evidence.
 
 ## Final Validation
 

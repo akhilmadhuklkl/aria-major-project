@@ -33,7 +33,19 @@ ARIA demonstrates a full-stack customer support workflow:
 
 ```text
 aria-major-project/
+|
 |-- README.md
+|-- final-report-assets/
+|   |-- figure-3-1-system-architecture.svg
+|   |-- figure-3-2-data-flow.svg
+|   |-- figure-3-3-use-case.svg
+|   |-- figure-3-4-database-schema.svg
+|   |-- figure-4-1-agent-workspace-interface.png
+|   |-- figure-4-2-customer-chat-ai-response.png
+|   |-- figure-4-3-knowledge-base-interface.png
+|   |-- figure-4-4-analytics-dashboard-interface.png
+|   `-- figure-4-5-system-settings-live-status.png
+|
 `-- aria-app/
     |-- README.md
     |-- API_REFERENCE.md
@@ -41,12 +53,63 @@ aria-major-project/
     |-- DATABASE_SCHEMA.md
     |-- FRONTEND_ARCHITECTURE.md
     |-- SYSTEM_WORKFLOWS.md
-    |-- src/
-    |-- server/
-    |-- data/
-    |-- public/
     |-- package.json
-    `-- vite.config.ts
+    |-- package-lock.json
+    |-- vite.config.ts
+    |-- eslint.config.js
+    |-- tsconfig.json
+    |-- tsconfig.app.json
+    |-- tsconfig.node.json
+    |-- index.html
+    |
+    |-- public/
+    |   |-- favicon.svg
+    |   `-- icons.svg
+    |
+    |-- src/
+    |   |-- App.tsx
+    |   |-- App.css
+    |   |-- index.css
+    |   |-- main.tsx
+    |   |-- api.ts
+    |   |-- constants.ts
+    |   |-- types.ts
+    |   |-- assets/
+    |   |-- mastra/
+    |   |   |-- index.ts
+    |   |   `-- agents/
+    |   `-- components/
+    |       |-- AgentWorkspace/
+    |       |-- CustomerChat/
+    |       |-- KnowledgeBase/
+    |       |-- Analytics/
+    |       |-- Layout/
+    |       `-- Common/
+    |
+    |-- server/
+    |   |-- index.ts
+    |   |-- database.ts
+    |   |-- env.ts
+    |   |-- agent-service.ts
+    |   |-- mastra-agent-service.ts
+    |   |-- semantic-retrieval.ts
+    |   |-- hybrid-retrieval.ts
+    |   |-- embedding-service.ts
+    |   |-- feedback-adaptation.ts
+    |   |-- mastra/
+    |   |   |-- index.ts
+    |   |   `-- agents/
+    |   `-- scripts/
+    |       |-- validate-final.ts
+    |       |-- index-knowledge.ts
+    |       |-- evaluate-retrieval.ts
+    |       `-- evaluate-adaptation.ts
+    |
+    |-- data/
+    |   `-- local SQLite database files
+    |
+    `-- docs/
+        `-- ARIA_Final_Demo_and_Viva_Script.docx
 ```
 
 ## Run Locally
