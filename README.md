@@ -1,26 +1,57 @@
 # ARIA Major Project
 
-ARIA, the Adaptive Response Intelligence Assistant, is an AI-assisted customer support prototype built for the 21CSA699A Major Project.
+ARIA stands for Adaptive Response Intelligence Assistant. It is an AI-assisted customer support prototype built for the MCA major project. The system helps customers ask support questions, helps support agents review AI suggestions, stores feedback, retrieves verified business knowledge, and displays support analytics.
 
-The application demonstrates a complete support workflow:
+## Project Overview
 
-- customer chat with grounded AI responses
-- agent workspace for reviewing and acting on AI suggestions
-- SQLite persistence for conversations, messages, knowledge, feedback, and agent actions
-- semantic knowledge retrieval using local embeddings
-- feedback adaptation and source-quality scoring
-- analytics dashboard for learning-loop visibility
-- optional Mastra/Gemini integration with local fallback support
+ARIA demonstrates a full-stack customer support workflow:
 
-## Project Location
+- customer chat with AI-assisted responses
+- agent workspace with accept, edit, regenerate, and reject actions
+- knowledge base for policies, FAQs, and support procedures
+- semantic retrieval using stored knowledge records
+- SQLite persistence for conversations, messages, feedback, knowledge, and embeddings
+- feedback learning through customer ratings and agent actions
+- analytics dashboard for response quality, source quality, acceptance rate, and support topics
+- Mastra and Gemini integration for live AI response generation
+- local fallback behavior for stable demos
 
-The runnable application is inside:
+## Technology Stack
 
-```bash
-aria-app/
+| Layer | Technology |
+|---|---|
+| Frontend | React, TypeScript, Vite |
+| Backend | Node.js, Express, TypeScript |
+| Database | SQLite |
+| Semantic Retrieval | Hugging Face Transformers.js embeddings |
+| AI Orchestration | Mastra |
+| LLM Provider | Google Gemini |
+| Charts | Recharts |
+| Version Control | Git and GitHub |
+
+## Repository Structure
+
+```text
+aria-major-project/
+|-- README.md
+`-- aria-app/
+    |-- README.md
+    |-- API_REFERENCE.md
+    |-- ARCHITECTURE.md
+    |-- DATABASE_SCHEMA.md
+    |-- FRONTEND_ARCHITECTURE.md
+    |-- SYSTEM_WORKFLOWS.md
+    |-- src/
+    |-- server/
+    |-- data/
+    |-- public/
+    |-- package.json
+    `-- vite.config.ts
 ```
 
-## Quick Start
+## Run Locally
+
+The runnable application is inside `aria-app/`.
 
 ```bash
 cd aria-app
@@ -35,11 +66,33 @@ Frontend:
 http://localhost:5173
 ```
 
-Backend health:
+Backend API:
+
+```text
+http://localhost:8787/api
+```
+
+Backend health check:
 
 ```text
 http://localhost:8787/api/health
 ```
+
+## Environment Variables
+
+Create `aria-app/.env` from `aria-app/.env.example`.
+
+Example safe configuration:
+
+```env
+PORT=<PORT_NUMBER>
+ENABLE_MASTRA_SERVER=true
+MASTRA_MODEL=google/gemini-2.5-flash
+GOOGLE_GENERATIVE_AI_API_KEY=
+MASTRA_AGENT_URL=
+```
+
+Do not commit `.env` or real API keys.
 
 ## Validation Commands
 
@@ -53,21 +106,46 @@ npm run evaluate:retrieval
 npm run evaluate:adaptation
 ```
 
-## Key Project Documents
+## Validation Summary
 
-- `aria-app/API_REFERENCE.md` documents the Express API endpoints used by the frontend, validation scripts, SQLite persistence, feedback loop, and analytics dashboard.
-- `aria-app/DATABASE_SCHEMA.md` documents the SQLite tables, relationships, semantic embedding storage, and feedback-learning data flow.
-- `aria-app/SYSTEM_WORKFLOWS.md` documents the end-to-end application workflows and final demo flow.
-- `MASTRA_PLATFORM_CHECKLIST.md` tracks the Mastra Platform continuation after credits reset.
-- `FINAL_TEST_PLAN.md` records final validation coverage.
-- `PROGRESS_LOG.md` records the implementation timeline.
+| Area | Status |
+|---|---|
+| Frontend build | Passed |
+| Lint check | Passed |
+| Backend health API | Passed |
+| SQLite persistence | Passed |
+| Knowledge retrieval | Passed |
+| Mastra/Gemini response generation | Passed |
+| Customer feedback storage | Passed |
+| Agent action storage | Passed |
+| Analytics update | Passed |
+| Secret safety check | `.env` ignored by Git |
+
+
+
+## Key Documentation
+
+- `aria-app/README.md` - application setup and feature guide
+- `aria-app/API_REFERENCE.md` - backend API endpoints
+- `aria-app/ARCHITECTURE.md` - system architecture
+- `aria-app/DATABASE_SCHEMA.md` - SQLite database design
+- `aria-app/FRONTEND_ARCHITECTURE.md` - frontend structure
+- `aria-app/SYSTEM_WORKFLOWS.md` - end-to-end workflows
 
 ## Secret Safety
 
-Do not commit `.env`, API keys, local SQLite databases, model caches, `node_modules`, or production build output. These are ignored by Git.
+The repository must not contain:
 
-Use `aria-app/.env.example` as the safe template for local environment variables.
+- `.env`
+- Gemini API keys
+- tokens or passwords
+- local SQLite database files
+- model cache files
+- `node_modules`
+- production build output
+
+Use `aria-app/.env.example` as the public environment template.
 
 ## Current Status
 
-The project is local-demo ready. Mastra Cloud setup remains pending until platform credits reset, but the application works locally with SQLite, semantic retrieval, feedback learning, analytics, and a local AI fallback.
+ARIA is final-demo ready as a local full-stack application. The project includes frontend screens, backend APIs, SQLite persistence, semantic retrieval, feedback learning, analytics, Mastra integration, Gemini response generation, validation scripts, and supporting documentation.
