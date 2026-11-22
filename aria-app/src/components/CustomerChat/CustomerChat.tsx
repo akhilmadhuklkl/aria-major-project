@@ -1,6 +1,7 @@
 import { Activity, BrainCircuit, Database, MessageSquareText } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { ChatMessage } from '../../types'
+import type { Language } from '../../i18n'
 import { ChatHistory } from './ChatHistory'
 
 export interface CustomerChatProps {
@@ -17,6 +18,10 @@ export interface CustomerChatProps {
   error: string
   mode: string
   sourceCount: number
+  language: Language
+  onRetry: () => void
+  onNewConversation: () => void
+  onDownload: () => void
 }
 
 export function CustomerChat({
@@ -33,6 +38,10 @@ export function CustomerChat({
   error,
   mode,
   sourceCount,
+  language,
+  onRetry,
+  onNewConversation,
+  onDownload,
 }: CustomerChatProps) {
   return (
     <section className="customer-layout">
@@ -48,6 +57,10 @@ export function CustomerChat({
         feedbackLoading={feedbackLoading}
         loading={loading}
         error={error}
+        language={language}
+        onRetry={onRetry}
+        onNewConversation={onNewConversation}
+        onDownload={onDownload}
       />
       <aside className="customer-context">
         <div className="customer-context-intro">

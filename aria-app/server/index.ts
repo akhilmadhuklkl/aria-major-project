@@ -1,33 +1,97 @@
 import './env.js'
 import cors from 'cors'
 import express from 'express'
+import helmet from 'helmet'
+import rateLimit from 'express-rate-limit'
+import multer from 'multer'
 import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
+  archiveKnowledgeDocuments,
+  createNotification,
   createKnowledgeDocument,
   db,
   deleteKnowledgeDocuments,
+  getKnowledgeDocumentVersions,
   getKnowledgeSourceFeedbackStats,
+  getGraphNode,
   inferTopic,
   listKnowledge,
+  listGraphNodes,
+  listGraphRelationships,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  queryGraphPaths,
+  createGraphRelationship,
+  deleteGraphNode,
+  deleteGraphRelationship,
+  upsertGraphNode,
   searchKnowledge,
+  updateKnowledgeDocument,
+  upsertKnowledgeEmbedding,
 } from './database.js'
 import { getKnowledgeEmbeddingStats } from './database.js'
 import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
+import {
+  authenticateUser,
+  createSession,
+  createUser,
+  ensureAuthSchema,
+  getAuthenticatedUser,
+  getBearerToken,
+  getUserCount,
+  requireAuth,
+  requireRole,
+  revokeSession,
+  validateCredentials,
+} from './auth.js'
+import { extractDocumentText, getDocumentType } from './document-extraction.js'
+import {
+  createContentHash,
+  createKnowledgeEmbeddingText,
+  embeddingModel,
+  LocalEmbeddingService,
+} from './embedding-service.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookSubscriptions } from './webhooks.js'
+import { Neo4jGraphStore } from './neo4j-graph-store.js'
+
+function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
+  void dispatchWebhookEvent(event, data)
+}
 
 const app = express()
+const allowedOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((origin) => origin.trim()).filter(Boolean)
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'too many authentication attempts; try again later' } })
+const chatLimiter = rateLimit({ windowMs: 60 * 1000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'too many chat requests; try again later' } })
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+})
 const port = Number(process.env.PORT ?? 8787)
-const hybridRetriever = new HybridKnowledgeRetriever(searchKnowledge)
-const agent = createAgentService(hybridRetriever.retrieve)
 const mastraModel = process.env.MASTRA_MODEL ?? 'google/gemini-2.5-flash'
 const hasRemoteMastraAgent = Boolean(process.env.MASTRA_AGENT_URL?.trim())
 const mastraServerEnabled = process.env.ENABLE_MASTRA_SERVER === 'true' && !hasRemoteMastraAgent
+const neo4jGraphStore = process.env.GRAPH_STORE === 'neo4j' ? new Neo4jGraphStore() : undefined
+const hybridRetriever = new HybridKnowledgeRetriever(
+  searchKnowledge,
+  undefined,
+  undefined,
+  neo4jGraphStore ? (query) => neo4jGraphStore.findKnowledgeTitles(query) : undefined,
+)
+const agent = createAgentService(hybridRetriever.retrieve)
 const llmProvider = mastraModel.startsWith('google/')
   ? 'google-gemini'
   : mastraModel.startsWith('openai/')
     ? 'openai'
     : 'configured-model'
+
+ensureAuthSchema()
+const authRequired = process.env.AUTH_REQUIRED === 'true'
+const roleGuard = (...roles: ('admin' | 'support_agent' | 'customer')[]) => (
+  authRequired ? requireRole(...roles) : (_request: express.Request, _response: express.Response, next: express.NextFunction) => next()
+)
 
 function getLlmProviderConfigured() {
   if (llmProvider === 'google-gemini') {
@@ -53,23 +117,44 @@ function getHealthSnapshot() {
     status: 'operational',
     agentProvider: getAgentProvider(),
     database: 'sqlite',
+    graphStore: neo4jGraphStore ? 'neo4j' : 'sqlite',
     mastraReady: true,
     mastraServerEnabled,
     mastraModel,
     llmProvider,
     llmProviderConfigured: getLlmProviderConfigured(),
     retrieval: {
-      primary: 'semantic',
+      primary: 'hybrid',
       fallback: 'keyword',
       embeddingModel: 'Xenova/all-MiniLM-L6-v2',
       storedEmbeddings: embeddingStats.count,
       dimensions: embeddingStats.maximumDimensions,
+      semanticThreshold: Number(process.env.RETRIEVAL_SEMANTIC_THRESHOLD ?? 0.2),
+      hybridThreshold: Number(process.env.RETRIEVAL_HYBRID_THRESHOLD ?? 0.28),
+      semanticWeight: Number(process.env.RETRIEVAL_SEMANTIC_WEIGHT ?? 0.7),
+      keywordWeight: Number(process.env.RETRIEVAL_KEYWORD_WEIGHT ?? 0.3),
     },
+    authRequired,
+    authSetupAvailable: getUserCount() === 0,
   }
 }
 
-app.use(cors())
-app.use(express.json())
+app.use(helmet())
+app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : true }))
+app.use(express.json({ limit: '1mb' }))
+app.use('/api/auth', authLimiter)
+
+app.use('/api', (request, response, next) => {
+  if (request.path.startsWith('/auth')) {
+    next()
+    return
+  }
+  if (!authRequired) {
+    next()
+    return
+  }
+  requireAuth(request, response, next)
+})
 
 if (mastraServerEnabled) {
   const [{ MastraServer }, { mastra }] = await Promise.all([
@@ -82,6 +167,194 @@ if (mastraServerEnabled) {
 
 app.get('/api/health', (_request, response) => {
   response.json(getHealthSnapshot())
+})
+
+app.get('/api/ready', async (_request, response) => {
+  try {
+    if (neo4jGraphStore) {
+      await neo4jGraphStore.verifyConnection()
+      response.json({ ready: true, database: 'neo4j' })
+      return
+    }
+    db.prepare('SELECT 1').get()
+    response.json({ ready: true, database: 'sqlite' })
+  } catch {
+    response.status(503).json({ ready: false, database: neo4jGraphStore ? 'neo4j' : 'sqlite' })
+  }
+})
+
+app.get('/api/notifications', (_request, response) => {
+  response.json(listNotifications())
+})
+
+app.post('/api/notifications/read-all', (_request, response) => {
+  response.json({ markedRead: markAllNotificationsRead() })
+})
+
+app.post('/api/notifications/:id/read', (request, response) => {
+  const id = Number(request.params.id)
+  if (!Number.isInteger(id) || id <= 0 || !markNotificationRead(id)) {
+    response.status(404).json({ error: 'notification was not found' })
+    return
+  }
+  response.json({ read: true })
+})
+
+app.get('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), async (_request, response) => {
+  response.json(neo4jGraphStore ? await neo4jGraphStore.listNodes() : listGraphNodes())
+})
+
+app.get('/api/knowledge-graph', roleGuard('admin', 'support_agent'), async (_request, response) => {
+  response.json({
+    nodes: neo4jGraphStore ? await neo4jGraphStore.listNodes() : listGraphNodes(),
+    relationships: neo4jGraphStore ? await neo4jGraphStore.listRelationships() : listGraphRelationships(),
+  })
+})
+
+app.get('/api/knowledge-graph/paths/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
+  const id = String(request.params.id)
+  const node = neo4jGraphStore ? await neo4jGraphStore.getNode(id) : getGraphNode(id)
+  if (!node) {
+    response.status(404).json({ error: 'graph node was not found' })
+    return
+  }
+  response.json({ node, paths: neo4jGraphStore ? await neo4jGraphStore.queryPaths(id, Number(request.query.hops ?? 2)) : queryGraphPaths(id, Number(request.query.hops ?? 2)) })
+})
+
+app.post('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), async (request, response) => {
+  const id = String(request.body?.id ?? '').trim()
+  const type = String(request.body?.type ?? '').trim()
+  const properties = request.body?.properties && typeof request.body.properties === 'object' ? request.body.properties : {}
+  if (!id || !['Customer', 'Order', 'Product', 'Payment', 'Refund', 'Delivery', 'Subscription', 'SupportIssue', 'SupportProcedure', 'KnowledgeDocument', 'SupportAgent'].includes(type)) {
+    response.status(400).json({ error: 'stable id and valid ontology node type are required' })
+    return
+  }
+  response.status(201).json(neo4jGraphStore
+    ? await neo4jGraphStore.upsertNode({ id, type, properties })
+    : upsertGraphNode({ id, type: type as Parameters<typeof upsertGraphNode>[0]['type'], properties }))
+})
+
+app.post('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent'), async (request, response) => {
+  const sourceId = String(request.body?.sourceId ?? '').trim()
+  const targetId = String(request.body?.targetId ?? '').trim()
+  const type = String(request.body?.type ?? '').trim()
+  const sourceNode = neo4jGraphStore ? await neo4jGraphStore.getNode(sourceId) : getGraphNode(sourceId)
+  const targetNode = neo4jGraphStore ? await neo4jGraphStore.getNode(targetId) : getGraphNode(targetId)
+  if (!sourceId || !targetId || !type || !sourceNode || !targetNode) {
+    response.status(400).json({ error: 'existing source and target nodes plus relationship type are required' })
+    return
+  }
+  response.status(201).json(neo4jGraphStore
+    ? await neo4jGraphStore.createRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
+    : createGraphRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} }))
+})
+
+app.delete('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent'), async (request, response) => {
+  const sourceId = String(request.body?.sourceId ?? '').trim()
+  const targetId = String(request.body?.targetId ?? '').trim()
+  const type = String(request.body?.type ?? '').trim()
+  if (!sourceId || !targetId || !type) {
+    response.status(400).json({ error: 'source, target, and relationship type are required' })
+    return
+  }
+  const deleted = neo4jGraphStore
+    ? await neo4jGraphStore.deleteRelationship({ sourceId, targetId, type })
+    : deleteGraphRelationship({ sourceId, targetId, type })
+  if (!deleted) {
+    response.status(404).json({ error: 'graph relationship was not found' })
+    return
+  }
+  response.json({ deleted: true })
+})
+
+app.delete('/api/knowledge-graph/nodes/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
+  const id = String(request.params.id).trim()
+  const deleted = neo4jGraphStore ? await neo4jGraphStore.deleteNode(id) : deleteGraphNode(id)
+  if (!deleted) {
+    response.status(404).json({ error: 'graph node was not found' })
+    return
+  }
+  response.json({ deleted: true })
+})
+
+app.get('/api/integrations/webhooks', roleGuard('admin'), (_request, response) => {
+  response.json(listWebhookSubscriptions())
+})
+
+app.post('/api/integrations/webhooks', roleGuard('admin'), (request, response) => {
+  const name = String(request.body?.name ?? '').trim()
+  const url = String(request.body?.url ?? '').trim()
+  const events = Array.isArray(request.body?.events) ? request.body.events.map((event: unknown) => String(event)) : ['*']
+  if (!name || !/^https:\/\//i.test(url)) {
+    response.status(400).json({ error: 'name and an HTTPS webhook URL are required' })
+    return
+  }
+  try {
+    response.status(201).json(createWebhookSubscription({ name, url, events }))
+  } catch {
+    response.status(409).json({ error: 'a webhook with this URL already exists' })
+  }
+})
+
+app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), (request, response) => {
+  const id = Number(request.params.id)
+  if (!Number.isInteger(id) || id <= 0 || !deleteWebhookSubscription(id)) {
+    response.status(404).json({ error: 'webhook was not found' })
+    return
+  }
+  response.json({ deleted: true })
+})
+
+app.post('/api/auth/bootstrap', (request, response) => {
+  if (getUserCount() > 0) {
+    response.status(409).json({ error: 'Authentication has already been initialized' })
+    return
+  }
+
+  const credentials = validateCredentials(request.body ?? {})
+  if ('error' in credentials) {
+    response.status(400).json({ error: credentials.error })
+    return
+  }
+
+  const displayName = String(request.body?.displayName ?? '').trim()
+  if (!displayName) {
+    response.status(400).json({ error: 'Display name is required' })
+    return
+  }
+
+  const user = createUser({
+    email: credentials.email,
+    displayName,
+    password: credentials.password,
+    role: 'admin',
+  })
+  response.status(201).json({ user, ...createSession(user!) })
+})
+
+app.post('/api/auth/login', (request, response) => {
+  const credentials = validateCredentials(request.body ?? {})
+  if ('error' in credentials) {
+    response.status(400).json({ error: credentials.error })
+    return
+  }
+
+  const user = authenticateUser(credentials.email, credentials.password)
+  if (!user) {
+    response.status(401).json({ error: 'Invalid email or password' })
+    return
+  }
+  response.json({ user, ...createSession(user) })
+})
+
+app.get('/api/auth/me', requireAuth, (request, response) => {
+  response.json({ user: getAuthenticatedUser(request) })
+})
+
+app.post('/api/auth/logout', requireAuth, (request, response) => {
+  const token = getBearerToken(request)
+  if (token) revokeSession(token)
+  response.status(204).send()
 })
 
 app.get('/api/system-status', (_request, response) => {
@@ -107,6 +380,7 @@ app.get('/api/system-status', (_request, response) => {
       knowledgeRecords: knowledge.length,
       indexedKnowledgeRecords: indexedKnowledge,
     },
+    graphStore: health.graphStore,
     retrieval: health.retrieval,
     ai: {
       agentProvider: health.agentProvider,
@@ -146,9 +420,11 @@ app.get('/api/interim-status', (_request, response) => {
   })
 })
 
-app.post('/api/chat', async (request, response) => {
+app.post('/api/chat', chatLimiter, async (request, response) => {
   const query = String(request.body?.message ?? '').trim()
   const requestedConversationId = Number(request.body?.conversationId)
+  const requestedLanguage = String(request.body?.language ?? 'en').toLowerCase()
+  const language = ['en', 'hi', 'es'].includes(requestedLanguage) ? requestedLanguage : 'en'
 
   if (!query) {
     response.status(400).json({ error: 'message is required' })
@@ -173,7 +449,7 @@ app.post('/api/chat', async (request, response) => {
     VALUES (?, ?, 'customer', ?, ?)
   `).run(customerMessageId, conversationId, query, now)
 
-  const result = await agent.generateResponse(query)
+  const result = await agent.generateResponse(query, language)
   const assistantMessageId = crypto.randomUUID()
   const assistantCreatedAt = new Date().toISOString()
 
@@ -200,6 +476,9 @@ app.post('/api/chat', async (request, response) => {
   for (const source of result.sources) {
     db.prepare('UPDATE knowledge_documents SET uses = uses + 1 WHERE title = ?').run(source)
   }
+  if (result.shouldEscalate) {
+    createNotification({ kind: 'escalation', title: 'Conversation needs human review', message: 'ARIA flagged this conversation for support-agent follow-up.' })
+  }
 
   response.json({
     id: assistantMessageId,
@@ -212,10 +491,53 @@ app.post('/api/chat', async (request, response) => {
 
 app.get('/api/conversations', (_request, response) => {
   const rows = db.prepare(`
-    SELECT id, customer_name AS customer, subject, status, priority, topic, created_at AS createdAt, updated_at AS updatedAt
+    SELECT id, customer_name AS customer, subject, status, priority, topic,
+      assigned_to AS assignedTo, tags, escalated,
+      created_at AS createdAt, updated_at AS updatedAt
     FROM conversations ORDER BY updated_at DESC
-  `).all()
+  `).all().map((row) => {
+    const item = row as Record<string, unknown>
+    return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
+  })
   response.json(rows)
+})
+
+app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (request, response) => {
+  const id = Number(request.params.id)
+  const status = request.body?.status ? String(request.body.status).toLowerCase() : undefined
+  const priority = request.body?.priority ? String(request.body.priority).toLowerCase() : undefined
+  const assignedTo = request.body?.assignedTo === null ? null : request.body?.assignedTo ? String(request.body.assignedTo).trim() : undefined
+  const tags = Array.isArray(request.body?.tags) ? request.body.tags.map((tag: unknown) => String(tag).trim()).filter(Boolean).slice(0, 8) : undefined
+  const escalated = typeof request.body?.escalated === 'boolean' ? request.body.escalated : undefined
+
+  if (!Number.isInteger(id) || id <= 0 || (status && !['open', 'pending', 'resolved'].includes(status)) || (priority && !['high', 'normal'].includes(priority))) {
+    response.status(400).json({ error: 'valid conversation metadata is required' })
+    return
+  }
+
+  const current = db.prepare('SELECT * FROM conversations WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  if (!current) {
+    response.status(404).json({ error: 'conversation was not found' })
+    return
+  }
+  db.prepare(`
+    UPDATE conversations SET status = ?, priority = ?, assigned_to = ?, tags = ?, escalated = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    status ?? String(current.status ?? 'open'),
+    priority ?? String(current.priority ?? 'normal'),
+    assignedTo === undefined ? (current.assigned_to == null ? null : String(current.assigned_to)) : assignedTo,
+    JSON.stringify(tags ?? JSON.parse(String(current.tags ?? '[]'))),
+    escalated === undefined ? Number(current.escalated ?? 0) : Number(escalated),
+    new Date().toISOString(),
+    id,
+  )
+  const updated = db.prepare(`
+    SELECT id, customer_name AS customer, subject, status, priority, topic,
+      assigned_to AS assignedTo, tags, escalated, created_at AS createdAt, updated_at AS updatedAt
+    FROM conversations WHERE id = ?
+  `).get(id) as Record<string, unknown>
+  response.json({ ...updated, tags: JSON.parse(String(updated.tags ?? '[]')), escalated: Boolean(updated.escalated) })
 })
 
 app.get('/api/conversations/:id/messages', (request, response) => {
@@ -275,10 +597,14 @@ app.post('/api/feedback', (request, response) => {
     entry.id, entry.messageId, entry.conversationId, entry.rating ?? null, entry.feedbackType,
     entry.comment, entry.editedResponse, entry.qualityScore, entry.createdAt,
   )
+  if (rating !== undefined && rating <= 2) {
+    createNotification({ kind: 'feedback', title: 'Low customer rating', message: `A response received a ${rating}/5 rating and may need review.` })
+    notifyWebhook('feedback.low_rating', { rating, conversationId, messageId })
+  }
   response.status(201).json(entry)
 })
 
-app.post('/api/agent-actions', (request, response) => {
+app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), (request, response) => {
   const conversationId = Number(request.body?.conversationId)
   const action = String(request.body?.action ?? '')
   const editedResponse = request.body?.editedResponse ? String(request.body.editedResponse) : null
@@ -314,6 +640,10 @@ app.post('/api/agent-actions', (request, response) => {
     INSERT INTO feedback (id, message_id, conversation_id, feedback_type, edited_response, quality_score, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `).run(entry.id, entry.messageId, entry.conversationId, entry.feedbackType, entry.editedResponse, entry.qualityScore, entry.createdAt)
+  if (action === 'rejected' || action === 'edited') {
+    createNotification({ kind: 'agent-action', title: action === 'rejected' ? 'AI response rejected' : 'AI response edited', message: 'An agent correction was recorded for future review.' })
+    notifyWebhook('agent_action.corrected', { action, conversationId })
+  }
 
   response.status(201).json(entry)
 })
@@ -322,7 +652,7 @@ app.get('/api/knowledge', (_request, response) => {
   response.json(listKnowledge())
 })
 
-app.post('/api/knowledge', (request, response) => {
+app.post('/api/knowledge', roleGuard('admin', 'support_agent'), (request, response) => {
   const title = String(request.body?.title ?? '').trim()
   const category = String(request.body?.category ?? '').trim()
   const content = String(request.body?.content ?? '').trim()
@@ -345,7 +675,110 @@ app.post('/api/knowledge', (request, response) => {
   }
 })
 
-app.delete('/api/knowledge/:id', (request, response) => {
+app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.single('file'), async (request, response) => {
+  if (!request.file) {
+    response.status(400).json({ error: 'a PDF, DOCX, TXT, or CSV file is required' })
+    return
+  }
+
+  const type = getDocumentType(request.file.originalname, request.file.mimetype)
+  if (!type) {
+    response.status(415).json({ error: 'unsupported file type; use PDF, DOCX, TXT, or CSV' })
+    return
+  }
+
+  const title = String(request.body?.title ?? request.file.originalname.replace(/\.[^.]+$/, '')).trim()
+  const category = String(request.body?.category ?? 'FAQ').trim()
+  if (!title || !category) {
+    response.status(400).json({ error: 'title and category are required' })
+    return
+  }
+
+  try {
+    const content = await extractDocumentText(request.file.buffer, type)
+    if (!content) {
+      response.status(422).json({ error: 'no readable text was found in the uploaded file' })
+      return
+    }
+
+    const document = createKnowledgeDocument({
+      title,
+      category,
+      content,
+      status: 'indexed',
+      sourceFilename: request.file.originalname,
+    })
+    const embeddingService = new LocalEmbeddingService()
+    try {
+      const embeddingText = createKnowledgeEmbeddingText(document)
+      const vector = await embeddingService.embed(embeddingText)
+      upsertKnowledgeEmbedding({
+        knowledgeDocumentId: document.id,
+        model: embeddingModel,
+        vector,
+        contentHash: createContentHash(embeddingText),
+      })
+    } finally {
+      await embeddingService.dispose()
+    }
+
+    createNotification({ kind: 'knowledge', title: 'Knowledge document indexed', message: `${request.file.originalname} is ready for retrieval.` })
+    notifyWebhook('knowledge.indexed', { title: document.title, sourceFilename: request.file.originalname })
+    response.status(201).json({ ...document, indexed: true, sourceFilename: request.file.originalname })
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      response.status(409).json({ error: 'a knowledge document with this title already exists' })
+      return
+    }
+    response.status(422).json({ error: error instanceof Error ? error.message : 'the document could not be processed' })
+  }
+})
+
+app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, response) => {
+  const id = Number(request.params.id)
+  const title = String(request.body?.title ?? '').trim()
+  const category = String(request.body?.category ?? '').trim()
+  const content = String(request.body?.content ?? '').trim()
+  const status = String(request.body?.status ?? 'indexed').trim().toLowerCase()
+  if (!Number.isInteger(id) || id <= 0 || !title || !category || !content) {
+    response.status(400).json({ error: 'id, title, category, and content are required' })
+    return
+  }
+  if (!['indexed', 'review'].includes(status)) {
+    response.status(400).json({ error: 'status must be indexed or review' })
+    return
+  }
+  try {
+    const updated = updateKnowledgeDocument(id, { title, category, content, status })
+    if (!updated) {
+      response.status(404).json({ error: 'knowledge document was not found' })
+      return
+    }
+    response.json({ ...updated, reindexRequired: status === 'indexed' })
+  } catch {
+    response.status(409).json({ error: 'a knowledge document with this title already exists' })
+  }
+})
+
+app.get('/api/knowledge/:id/versions', roleGuard('admin', 'support_agent'), (request, response) => {
+  const id = Number(request.params.id)
+  if (!Number.isInteger(id) || id <= 0) {
+    response.status(400).json({ error: 'valid knowledge id is required' })
+    return
+  }
+  response.json(getKnowledgeDocumentVersions(id))
+})
+
+app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), (request, response) => {
+  const ids = Array.isArray(request.body?.ids) ? request.body.ids.map((id: unknown) => Number(id)) : []
+  if (ids.length === 0 || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
+    response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
+    return
+  }
+  response.json(archiveKnowledgeDocuments(ids))
+})
+
+app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, response) => {
   const id = Number(request.params.id)
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -362,7 +795,7 @@ app.delete('/api/knowledge/:id', (request, response) => {
   response.json(result)
 })
 
-app.delete('/api/knowledge', (request, response) => {
+app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), (request, response) => {
   const ids = Array.isArray(request.body?.ids)
     ? request.body.ids.map((id: unknown) => Number(id))
     : []
@@ -375,17 +808,21 @@ app.delete('/api/knowledge', (request, response) => {
   response.json(deleteKnowledgeDocuments(ids))
 })
 
-app.get('/api/analytics/summary', (_request, response) => {
-  const conversationCount = db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }
+app.get('/api/analytics/summary', (request, response) => {
+  const range = String(request.query.range ?? '7d')
+  const since = range === 'all' ? undefined : new Date(Date.now() - (range === '30d' ? 30 : 7) * 24 * 60 * 60 * 1000).toISOString()
+  const dateClause = since ? ' WHERE created_at >= ?' : ''
+  const dateArgs = since ? [since] : []
+  const conversationCount = db.prepare(`SELECT COUNT(*) AS count FROM conversations${dateClause}`).get(...dateArgs) as { count: number }
   const feedbackStats = db.prepare(`
     SELECT COUNT(*) AS count, COALESCE(AVG(rating), 0) AS averageRating, COALESCE(AVG(quality_score), 0) AS averageQuality
-    FROM feedback
-  `).get() as { count: number; averageRating: number; averageQuality: number }
-  const accepted = db.prepare("SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'accepted'").get() as { count: number }
-  const corrected = db.prepare("SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'edited'").get() as { count: number }
+    FROM feedback${dateClause}
+  `).get(...dateArgs) as { count: number; averageRating: number; averageQuality: number }
+  const accepted = db.prepare(`SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'accepted'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
+  const corrected = db.prepare(`SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'edited'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const topicRows = db.prepare(`
-    SELECT topic, COUNT(*) AS conversations FROM conversations GROUP BY topic ORDER BY conversations DESC
-  `).all()
+    SELECT topic, COUNT(*) AS conversations FROM conversations${dateClause} GROUP BY topic ORDER BY conversations DESC
+  `).all(...dateArgs)
   const sourceStats = getKnowledgeSourceFeedbackStats()
   const adaptedSources = sourceStats.map((source) => ({
     title: source.title,
@@ -413,17 +850,27 @@ app.get('/api/analytics/summary', (_request, response) => {
       || second.editedCount - first.editedCount
     ))
     .slice(0, 3)
-  const agentActionCount = accepted.count + corrected.count + (
-    db.prepare("SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'rejected'").get() as { count: number }
-  ).count
+  const rejected = db.prepare(`SELECT COUNT(*) AS count FROM feedback WHERE feedback_type = 'rejected'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
+  const agentActionCount = accepted.count + corrected.count + rejected.count
+  const retrievalRows = db.prepare(`
+    SELECT COALESCE(retrieval_method, 'none') AS method, COUNT(*) AS count
+    FROM messages${dateClause} GROUP BY retrieval_method ORDER BY count DESC
+  `).all(...dateArgs) as Array<{ method: string; count: number }>
+  const escalationCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE should_escalate = 1${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
+  const responseMessageCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
 
   response.json({
+    range,
+    generatedAt: new Date().toISOString(),
     conversations: conversationCount.count,
     averageRating: Number(feedbackStats.averageRating.toFixed(1)),
     averageQuality: Math.round(feedbackStats.averageQuality),
     acceptanceRate: feedbackStats.count ? Math.round((accepted.count / feedbackStats.count) * 100) : 0,
     correctionRate: feedbackStats.count ? Math.round((corrected.count / feedbackStats.count) * 100) : 0,
     feedbackRecords: feedbackStats.count,
+    retrieval: retrievalRows,
+    escalations: escalationCount.count,
+    assistantResponses: responseMessageCount.count,
     topics: topicRows,
     learningSignals: {
       learnedSourceCount,

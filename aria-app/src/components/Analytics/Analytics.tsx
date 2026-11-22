@@ -1,23 +1,44 @@
 import { useState } from 'react'
-import { BarChart3, RefreshCw, ShieldCheck } from 'lucide-react'
+import { BarChart3, Download, RefreshCw, ShieldCheck } from 'lucide-react'
 import { MetricStrip } from './MetricStrip'
 import { ChartsSection } from './ChartsSection'
 import { InsightsSection } from './InsightsSection'
 import { LearningSources } from './LearningSources'
 import type { AnalyticsSummary } from '../../types'
 
-export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; onRefresh: () => Promise<void> }) {
+export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; onRefresh: (range?: string) => Promise<void> }) {
   const [refreshing, setRefreshing] = useState(false)
+  const [range, setRange] = useState('7d')
 
   async function refresh() {
     if (refreshing) return
 
     setRefreshing(true)
     try {
-      await onRefresh()
+      await onRefresh(range)
     } finally {
       setRefreshing(false)
     }
+  }
+
+  function exportCsv() {
+    const rows = [
+      ['Metric', 'Value'],
+      ['Range', summary?.range ?? range],
+      ['Conversations', String(summary?.conversations ?? 0)],
+      ['Assistant responses', String(summary?.assistantResponses ?? 0)],
+      ['Average rating', String(summary?.averageRating ?? 0)],
+      ['Average quality', String(summary?.averageQuality ?? 0)],
+      ['Escalations', String(summary?.escalations ?? 0)],
+      ['Feedback records', String(summary?.feedbackRecords ?? 0)],
+    ]
+    const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(',')).join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `aria-analytics-${range}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   return (
@@ -28,7 +49,10 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
           <div><h2>Support performance</h2><p>Track response quality, customer feedback, and agent-assist effectiveness.</p></div>
         </div>
         <div className="analytics-status"><ShieldCheck size={14} /> Learning loop active</div>
-        <div className="analytics-range">Last 7 days</div>
+        <select className="analytics-range-select" value={range} onChange={(event) => { setRange(event.target.value); void onRefresh(event.target.value) }} aria-label="Analytics date range">
+          <option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="all">All time</option>
+        </select>
+        <button className="filter-button" onClick={exportCsv} disabled={!summary} aria-label="Export analytics CSV" title="Export analytics CSV"><Download size={15} /> Export CSV</button>
         <button
           className="filter-button"
           aria-label="Refresh analytics data"
@@ -40,6 +64,11 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
         </button>
       </div>
       <MetricStrip summary={summary} />
+      <div className="analytics-summary-line">
+        <span><strong>{summary?.assistantResponses ?? 0}</strong> assistant responses</span>
+        <span><strong>{summary?.escalations ?? 0}</strong> escalations</span>
+        <span><strong>{(summary?.retrieval ?? []).find((item) => item.method === 'hybrid')?.count ?? 0}</strong> hybrid retrieval responses</span>
+      </div>
       <ChartsSection topics={summary?.topics} quality={summary?.averageQuality} />
       <LearningSources strongestSources={summary?.strongestSources} reviewSources={summary?.reviewSources} />
       <InsightsSection summary={summary} />

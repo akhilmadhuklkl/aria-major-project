@@ -1,4 +1,4 @@
-import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, PlugZap, Server, Settings, X } from 'lucide-react'
+import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Server, Settings, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { AnalyticsSummary, KnowledgeItem, SystemStatus } from '../../types'
 
@@ -112,6 +112,14 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, onClos
                 detail={systemStatus
                   ? `${systemStatus.database.knowledgeRecords} knowledge records, ${systemStatus.database.indexedKnowledgeRecords} indexed, ${systemStatus.database.conversations} conversations, ${systemStatus.database.feedbackRecords} feedback records.`
                   : `${totalSources} knowledge records, ${indexedSources} indexed for retrieval.`}
+              />
+              <StatusTile
+                icon={GitBranch}
+                label="Graph store"
+                value={systemStatus?.graphStore === 'neo4j' ? 'Neo4j active' : 'SQLite active'}
+                detail={systemStatus?.graphStore === 'neo4j'
+                  ? 'Ontology nodes, relationships, paths, and graph-aware retrieval are using Neo4j.'
+                  : 'Ontology nodes, relationships, paths, and graph-aware retrieval are using SQLite.'}
               />
               <StatusTile
                 icon={BrainCircuit}

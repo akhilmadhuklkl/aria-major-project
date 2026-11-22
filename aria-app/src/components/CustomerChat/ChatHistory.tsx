@@ -1,6 +1,9 @@
-import { Bot, BrainCircuit, CheckCircle2, Database, Send, ShieldCheck, Sparkles } from 'lucide-react'
+import { Bot, BrainCircuit, Check, CheckCircle2, Copy, Database, Download, Plus, RefreshCw, Send, ShieldCheck, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 import type { ChatMessage } from '../../types'
 import { FeedbackPrompt } from './FeedbackPrompt'
+import type { Language } from '../../i18n'
+import { translate } from '../../i18n'
 
 export interface ChatHistoryProps {
   messages: ChatMessage[]
@@ -14,6 +17,10 @@ export interface ChatHistoryProps {
   feedbackLoading: boolean
   loading: boolean
   error: string
+  language: Language
+  onRetry: () => void
+  onNewConversation: () => void
+  onDownload: () => void
 }
 
 export function ChatHistory({
@@ -28,13 +35,31 @@ export function ChatHistory({
   feedbackLoading,
   loading,
   error,
+  language,
+  onRetry,
+  onNewConversation,
+  onDownload,
 }: ChatHistoryProps) {
+  const [copiedId, setCopiedId] = useState<string>()
+  const lastBotId = [...messages].reverse().find((message) => message.from === 'bot')?.id
+
+  async function copyMessage(id: string | undefined, text: string) {
+    if (!navigator.clipboard) return
+    await navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    window.setTimeout(() => setCopiedId(undefined), 1500)
+  }
+
   return (
     <div className="customer-chat">
       <div className="customer-chat-header">
         <div className="ai-icon"><Bot size={18} /></div>
-        <div><h2>ARIA Support</h2><span><i /> Verified AI support assistant</span></div>
-        <div className="chat-header-status"><ShieldCheck size={14} /> Grounded</div>
+        <div><h2>ARIA Support</h2><span><i /> {translate(language, 'verifiedAssistant')}</span></div>
+        <div className="chat-header-status"><ShieldCheck size={14} /> {translate(language, 'grounded')}</div>
+        <div className="customer-chat-actions">
+          <button className="icon-button" onClick={onNewConversation} aria-label="Start new conversation" title="New conversation"><Plus size={16} /></button>
+          <button className="icon-button" onClick={onDownload} aria-label="Download conversation" title="Download conversation"><Download size={16} /></button>
+        </div>
       </div>
       <div className="customer-message-list">
         {messages.map((message, index) => (
@@ -64,6 +89,12 @@ export function ChatHistory({
                   })}
                 </div>
               )}
+              {message.from === 'bot' && message.id && (
+                <div className="message-actions">
+                  <button className="text-action" onClick={() => void copyMessage(message.id, message.text)}><span>{copiedId === message.id ? <Check size={12} /> : <Copy size={12} />}</span>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+                  {message.id === lastBotId && <button className="text-action" onClick={onRetry}><RefreshCw size={12} /> Retry</button>}
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -84,7 +115,7 @@ export function ChatHistory({
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => event.key === 'Enter' && send()}
           aria-label="Customer support question"
-          placeholder="Ask a support question..."
+          placeholder={translate(language, 'askQuestion')}
         />
         <button className="primary-button icon-only" disabled={loading || !input.trim()} onClick={send} aria-label="Send message" title="Send message"><Send size={17} /></button>
       </div>

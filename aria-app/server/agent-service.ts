@@ -3,13 +3,13 @@ export type AgentResponse = {
   confidence: number
   sources: string[]
   sourceScores: SourceScore[]
-  retrievalMethod: 'semantic' | 'keyword' | 'none'
+  retrievalMethod: 'hybrid' | 'semantic' | 'keyword' | 'none'
   generationProvider: 'mastra-gemini' | 'local-knowledge'
   shouldEscalate: boolean
 }
 
 export interface AgentService {
-  generateResponse(query: string): Promise<AgentResponse>
+  generateResponse(query: string, language?: string): Promise<AgentResponse>
 }
 
 export type KnowledgeSnippet = {
@@ -21,7 +21,8 @@ export type KnowledgeSnippet = {
   feedbackAdjustment?: number
   feedbackCount?: number
   averageQuality?: number
-  retrievalMethod?: 'semantic' | 'keyword'
+  graphEvidence?: string[]
+  retrievalMethod?: 'hybrid' | 'semantic' | 'keyword'
 }
 
 export type KnowledgeRetriever = (query: string) => Promise<KnowledgeSnippet[]>
@@ -93,7 +94,8 @@ export class LocalAgentService implements AgentService {
     this.retrieveKnowledge = retrieveKnowledge
   }
 
-  async generateResponse(query: string): Promise<AgentResponse> {
+  async generateResponse(query: string, language = 'en'): Promise<AgentResponse> {
+    void language
     const normalized = query.toLowerCase()
     const result = responses.find((response) =>
       response.match.some((keyword) => normalized.includes(keyword)),
@@ -152,11 +154,11 @@ export class RemoteMastraAgentService implements AgentService {
     this.retrieveKnowledge = retrieveKnowledge
   }
 
-  async generateResponse(query: string): Promise<AgentResponse> {
+  async generateResponse(query: string, language = 'en'): Promise<AgentResponse> {
     try {
       const knowledge = await this.retrieveKnowledge(query)
       const knowledgeContext = knowledge.length > 0
-        ? knowledge.map((item) => `- ${item.title} (${item.category}): ${item.content}`).join('\n')
+        ? knowledge.map((item) => `- ${item.title} (${item.category}): ${item.content}${item.graphEvidence?.length ? ` Graph evidence: ${item.graphEvidence.join('; ')}` : ''}`).join('\n')
         : '- No matching knowledge record was found.'
       const prompt = `
 Customer question:
@@ -166,6 +168,7 @@ Verified ARIA knowledge base:
 ${knowledgeContext}
 
 Answer using only the verified knowledge above. If the knowledge is missing or unclear, ask for more details or recommend escalation.
+Respond in the customer's selected language: ${language}.
 `
 
       const response = await fetch(this.endpoint, {
@@ -190,7 +193,7 @@ Answer using only the verified knowledge above. If the knowledge is missing or u
         shouldEscalate: knowledge.length === 0,
       }
     } catch {
-      return this.fallback.generateResponse(query)
+      return this.fallback.generateResponse(query, language)
     }
   }
 }

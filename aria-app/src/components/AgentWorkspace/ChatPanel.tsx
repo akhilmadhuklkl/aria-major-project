@@ -7,10 +7,11 @@ export interface ChatPanelProps {
   selected: Conversation
   messages: AgentThreadMessage[]
   onSendMessage: (message: string, type?: 'agent' | 'note') => void
+  onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
 }
 
-export function ChatPanel({ selected, messages, onSendMessage }: ChatPanelProps) {
-  const [status, setStatus] = useState<'Open' | 'Pending' | 'Resolved'>('Open')
+export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation }: ChatPanelProps) {
+  const [status, setStatus] = useState<'Open' | 'Pending' | 'Resolved'>(selected.status ?? 'Open')
   const [showOptions, setShowOptions] = useState(false)
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [draft, setDraft] = useState('')
@@ -38,7 +39,11 @@ export function ChatPanel({ selected, messages, onSendMessage }: ChatPanelProps)
         <button
           className="status-button"
           aria-label={`Conversation status: ${status}`}
-          onClick={() => setStatus((current) => current === 'Open' ? 'Pending' : current === 'Pending' ? 'Resolved' : 'Open')}
+          onClick={() => {
+            const next = status === 'Open' ? 'Pending' : status === 'Pending' ? 'Resolved' : 'Open'
+            setStatus(next)
+            void onUpdateConversation(selected.id, { status: next })
+          }}
           title="Cycle conversation status"
         >
           <i /> {status} <ChevronDown size={15} />
@@ -47,7 +52,9 @@ export function ChatPanel({ selected, messages, onSendMessage }: ChatPanelProps)
           <button className="icon-button" aria-label="Conversation options" onClick={() => setShowOptions((current) => !current)}><MoreHorizontal size={18} /></button>
           {showOptions && (
             <div className="chat-options-menu" role="status">
-              <strong>{selected.priority} priority</strong>
+              <button onClick={() => void onUpdateConversation(selected.id, { priority: selected.priority === 'High' ? 'Normal' : 'High' })}>{selected.priority} priority (toggle)</button>
+              <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || undefined })}><option value="">Unassigned</option><option>Akhil</option><option>Support Team</option></select></label>
+              <button onClick={() => void onUpdateConversation(selected.id, { escalated: !selected.escalated })}>{selected.escalated ? 'Remove escalation' : 'Escalate conversation'}</button>
               <span>Topic: {selected.subject}</span>
             </div>
           )}

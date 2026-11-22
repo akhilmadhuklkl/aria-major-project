@@ -1,0 +1,8 @@
+node_modules
+dist
+.cache
+.mastra
+.env
+data/*.db-shm
+data/*.db-wal
+*.log

@@ -1,0 +1,58 @@
+name: ARIA CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+defaults:
+  run:
+    working-directory: aria-app
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: aria-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Run lint
+        run: npm run lint
+      - name: Run unit tests
+        run: npm test
+      - name: Build application
+        run: npm run build
+      - name: Build production container
+        run: docker build --tag aria-app:ci .
+      - name: Start API smoke-test process
+        run: npm run start:server > /tmp/aria-api.log 2>&1 &
+      - name: Verify API readiness
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:8787/api/ready; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/aria-api.log
+          exit 1
+      - name: Run production container smoke test
+        run: |
+          set -e
+          trap 'docker logs aria-api-ci || true; docker rm --force aria-api-ci || true' EXIT
+          docker run --detach --name aria-api-ci --publish 8788:8787 --env PORT=8787 aria-app:ci
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8788/api/ready; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1

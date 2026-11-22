@@ -1,13 +1,14 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Archive, FileText, MoreHorizontal, Trash2 } from 'lucide-react'
 import type { KnowledgeItem } from '../../types'
 
 export interface KnowledgeTableProps {
   items: KnowledgeItem[]
   onDelete: (ids: number[]) => Promise<void>
+  onArchive: (ids: number[]) => Promise<void>
 }
 
-export function KnowledgeTable({ items, onDelete }: KnowledgeTableProps) {
+export function KnowledgeTable({ items, onDelete, onArchive }: KnowledgeTableProps) {
   const [expandedTitle, setExpandedTitle] = useState<string>()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [deleting, setDeleting] = useState(false)
@@ -56,9 +57,14 @@ export function KnowledgeTable({ items, onDelete }: KnowledgeTableProps) {
       {visibleSelectedIds.length > 0 && (
         <div className="bulk-actions">
           <strong>{visibleSelectedIds.length} selected</strong>
-          <button className="danger-button" disabled={deleting} onClick={() => void deleteIds(visibleSelectedIds)}>
-            <Trash2 size={15} /> {deleting ? 'Deleting...' : 'Delete selected'}
-          </button>
+          <div className="bulk-action-buttons">
+            <button className="secondary-button" disabled={deleting} onClick={() => void onArchive(visibleSelectedIds)}>
+              <Archive size={15} /> Archive selected
+            </button>
+            <button className="danger-button" disabled={deleting} onClick={() => void deleteIds(visibleSelectedIds)}>
+              <Trash2 size={15} /> {deleting ? 'Deleting...' : 'Delete selected'}
+            </button>
+          </div>
         </div>
       )}
       <div className="table-wrap">
@@ -115,6 +121,15 @@ export function KnowledgeTable({ items, onDelete }: KnowledgeTableProps) {
                       onClick={() => setExpandedTitle((current) => current === item.title ? undefined : item.title)}
                     >
                       <MoreHorizontal size={17} />
+                    </button>
+                    <button
+                      className="icon-button archive-icon-button"
+                      aria-label={`Archive ${item.title}`}
+                      title="Archive knowledge record"
+                      disabled={!item.id || deleting}
+                      onClick={() => item.id && void onArchive([item.id])}
+                    >
+                      <Archive size={16} />
                     </button>
                     <button
                       className="danger-icon-button"

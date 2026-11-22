@@ -16,7 +16,7 @@ type ChatResponse = {
     semanticScore?: number
     feedbackAdjustment?: number
   }>
-  retrievalMethod: 'semantic' | 'keyword' | 'none'
+  retrievalMethod: 'hybrid' | 'semantic' | 'keyword' | 'none'
   generationProvider: 'mastra-gemini' | 'local-knowledge'
   shouldEscalate: boolean
 }

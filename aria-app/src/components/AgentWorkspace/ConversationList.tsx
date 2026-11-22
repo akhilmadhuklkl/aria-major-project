@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Plus, SlidersHorizontal } from 'lucide-react'
 import type { Conversation } from '../../types'
 import { conversations } from '../../constants'
 
@@ -7,24 +7,25 @@ export interface ConversationListProps {
   selected: Conversation
   onSelect: (conversation: Conversation) => void
   searchQuery: string
+  onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
 }
 
 export function ConversationList({ selected, onSelect, searchQuery }: ConversationListProps) {
   const [queue, setQueue] = useState<'mine' | 'unassigned'>('mine')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [priorityFilter, setPriorityFilter] = useState('all')
   const [showNewNotice, setShowNewNotice] = useState(false)
   const visibleConversations = useMemo(() => {
-    const base = queue === 'mine' ? conversations : conversations.filter((conversation) => conversation.priority === 'Normal').slice(0, 3)
+    const base = queue === 'mine' ? conversations.filter((conversation) => conversation.assignedTo) : conversations.filter((conversation) => !conversation.assignedTo)
     const normalizedQuery = searchQuery.trim().toLowerCase()
-
-    if (!normalizedQuery) return base
-
-    return base.filter((conversation) => [
-      conversation.customer,
-      conversation.subject,
-      conversation.preview,
-      conversation.priority,
-    ].some((value) => value.toLowerCase().includes(normalizedQuery)))
-  }, [queue, searchQuery])
+    return base.filter((conversation) => {
+      if (statusFilter !== 'all' && conversation.status !== statusFilter) return false
+      if (priorityFilter !== 'all' && conversation.priority !== priorityFilter) return false
+      if (!normalizedQuery) return true
+      return [conversation.customer, conversation.subject, conversation.preview, conversation.priority, ...(conversation.tags ?? [])]
+        .some((value) => value.toLowerCase().includes(normalizedQuery))
+    })
+  }, [priorityFilter, queue, searchQuery, statusFilter])
 
   return (
     <div className="queue-panel">
@@ -44,6 +45,15 @@ export function ConversationList({ selected, onSelect, searchQuery }: Conversati
         <button className={queue === 'mine' ? 'active' : ''} onClick={() => setQueue('mine')} aria-label="Mine conversations">Mine <b aria-hidden="true">5</b></button>
         <button className={queue === 'unassigned' ? 'active' : ''} onClick={() => setQueue('unassigned')} aria-label="Unassigned conversations">Unassigned <b aria-hidden="true">3</b></button>
       </div>
+      <div className="queue-filters">
+        <SlidersHorizontal size={14} />
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filter by status">
+          <option value="all">All statuses</option><option value="Open">Open</option><option value="Pending">Pending</option><option value="Resolved">Resolved</option>
+        </select>
+        <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} aria-label="Filter by priority">
+          <option value="all">All priorities</option><option value="High">High</option><option value="Normal">Normal</option>
+        </select>
+      </div>
       <div className="conversation-list">
         {visibleConversations.map((conversation) => (
           <button
@@ -57,6 +67,7 @@ export function ConversationList({ selected, onSelect, searchQuery }: Conversati
               <div><strong>{conversation.customer}</strong><time>{conversation.time}</time></div>
               <span className="subject-line">{conversation.subject}</span>
               <small>{conversation.preview}</small>
+              <div className="conversation-meta"><span>{conversation.status ?? 'Open'}</span>{conversation.escalated && <span className="escalated-tag">Escalated</span>}</div>
             </div>
             {conversation.unread && <i className="unread-dot" />}
           </button>

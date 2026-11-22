@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, Search } from 'lucide-react'
-import type { View } from '../../types'
+import type { Notification, View } from '../../types'
+import { api } from '../../api'
+import type { Language } from '../../i18n'
+import { translate } from '../../i18n'
 
 export interface TopbarProps {
   view: View
@@ -8,15 +11,24 @@ export interface TopbarProps {
   onSearch: (value: string) => void
   searchEnabled: boolean
   searchPlaceholder: string
+  language: Language
 }
 
-export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder }: TopbarProps) {
+export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  useEffect(() => {
+    const loadNotifications = () => { void api.getNotifications().then(setNotifications).catch(() => undefined) }
+    loadNotifications()
+    const interval = window.setInterval(loadNotifications, 30000)
+    return () => window.clearInterval(interval)
+  }, [])
+  const unreadCount = notifications.filter((item) => !item.readAt).length
   const names: Record<View, string> = {
-    inbox: 'Agent workspace',
-    customer: 'Customer chat',
-    knowledge: 'Knowledge base',
-    analytics: 'Support analytics',
+    inbox: translate(language, 'inbox'),
+    customer: translate(language, 'customer'),
+    knowledge: translate(language, 'knowledge'),
+    analytics: translate(language, 'analytics'),
   }
 
   return (
@@ -44,12 +56,12 @@ export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlace
             title="Notifications"
             onClick={() => setShowNotifications((current) => !current)}
           >
-            <Bell size={18} /><i />
+            <Bell size={18} />{unreadCount > 0 && <i />}
           </button>
           {showNotifications && (
-            <div className="topbar-popover" role="status">
-              <strong>System ready</strong>
-              <span>Backend, SQLite, retrieval, and AI connection are operational.</span>
+            <div className="topbar-popover notifications-popover" role="status">
+              <div className="notification-heading"><strong>Notifications</strong><button onClick={() => { void api.markAllNotificationsRead(); setNotifications((items) => items.map((item) => ({ ...item, readAt: new Date().toISOString() }))) }}>Mark all read</button></div>
+              {notifications.length === 0 ? <span>System ready. No new notifications.</span> : notifications.slice(0, 5).map((item) => <button className={`notification-item ${item.readAt ? 'read' : ''}`} key={item.id} onClick={() => { if (!item.readAt) { void api.markNotificationRead(item.id); setNotifications((current) => current.map((notification) => notification.id === item.id ? { ...notification, readAt: new Date().toISOString() } : notification)) } }}><strong>{item.title}</strong><span>{item.message}</span></button>)}
             </div>
           )}
         </div>

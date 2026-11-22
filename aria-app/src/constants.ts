@@ -3,11 +3,11 @@ import { Inbox, MessageCircle, BookOpen, BarChart3 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export const conversations: Conversation[] = [
-  { id: 1, customer: 'Maya Chen', initials: 'MC', subject: 'Refund status', orderNumber: 'AR-20491', preview: 'The refund still has not appeared...', time: '2m', priority: 'High', unread: true },
-  { id: 2, customer: 'Noah Williams', initials: 'NW', subject: 'Reset password', orderNumber: 'AR-20518', preview: 'I am locked out of my account.', time: '8m', priority: 'Normal', unread: true },
-  { id: 3, customer: 'Priya Sharma', initials: 'PS', subject: 'Change delivery address', orderNumber: 'AR-20536', preview: 'Can I update the address after...', time: '21m', priority: 'Normal', unread: false },
-  { id: 4, customer: 'Daniel Lee', initials: 'DL', subject: 'Damaged item', orderNumber: 'AR-20544', preview: 'My order arrived with a crack.', time: '38m', priority: 'High', unread: false },
-  { id: 5, customer: 'Olivia Martin', initials: 'OM', subject: 'Subscription cancellation', orderNumber: 'AR-20559', preview: 'Please cancel before renewal.', time: '1h', priority: 'Normal', unread: false },
+  { id: 1, customer: 'Maya Chen', initials: 'MC', subject: 'Refund status', orderNumber: 'AR-20491', preview: 'The refund still has not appeared...', time: '2m', priority: 'High', unread: true, status: 'Open', assignedTo: 'Akhil', tags: ['refund', 'priority'] },
+  { id: 2, customer: 'Noah Williams', initials: 'NW', subject: 'Reset password', orderNumber: 'AR-20518', preview: 'I am locked out of my account.', time: '8m', priority: 'Normal', unread: true, status: 'Open', assignedTo: 'Akhil', tags: ['account'] },
+  { id: 3, customer: 'Priya Sharma', initials: 'PS', subject: 'Change delivery address', orderNumber: 'AR-20536', preview: 'Can I update the address after...', time: '21m', priority: 'Normal', unread: false, status: 'Pending', tags: ['delivery'] },
+  { id: 4, customer: 'Daniel Lee', initials: 'DL', subject: 'Damaged item', orderNumber: 'AR-20544', preview: 'My order arrived with a crack.', time: '38m', priority: 'High', unread: false, status: 'Open', tags: ['replacement'], escalated: true },
+  { id: 5, customer: 'Olivia Martin', initials: 'OM', subject: 'Subscription cancellation', orderNumber: 'AR-20559', preview: 'Please cancel before renewal.', time: '1h', priority: 'Normal', unread: false, status: 'Open', tags: ['billing'] },
 ]
 
 export const conversationThreads: Record<number, AgentThreadMessage[]> = {

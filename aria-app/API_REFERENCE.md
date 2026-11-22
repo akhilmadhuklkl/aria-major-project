@@ -36,7 +36,11 @@ flowchart LR
 
 | Method | Endpoint | Purpose | Used By |
 | --- | --- | --- | --- |
-| GET | `/health` | Checks API, SQLite, retrieval, Mastra, and provider-key status. | Setup checks, final validation |
+| GET | `/health` | Checks API, SQLite, retrieval, Mastra, provider-key, and authentication status. | Setup checks, final validation |
+| POST | `/auth/bootstrap` | Creates the first administrator and returns a session token when setup is available. | Initial setup |
+| POST | `/auth/login` | Authenticates a user and returns a session token. | Login interface |
+| GET | `/auth/me` | Returns the authenticated user for the current bearer token. | Session restore |
+| POST | `/auth/logout` | Revokes the authenticated session. | Logout interface |
 | GET | `/system-status` | Returns live system, database, retrieval, AI, and learning-loop status for the Settings modal. | Settings modal, demo proof |
 | GET | `/interim-status` | Returns interim milestone readiness and final pending items. | Report/demo evidence |
 | POST | `/chat` | Creates or continues a conversation and generates an assistant response. | Customer Chat |
@@ -47,6 +51,9 @@ flowchart LR
 | GET | `/knowledge` | Lists support knowledge records. | Knowledge Base, retrieval |
 | POST | `/knowledge` | Adds a new support knowledge record. | Knowledge Base |
 | GET | `/analytics/summary` | Returns persisted learning and support metrics. | Analytics Dashboard |
+| GET | `/knowledge-graph` | Returns typed ontology nodes and relationships. | Knowledge Graph Explorer |
+| POST | `/knowledge-graph/nodes` | Adds an ontology node for an administrator or support agent. | Knowledge Graph Explorer |
+| POST | `/knowledge-graph/relationships` | Connects two ontology nodes. | Knowledge Graph Explorer |
 
 ## Common Response Behavior
 
@@ -60,7 +67,7 @@ Example error:
 }
 ```
 
-The prototype does not require login authentication. This is acceptable for the current local academic demo. For deployment, authentication can be added as a future enhancement before exposing agent or knowledge-management features publicly.
+Authentication is optional for the local academic demo and is controlled by `AUTH_REQUIRED`. When it is `false` (the default), the application remains directly accessible for local demonstration while authentication endpoints remain available. Set `AUTH_REQUIRED=true` before exposing the application publicly; protected routes then require a bearer token issued by `/auth/login` or `/auth/bootstrap`, and role guards distinguish administrators, support agents, and customers.
 
 ## GET /health
 

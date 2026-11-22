@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
@@ -15,6 +15,7 @@ export type KnowledgeDocument = {
   status: string
   uses: number
   updatedAt: string
+  archivedAt?: string | null
 }
 
 db.exec(`
@@ -81,8 +82,58 @@ db.exec(`
 ensureColumn('messages', 'source_scores', 'TEXT')
 ensureColumn('messages', 'retrieval_method', 'TEXT')
 ensureColumn('messages', 'generation_provider', 'TEXT')
+runMigrations()
 
 seedDatabase()
+
+function runMigrations() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL
+    );
+  `)
+
+  db.prepare(`
+    INSERT OR IGNORE INTO schema_migrations (version, applied_at)
+    VALUES ('000_initial_schema', ?)
+  `).run(new Date().toISOString())
+
+  const migrations = [
+    {
+      version: '001_performance_indexes',
+      file: resolve('server', 'migrations', '001_performance_indexes.sql'),
+    },
+    {
+      version: '002_knowledge_document_lifecycle',
+      file: resolve('server', 'migrations', '002_knowledge_document_lifecycle.sql'),
+    },
+    {
+      version: '003_conversation_management',
+      file: resolve('server', 'migrations', '003_conversation_management.sql'),
+    },
+    {
+      version: '004_notifications',
+      file: resolve('server', 'migrations', '004_notifications.sql'),
+    },
+    {
+      version: '005_webhooks',
+      file: resolve('server', 'migrations', '005_webhooks.sql'),
+    },
+    {
+      version: '006_knowledge_graph',
+      file: resolve('server', 'migrations', '006_knowledge_graph.sql'),
+    },
+  ]
+
+  for (const migration of migrations) {
+    const applied = db.prepare('SELECT 1 FROM schema_migrations WHERE version = ?').get(migration.version)
+    if (applied) continue
+    db.exec(readFileSync(migration.file, 'utf8'))
+    db.prepare('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)')
+      .run(migration.version, new Date().toISOString())
+  }
+}
 
 function ensureColumn(table: string, column: string, definition: string) {
   const columns = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
@@ -94,6 +145,7 @@ function ensureColumn(table: string, column: string, definition: string) {
 function seedDatabase() {
   const now = new Date().toISOString()
   seedKnowledge(now)
+  seedKnowledgeGraph(now)
 
   const conversationCount = db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }
   if (conversationCount.count === 0) {
@@ -110,6 +162,124 @@ function seedDatabase() {
     ]
     for (const record of records) insert.run(...record, now, now)
   }
+}
+
+export type GraphNodeType = 'Customer' | 'Order' | 'Product' | 'Payment' | 'Refund' | 'Delivery' | 'Subscription' | 'SupportIssue' | 'SupportProcedure' | 'KnowledgeDocument' | 'SupportAgent'
+
+export function upsertGraphNode(input: { id: string; type: GraphNodeType; properties?: Record<string, string | number | boolean | null> }) {
+  const now = new Date().toISOString()
+  db.prepare(`
+    INSERT INTO graph_nodes (id, type, properties, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET type = excluded.type, properties = excluded.properties, updated_at = excluded.updated_at
+  `).run(input.id, input.type, JSON.stringify(input.properties ?? {}), now, now)
+  return getGraphNode(input.id)
+}
+
+export function createGraphRelationship(input: { sourceId: string; type: string; targetId: string; properties?: Record<string, string | number | boolean | null> }) {
+  const createdAt = new Date().toISOString()
+  db.prepare(`
+    INSERT INTO graph_relationships (source_id, type, target_id, properties, created_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(source_id, type, target_id) DO UPDATE SET properties = excluded.properties
+  `).run(input.sourceId, input.type, input.targetId, JSON.stringify(input.properties ?? {}), createdAt)
+  return { ...input, properties: input.properties ?? {} }
+}
+
+export function getGraphNode(id: string) {
+  const row = db.prepare('SELECT id, type, properties, created_at AS createdAt, updated_at AS updatedAt FROM graph_nodes WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  if (!row) return null
+  return { ...row, properties: JSON.parse(String(row.properties ?? '{}')) }
+}
+
+export function listGraphNodes(limit = 100) {
+  return db.prepare('SELECT id, type, properties, created_at AS createdAt, updated_at AS updatedAt FROM graph_nodes ORDER BY id LIMIT ?').all(Math.min(Math.max(limit, 1), 500)).map((row) => {
+    const item = row as Record<string, unknown>
+    return { ...item, properties: JSON.parse(String(item.properties ?? '{}')) }
+  })
+}
+
+export function listGraphRelationships(limit = 500) {
+  return db.prepare('SELECT source_id AS sourceId, type, target_id AS targetId, properties, created_at AS createdAt FROM graph_relationships ORDER BY source_id, target_id LIMIT ?').all(Math.min(Math.max(limit, 1), 1000)).map((row) => {
+    const item = row as Record<string, unknown>
+    return { ...item, properties: JSON.parse(String(item.properties ?? '{}')) }
+  })
+}
+
+export function deleteGraphRelationship(input: { sourceId: string; type: string; targetId: string }) {
+  return db.prepare('DELETE FROM graph_relationships WHERE source_id = ? AND type = ? AND target_id = ?')
+    .run(input.sourceId, input.type, input.targetId).changes > 0
+}
+
+export function deleteGraphNode(id: string) {
+  return db.prepare('DELETE FROM graph_nodes WHERE id = ?').run(id).changes > 0
+}
+
+export function queryGraphPaths(startId: string, maxHops = 2) {
+  const depthLimit = Math.min(Math.max(maxHops, 1), 2)
+  const edges = db.prepare('SELECT source_id AS sourceId, type, target_id AS targetId, properties FROM graph_relationships').all().map((row) => {
+    const item = row as Record<string, unknown>
+    return { sourceId: String(item.sourceId), type: String(item.type), targetId: String(item.targetId), properties: JSON.parse(String(item.properties ?? '{}')) }
+  })
+  const paths: Array<{ nodes: string[]; relationships: string[] }> = []
+  const visit = (nodeId: string, nodes: string[], relationships: string[]) => {
+    if (relationships.length >= depthLimit) return
+    for (const edge of edges.filter((item) => item.sourceId === nodeId)) {
+      if (nodes.includes(edge.targetId)) continue
+      const nextNodes = [...nodes, edge.targetId]
+      const nextRelationships = [...relationships, edge.type]
+      paths.push({ nodes: nextNodes, relationships: nextRelationships })
+      visit(edge.targetId, nextNodes, nextRelationships)
+    }
+  }
+  if (getGraphNode(startId)) visit(startId, [startId], [])
+  return paths
+}
+
+export function findGraphKnowledgeTitles(query: string) {
+  const terms = query.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 2)
+  const nodes = db.prepare('SELECT id, type, properties FROM graph_nodes').all().map((row) => {
+    const item = row as Record<string, unknown>
+    const properties = JSON.parse(String(item.properties ?? '{}')) as Record<string, unknown>
+    return { id: String(item.id), type: String(item.type), title: typeof properties.title === 'string' ? properties.title : '', text: `${item.id} ${item.type} ${String(item.properties ?? '{}')}`.toLowerCase() }
+  })
+  const edges = db.prepare('SELECT source_id AS sourceId, target_id AS targetId FROM graph_relationships').all() as Array<{ sourceId: string; targetId: string }>
+  const matched = nodes.filter((node) => terms.some((term) => node.text.includes(term))).map((node) => node.id)
+  const connected = new Set(matched)
+  for (const nodeId of matched) {
+    for (const edge of edges) {
+      if (edge.sourceId === nodeId) connected.add(edge.targetId)
+      if (edge.targetId === nodeId) connected.add(edge.sourceId)
+    }
+  }
+  return nodes.filter((node) => node.type === 'KnowledgeDocument' && connected.has(node.id))
+    .map((node) => node.title)
+    .filter(Boolean)
+}
+
+function seedKnowledgeGraph(now: string) {
+  const refundDoc = db.prepare("SELECT id FROM knowledge_documents WHERE title = 'Refund and return policy'").get() as { id: number } | undefined
+  const nodes = [
+    ['customer:customer-001', 'Customer', { name: 'Demo customer' }],
+    ['order:order-20491', 'Order', { status: 'refund_pending' }],
+    ['refund:refund-20491', 'Refund', { status: 'approved' }],
+    ['issue:refund-delay', 'SupportIssue', { title: 'Refund delay' }],
+    ['payment:payment-20491', 'Payment', { provider: 'Payment provider' }],
+    ['procedure:refund-timeline-check', 'SupportProcedure', { title: 'Refund timeline check' }],
+    ['agent:support-001', 'SupportAgent', { name: 'Support agent' }],
+    ...(refundDoc ? [[`knowledge:${refundDoc.id}`, 'KnowledgeDocument', { title: 'Refund and return policy', status: 'indexed' }]] : []),
+  ] as Array<[string, GraphNodeType, Record<string, string | number | boolean | null>]>
+  for (const [id, type, properties] of nodes) upsertGraphNode({ id, type, properties })
+  createGraphRelationship({ sourceId: 'customer:customer-001', type: 'OWNS', targetId: 'order:order-20491' })
+  createGraphRelationship({ sourceId: 'customer:customer-001', type: 'REPORTS', targetId: 'issue:refund-delay' })
+  createGraphRelationship({ sourceId: 'order:order-20491', type: 'HAS_REFUND', targetId: 'refund:refund-20491' })
+  createGraphRelationship({ sourceId: 'order:order-20491', type: 'USES', targetId: 'payment:payment-20491' })
+  createGraphRelationship({ sourceId: 'refund:refund-20491', type: 'ABOUT', targetId: 'issue:refund-delay' })
+  createGraphRelationship({ sourceId: 'refund:refund-20491', type: 'RESOLVED_BY', targetId: 'procedure:refund-timeline-check' })
+  createGraphRelationship({ sourceId: 'issue:refund-delay', type: 'ASSIGNED_TO', targetId: 'agent:support-001' })
+  createGraphRelationship({ sourceId: 'agent:support-001', type: 'FOLLOWS', targetId: 'procedure:refund-timeline-check' })
+  if (refundDoc) createGraphRelationship({ sourceId: 'procedure:refund-timeline-check', type: 'SUPPORTED_BY', targetId: `knowledge:${refundDoc.id}` })
+  void now
 }
 
 function seedKnowledge(now: string) {
@@ -209,6 +379,28 @@ export function inferTopic(message: string) {
   return 'General'
 }
 
+export function createNotification(input: { kind: string; title: string; message: string }) {
+  const createdAt = new Date().toISOString()
+  const result = db.prepare('INSERT INTO notifications (kind, title, message, created_at) VALUES (?, ?, ?, ?)')
+    .run(input.kind, input.title, input.message, createdAt)
+  return { id: Number(result.lastInsertRowid), ...input, readAt: null, createdAt }
+}
+
+export function listNotifications(limit = 20) {
+  return db.prepare(`
+    SELECT id, kind, title, message, read_at AS readAt, created_at AS createdAt
+    FROM notifications ORDER BY created_at DESC LIMIT ?
+  `).all(Math.max(1, Math.min(limit, 100)))
+}
+
+export function markNotificationRead(id: number) {
+  return db.prepare('UPDATE notifications SET read_at = ? WHERE id = ?').run(new Date().toISOString(), id).changes > 0
+}
+
+export function markAllNotificationsRead() {
+  return db.prepare('UPDATE notifications SET read_at = ? WHERE read_at IS NULL').run(new Date().toISOString()).changes
+}
+
 export function calculateQualityScore(rating?: number, feedbackType = 'customer_rating') {
   const ratingScore = rating ? rating * 20 : 60
   const actionAdjustment = feedbackType === 'accepted' ? 15 : feedbackType === 'rejected' ? -20 : 0
@@ -217,22 +409,85 @@ export function calculateQualityScore(rating?: number, feedbackType = 'customer_
 
 export function listKnowledge() {
   return db.prepare(`
-    SELECT id, title, category, content, status, uses, updated_at AS updatedAt
-    FROM knowledge_documents ORDER BY uses DESC, updated_at DESC
+    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
+    FROM knowledge_documents
+    WHERE archived_at IS NULL
+    ORDER BY uses DESC, updated_at DESC
   `).all() as KnowledgeDocument[]
 }
 
-export function createKnowledgeDocument(input: { title: string; category: string; content: string; status?: string }) {
+export function createKnowledgeDocument(input: { title: string; category: string; content: string; status?: string; sourceFilename?: string }) {
   const now = new Date().toISOString()
   const created = db.prepare(`
-    INSERT INTO knowledge_documents (title, category, content, status, uses, updated_at)
-    VALUES (?, ?, ?, ?, 0, ?)
+    INSERT INTO knowledge_documents (title, category, content, status, uses, updated_at, archived_at)
+    VALUES (?, ?, ?, ?, 0, ?, NULL)
   `).run(input.title, input.category, input.content, input.status ?? 'indexed', now)
 
+  const id = Number(created.lastInsertRowid)
+  db.prepare(`
+    INSERT INTO knowledge_document_versions
+      (knowledge_document_id, version, title, category, content, source_filename, created_at)
+    VALUES (?, 1, ?, ?, ?, ?, ?)
+  `).run(id, input.title, input.category, input.content, input.sourceFilename ?? null, now)
+
   return db.prepare(`
-    SELECT id, title, category, content, status, uses, updated_at AS updatedAt
+    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
     FROM knowledge_documents WHERE id = ?
-  `).get(Number(created.lastInsertRowid)) as KnowledgeDocument
+  `).get(id) as KnowledgeDocument
+}
+
+export function archiveKnowledgeDocuments(ids: number[]) {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
+  if (uniqueIds.length === 0) return { archived: 0 }
+  const placeholders = uniqueIds.map(() => '?').join(', ')
+  const result = db.prepare(`
+    UPDATE knowledge_documents SET archived_at = ?, updated_at = ?
+    WHERE id IN (${placeholders}) AND archived_at IS NULL
+  `).run(new Date().toISOString(), new Date().toISOString(), ...uniqueIds)
+  return { archived: result.changes }
+}
+
+export function updateKnowledgeDocument(id: number, input: {
+  title: string
+  category: string
+  content: string
+  status?: string
+  sourceFilename?: string
+}) {
+  const current = db.prepare('SELECT id FROM knowledge_documents WHERE id = ? AND archived_at IS NULL').get(id)
+  if (!current) return null
+  const now = new Date().toISOString()
+  const nextVersion = db.prepare(`
+    SELECT COALESCE(MAX(version), 0) + 1 AS version
+    FROM knowledge_document_versions WHERE knowledge_document_id = ?
+  `).get(id) as { version: number }
+
+  db.prepare(`
+    UPDATE knowledge_documents
+    SET title = ?, category = ?, content = ?, status = ?, updated_at = ?
+    WHERE id = ?
+  `).run(input.title, input.category, input.content, input.status ?? 'indexed', now, id)
+  db.prepare(`
+    INSERT INTO knowledge_document_versions
+      (knowledge_document_id, version, title, category, content, source_filename, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, nextVersion.version, input.title, input.category, input.content, input.sourceFilename ?? null, now)
+  db.prepare('DELETE FROM knowledge_embeddings WHERE knowledge_document_id = ?').run(id)
+
+  return db.prepare(`
+    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
+    FROM knowledge_documents WHERE id = ?
+  `).get(id) as KnowledgeDocument
+}
+
+export function getKnowledgeDocumentVersions(id: number) {
+  return db.prepare(`
+    SELECT id, knowledge_document_id AS knowledgeDocumentId, version, title, category,
+      content, source_filename AS sourceFilename, created_at AS createdAt, archived_at AS archivedAt
+    FROM knowledge_document_versions
+    WHERE knowledge_document_id = ?
+    ORDER BY version DESC
+  `).all(id)
 }
 
 export function deleteKnowledgeDocuments(ids: number[]) {

@@ -1,5 +1,23 @@
 export type View = 'inbox' | 'customer' | 'knowledge' | 'analytics'
 
+export type UserRole = 'admin' | 'support_agent' | 'customer'
+
+export interface AuthUser {
+  id: number
+  email: string
+  displayName: string
+  role: UserRole
+}
+
+export interface Notification {
+  id: number
+  kind: string
+  title: string
+  message: string
+  readAt: string | null
+  createdAt: string
+}
+
 export interface Conversation {
   id: number
   customer: string
@@ -10,6 +28,10 @@ export interface Conversation {
   time: string
   priority: 'High' | 'Normal'
   unread: boolean
+  status?: 'Open' | 'Pending' | 'Resolved'
+  assignedTo?: string
+  tags?: string[]
+  escalated?: boolean
 }
 
 export interface AgentThreadMessage {
@@ -26,6 +48,22 @@ export interface KnowledgeItem {
   updated: string
   status: 'Indexed' | 'Review'
   uses: number
+}
+
+export interface GraphNode {
+  id: string
+  type: string
+  properties: Record<string, string | number | boolean | null>
+  createdAt: string
+  updatedAt: string
+}
+
+export interface GraphRelationship {
+  sourceId: string
+  targetId: string
+  type: string
+  properties: Record<string, string | number | boolean | null>
+  createdAt?: string
 }
 
 export interface NewKnowledgeItem {
@@ -54,7 +92,7 @@ export interface ChatMessage {
   confidence?: number
   sources?: string[]
   sourceScores?: SourceScore[]
-  retrievalMethod?: 'semantic' | 'keyword' | 'none'
+  retrievalMethod?: 'hybrid' | 'semantic' | 'keyword' | 'none'
   generationProvider?: 'mastra-gemini' | 'local-knowledge'
 }
 
@@ -68,6 +106,8 @@ export interface SourceScore {
 }
 
 export interface AnalyticsSummary {
+  range?: string
+  generatedAt?: string
   conversations: number
   averageRating: number
   averageQuality: number
@@ -78,6 +118,9 @@ export interface AnalyticsSummary {
   learningSignals: LearningSignals
   strongestSources: LearningSource[]
   reviewSources: LearningSource[]
+  retrieval?: Array<{ method: string; count: number }>
+  escalations?: number
+  assistantResponses?: number
 }
 
 export interface LearningSignals {
@@ -100,6 +143,7 @@ export interface LearningSource {
 
 export interface SystemStatus {
   generatedAt: string
+  graphStore: 'sqlite' | 'neo4j'
   backend: {
     service: string
     status: string

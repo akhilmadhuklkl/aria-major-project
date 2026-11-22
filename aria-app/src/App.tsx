@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, View, Conversation, AnalyticsSummary, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
+import type { AgentThreadMessage, AuthUser, View, Conversation, AnalyticsSummary, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
+import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
 import { AppModal } from './components/Layout/AppModal'
+import { LoginPage } from './components/Auth/LoginPage'
 import { Sidebar } from './components/Layout/Sidebar'
 import { Topbar } from './components/Layout/Topbar'
 import { AgentWorkspace } from './components/AgentWorkspace/AgentWorkspace'
@@ -33,17 +35,52 @@ export default function App() {
   const [agentActionLoading, setAgentActionLoading] = useState(false)
   const [knowledgeQuery, setKnowledgeQuery] = useState('')
   const [remoteKnowledge, setRemoteKnowledge] = useState<KnowledgeItem[]>(knowledgeItems)
+  const [graphNodes, setGraphNodes] = useState<GraphNode[]>([])
+  const [graphRelationships, setGraphRelationships] = useState<GraphRelationship[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>()
+  const [authUser, setAuthUser] = useState<AuthUser>()
+  const [authRequired, setAuthRequired] = useState(false)
+  const [authSetupAvailable, setAuthSetupAvailable] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [showLogin, setShowLogin] = useState(false)
+  const [language, setLanguage] = useState<Language>(() => (window.localStorage.getItem('aria.language') as Language) || 'en')
+
+  function changeLanguage(next: Language) {
+    setLanguage(next)
+    window.localStorage.setItem('aria.language', next)
+  }
 
   useEffect(() => {
-    void Promise.allSettled([api.getKnowledge(), api.getAnalytics(), api.getSystemStatus()])
-      .then(([knowledgeResult, analyticsResult, statusResult]) => {
+    void api.getHealth()
+      .then((health) => {
+        setAuthRequired(health.authRequired)
+        setAuthSetupAvailable(health.authSetupAvailable)
+        return api.getCurrentUser().catch(() => undefined)
+      })
+      .then((user) => setAuthUser(user))
+      .finally(() => setAuthLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (authLoading || (authRequired && !authUser)) return
+    void Promise.allSettled([api.getKnowledge(), api.getAnalytics(), api.getSystemStatus(), api.getKnowledgeGraph()])
+      .then(([knowledgeResult, analyticsResult, statusResult, graphResult]) => {
         if (knowledgeResult.status === 'fulfilled') setRemoteKnowledge(knowledgeResult.value)
         if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
         if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
+        if (graphResult.status === 'fulfilled') {
+          setGraphNodes(graphResult.value.nodes)
+          setGraphRelationships(graphResult.value.relationships)
+        }
       })
-  }, [])
+  }, [authLoading, authRequired, authUser])
+
+  async function refreshGraph() {
+    const graph = await api.getKnowledgeGraph()
+    setGraphNodes(graph.nodes)
+    setGraphRelationships(graph.relationships)
+  }
 
   useEffect(() => {
     if (activeModal !== 'settings') return
@@ -70,18 +107,18 @@ export default function App() {
     document.querySelector('.main-content')?.scrollTo({ top: 0 })
   }, [view])
 
-  async function sendCustomerMessage() {
-    const message = customerInput.trim()
+  async function sendCustomerMessage(override?: string) {
+    const message = (typeof override === 'string' ? override : customerInput).trim()
     if (!message || chatLoading) return
     setCustomerMessages((current) => [...current, { from: 'customer', text: message }])
-    setCustomerInput('')
+    if (typeof override !== 'string') setCustomerInput('')
     setFeedbackSent(false)
     setRating(0)
     setChatError('')
     setChatLoading(true)
 
     try {
-      const result = await api.chat(message, customerConversationId)
+      const result = await api.chat(message, customerConversationId, language)
       setCustomerConversationId(result.conversationId)
       setLastAssistantMessageId(result.id)
       setCustomerMessages((current) => [
@@ -103,6 +140,30 @@ export default function App() {
     } finally {
       setChatLoading(false)
     }
+  }
+
+  function startNewCustomerConversation() {
+    setCustomerMessages([{ from: 'bot', text: 'Hello! I am ARIA. How can I help with your order today?' }])
+    setCustomerConversationId(undefined)
+    setLastAssistantMessageId(undefined)
+    setRating(0)
+    setFeedbackSent(false)
+    setChatError('')
+  }
+
+  function retryCustomerMessage() {
+    const lastQuestion = [...customerMessages].reverse().find((message) => message.from === 'customer')
+    if (lastQuestion) void sendCustomerMessage(lastQuestion.text)
+  }
+
+  function downloadCustomerTranscript() {
+    const transcript = customerMessages.map((message) => `${message.from === 'bot' ? 'ARIA' : 'Customer'}: ${message.text}`).join('\n\n')
+    const url = URL.createObjectURL(new Blob([transcript], { type: 'text/plain' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'aria-customer-conversation.txt'
+    anchor.click()
+    URL.revokeObjectURL(url)
   }
 
   async function submitCustomerFeedback() {
@@ -159,6 +220,11 @@ export default function App() {
     setSuggestionStatus('Ready for review')
   }
 
+  async function updateConversation(id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) {
+    await api.updateConversation(id, changes)
+    setSelectedConversation((current) => current.id === id ? { ...current, ...changes } : current)
+  }
+
   async function submitAgentAction(action: 'accepted' | 'edited' | 'rejected') {
     if (agentActionLoading) return
     const statusByAction = {
@@ -202,8 +268,52 @@ export default function App() {
       })
   }
 
-  async function refreshAnalytics() {
-    setAnalytics(await api.getAnalytics())
+  async function uploadKnowledge(file: File, category: string, title?: string) {
+    const uploaded = await api.uploadKnowledge(file, category, title)
+    setRemoteKnowledge((current) => [uploaded, ...current])
+    void api.getSystemStatus().then(setSystemStatus).catch(() => undefined)
+  }
+
+  async function archiveKnowledge(ids: number[]) {
+    await api.archiveKnowledge(ids)
+    setRemoteKnowledge((current) => current.filter((item) => !item.id || !ids.includes(item.id)))
+  }
+
+  async function refreshAnalytics(range = '7d') {
+    setAnalytics(await api.getAnalytics(range))
+  }
+
+  async function login(email: string, password: string) {
+    const user = await api.login(email, password)
+    setAuthUser(user)
+    setShowLogin(false)
+    return user
+  }
+
+  async function bootstrap(input: { email: string; displayName: string; password: string }) {
+    const user = await api.bootstrap(input)
+    setAuthUser(user)
+    setAuthSetupAvailable(false)
+    setShowLogin(false)
+    return user
+  }
+
+  async function logout() {
+    await api.logout()
+    setAuthUser(undefined)
+    setShowLogin(authRequired)
+  }
+
+  if (authLoading) {
+    return <main className="auth-loading"><div className="brand-mark"><span>✦</span></div><strong>Loading ARIA...</strong></main>
+  }
+
+  if (authRequired && !authUser) {
+    return <LoginPage onLogin={login} onBootstrap={bootstrap} setupAvailable={authSetupAvailable} />
+  }
+
+  if (showLogin) {
+    return <LoginPage onLogin={login} onBootstrap={bootstrap} setupAvailable={authSetupAvailable} />
   }
 
   return (
@@ -213,6 +323,11 @@ export default function App() {
         onChange={setView}
         onHelp={() => setActiveModal('help')}
         onSettings={() => setActiveModal('settings')}
+        user={authUser}
+        onLogin={() => setShowLogin(true)}
+        onLogout={() => void logout()}
+        language={language}
+        onLanguageChange={changeLanguage}
       />
       <div className="app-body">
         <Topbar
@@ -222,6 +337,7 @@ export default function App() {
           onSearch={view === 'knowledge' ? setKnowledgeQuery : setTopSearch}
           searchEnabled={view === 'inbox' || view === 'knowledge'}
           searchPlaceholder={view === 'knowledge' ? 'Search knowledge' : 'Search conversations'}
+          language={language}
         />
         <main className="main-content">
           {view === 'inbox' && (
@@ -237,6 +353,7 @@ export default function App() {
               onAction={submitAgentAction}
               regenerate={regenerateSuggestion}
               actionLoading={agentActionLoading}
+              onUpdateConversation={updateConversation}
             />
           )}
           {view === 'customer' && (
@@ -252,12 +369,27 @@ export default function App() {
               feedbackLoading={feedbackLoading}
               loading={chatLoading}
               error={chatError}
+              onRetry={retryCustomerMessage}
+              onNewConversation={startNewCustomerConversation}
+              onDownload={downloadCustomerTranscript}
               mode="Persistent API"
               sourceCount={remoteKnowledge.filter((item) => item.status === 'Indexed').length}
+              language={language}
             />
           )}
           {view === 'knowledge' && (
-            <KnowledgeBase query={knowledgeQuery} setQuery={setKnowledgeQuery} items={remoteKnowledge} onAdd={addKnowledge} onDelete={deleteKnowledge} />
+            <KnowledgeBase
+              query={knowledgeQuery}
+              setQuery={setKnowledgeQuery}
+              items={remoteKnowledge}
+              onAdd={addKnowledge}
+              onUpload={uploadKnowledge}
+              onDelete={deleteKnowledge}
+              onArchive={archiveKnowledge}
+              onRefreshGraph={refreshGraph}
+              graphNodes={graphNodes}
+              graphRelationships={graphRelationships}
+            />
           )}
           {view === 'analytics' && <Analytics summary={analytics} onRefresh={refreshAnalytics} />}
         </main>
