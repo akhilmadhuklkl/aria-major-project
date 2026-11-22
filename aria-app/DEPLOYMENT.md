@@ -20,6 +20,14 @@ DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run 
 
 The migration script imports the current SQLite records, embeddings, sessions, conversation metadata, knowledge-document versions, notifications, webhook subscriptions, and Knowledge Graph nodes/relationships inside a transaction. The application still requires a separate database-adapter cutover before PostgreSQL can be used as its runtime database.
 
+After migration, verify the target schema without changing data:
+
+```bash
+DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run verify:postgres
+```
+
+The verification checks required tables, columns, and production indexes for authentication, conversations, retrieval, notifications, webhooks, and Knowledge Graph storage.
+
 ## Production checklist
 
 - Set `AUTH_REQUIRED=true`.
