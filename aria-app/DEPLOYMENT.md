@@ -5,6 +5,7 @@
 1. Copy `.env.example` to `.env` and set the required provider key.
 2. Run `docker compose up --build` from `aria-app/`.
 3. Verify liveness at `http://localhost:8787/api/health` and readiness at `http://localhost:8787/api/ready`.
+4. Run the non-mutating API smoke check with `npm run check:api`.
 
 The default container uses SQLite with the `/app/data` volume. Do not commit `.env` or provider keys.
 
@@ -29,3 +30,4 @@ The migration script imports the current SQLite records, embeddings, sessions, c
 - Persist the database volume and configure backups.
 - Confirm `/api/health` is monitored and never expose `.env` files.
 - Configure deployment monitoring to use `/api/ready` for traffic readiness; it returns HTTP 503 when the SQLite database cannot be queried.
+- Use `SMOKE_API_TOKEN` with `npm run check:api` when `AUTH_REQUIRED=true` so protected read-only endpoints can be checked without performing writes.
