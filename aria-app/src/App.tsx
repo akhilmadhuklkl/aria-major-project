@@ -86,6 +86,13 @@ export default function App() {
       })
   }, [authLoading, authRequired, authUser])
 
+  useEffect(() => {
+    if (authLoading || (authRequired && !authUser)) return
+    const refreshStatus = () => { void api.getSystemStatus().then(setSystemStatus).catch(() => undefined) }
+    const interval = window.setInterval(refreshStatus, 30_000)
+    return () => window.clearInterval(interval)
+  }, [authLoading, authRequired, authUser])
+
   async function loadMoreConversations() {
     if (conversationLoading || !conversationHasMore) return
     setConversationLoading(true)
