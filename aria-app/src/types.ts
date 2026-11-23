@@ -144,6 +144,7 @@ export interface AnalyticsSummary {
   retrieval?: Array<{ method: string; count: number }>
   escalations?: number
   assistantResponses?: number
+  averageLatencyMs?: number
 }
 
 export interface LearningSignals {

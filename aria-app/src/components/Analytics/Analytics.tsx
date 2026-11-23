@@ -29,6 +29,7 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
       ['Assistant responses', String(summary?.assistantResponses ?? 0)],
       ['Average rating', String(summary?.averageRating ?? 0)],
       ['Average quality', String(summary?.averageQuality ?? 0)],
+      ['Average latency (ms)', String(summary?.averageLatencyMs ?? 0)],
       ['Escalations', String(summary?.escalations ?? 0)],
       ['Feedback records', String(summary?.feedbackRecords ?? 0)],
     ]

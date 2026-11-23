@@ -991,6 +991,7 @@ app.get('/api/analytics/summary', (request, response) => {
   `).all(...dateArgs) as Array<{ method: string; count: number }>
   const escalationCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE should_escalate = 1${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const responseMessageCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
+  const latencyStats = db.prepare(`SELECT COALESCE(AVG(latency_ms), 0) AS averageLatencyMs FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageLatencyMs: number }
 
   response.json({
     range,
@@ -1004,6 +1005,7 @@ app.get('/api/analytics/summary', (request, response) => {
     retrieval: retrievalRows,
     escalations: escalationCount.count,
     assistantResponses: responseMessageCount.count,
+    averageLatencyMs: Math.round(latencyStats.averageLatencyMs),
     topics: topicRows,
     learningSignals: {
       learnedSourceCount,
