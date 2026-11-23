@@ -30,6 +30,10 @@ jobs:
         run: npm test
       - name: Build application
         run: npm run build
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Run browser smoke tests
+        run: npm run test:e2e
       - name: Build production container
         run: docker build --tag aria-app:ci .
       - name: Start API smoke-test process
