@@ -104,8 +104,12 @@ button { cursor: pointer; }
 .topbar-popover span, .chat-options-menu span { margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .notification-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .notification-heading button { border: 0; background: transparent; color: var(--teal-dark); font-size: 8px; }
+.notification-heading button:disabled { cursor: wait; opacity: .55; }
+.notification-error { margin: 8px 0 0; padding: 7px 8px; border: 1px solid #f0c6c3; border-radius: 5px; background: #fff5f4; color: var(--danger); font-size: 8px; line-height: 1.35; }
 .notification-item { width: 100%; margin-top: 9px; padding: 8px 0 0; border: 0; border-top: 1px solid var(--line); background: transparent; text-align: left; }
 .notification-item:hover { background: var(--surface-soft); }
+.notification-item:disabled { cursor: wait; }
+.notification-item small { display: block; margin-top: 5px; color: var(--faint); font-size: 8px; }
 .notification-item.read { opacity: .58; }
 .search-box { height: 36px; min-width: 220px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--faint); }
 .search-box input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); font-size: 12px; background: transparent; }
