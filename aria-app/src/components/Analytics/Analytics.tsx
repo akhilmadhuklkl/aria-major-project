@@ -36,6 +36,15 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
       ['Escalations', String(summary?.escalations ?? 0)],
       ['Escalation rate', `${summary?.escalationRate ?? 0}%`],
       ['Feedback records', String(summary?.feedbackRecords ?? 0)],
+      [],
+      ['Retrieval method', 'Responses'],
+      ...(summary?.retrieval ?? []).map((item) => [item.method, String(item.count)]),
+      [],
+      ['Generation provider', 'Responses'],
+      ...(summary?.providers ?? []).map((item) => [item.provider, String(item.count)]),
+      [],
+      ['Quality trend day', 'Quality', 'Rating'],
+      ...(summary?.qualityTrend ?? []).map((item) => [item.day, String(item.quality), String(item.rating)]),
     ]
     const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(',')).join('\n')
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
