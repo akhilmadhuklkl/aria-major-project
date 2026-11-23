@@ -981,6 +981,15 @@ app.get('/api/analytics/summary', (request, response) => {
   })
 })
 
+app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  void _next
+  const requestId = String(response.getHeader('X-Request-ID') ?? 'unknown')
+  const message = error instanceof Error ? error.message : 'Unknown server error'
+  console.error(`[${requestId}] ${request.method} ${request.originalUrl} failed: ${message}`)
+  if (response.headersSent) return
+  response.status(500).json({ error: 'internal server error', requestId })
+})
+
 app.listen(port, () => {
   console.log(`ARIA API listening on http://127.0.0.1:${port}`)
 })
