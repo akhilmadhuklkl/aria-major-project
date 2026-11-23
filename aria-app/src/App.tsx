@@ -456,6 +456,7 @@ export default function App() {
         onLogout={() => void logout()}
         language={language}
         onLanguageChange={changeLanguage}
+          attentionCount={queueCounts.attention}
       />
       <div className="app-body">
         <Topbar

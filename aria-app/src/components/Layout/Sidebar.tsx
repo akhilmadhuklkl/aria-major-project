@@ -14,9 +14,10 @@ export interface SidebarProps {
   onLogout: () => void
   language: Language
   onLanguageChange: (language: Language) => void
+  attentionCount: number
 }
 
-export function Sidebar({ view, onChange, onHelp, onSettings, user, onLogin, onLogout, language, onLanguageChange }: SidebarProps) {
+export function Sidebar({ view, onChange, onHelp, onSettings, user, onLogin, onLogout, language, onLanguageChange, attentionCount }: SidebarProps) {
   const visibleNavItems = navItems.filter((item) => !user || user.role !== 'customer' || item.id === 'customer')
 
   return (
@@ -38,7 +39,7 @@ export function Sidebar({ view, onChange, onHelp, onSettings, user, onLogin, onL
             >
               <Icon size={19} />
               <span>{translate(language, item.id)}</span>
-              {item.id === 'inbox' && <b aria-hidden="true">5</b>}
+              {item.id === 'inbox' && <b aria-hidden="true">{attentionCount}</b>}
             </button>
           )
         })}
