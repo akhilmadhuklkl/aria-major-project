@@ -45,10 +45,16 @@ try {
 
   const status = await request<Record<string, unknown>>('/system-status')
   const backend = status.backend as Record<string, unknown> | undefined
+  const ai = status.ai as Record<string, unknown> | undefined
   addResult(
     'System status endpoint',
     backend?.status === 'operational',
     'system status returned successfully',
+  )
+  addResult(
+    'AI provider status',
+    typeof ai?.agentProvider === 'string' && ai.agentProvider.length > 0,
+    `provider=${String(ai?.agentProvider ?? 'unknown')}`,
   )
 
   const analytics = await request<Record<string, unknown>>('/analytics/summary')
