@@ -1,4 +1,4 @@
-import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus } from './types'
+import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookSubscription } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 const AUTH_TOKEN_KEY = 'aria.auth.token'
@@ -57,6 +57,18 @@ export const api = {
 
   getAuditLogs(limit = 20) {
     return request<AuditLog[]>(`/audit-logs?limit=${limit}`)
+  },
+
+  getWebhooks() {
+    return request<WebhookSubscription[]>('/integrations/webhooks')
+  },
+
+  createWebhook(input: { name: string; url: string; events: string[] }) {
+    return request<WebhookSubscription>('/integrations/webhooks', { method: 'POST', body: JSON.stringify(input) })
+  },
+
+  deleteWebhook(id: number) {
+    return request<{ deleted: boolean }>(`/integrations/webhooks/${id}`, { method: 'DELETE' })
   },
 
   getGraphNodes() {

@@ -29,6 +29,17 @@ export interface AuditLog {
   createdAt: string
 }
 
+export interface WebhookSubscription {
+  id: number
+  name: string
+  url: string
+  events: string[]
+  active: boolean
+  createdAt: string
+  updatedAt?: string
+  secret?: string
+}
+
 export interface Conversation {
   id: number
   customer: string

@@ -1,6 +1,7 @@
-import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Server, Settings, X } from 'lucide-react'
+import { useState } from 'react'
+import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Server, Settings, Trash2, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { AnalyticsSummary, AuditLog, KnowledgeItem, SystemStatus } from '../../types'
+import type { AnalyticsSummary, AuditLog, KnowledgeItem, SystemStatus, WebhookSubscription } from '../../types'
 
 type ModalType = 'help' | 'settings'
 
@@ -10,6 +11,9 @@ interface AppModalProps {
   analytics?: AnalyticsSummary
   systemStatus?: SystemStatus
   auditLogs: AuditLog[]
+  webhooks: WebhookSubscription[]
+  onCreateWebhook: (input: { name: string; url: string; events: string[] }) => Promise<string | undefined>
+  onDeleteWebhook: (id: number) => Promise<void>
   onClose: () => void
 }
 
@@ -36,7 +40,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, onCreateWebhook, onDeleteWebhook, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -162,9 +166,68 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
                 </div>
               )) : <p className="audit-log-empty">No recorded administrative activity yet.</p>}
             </div>
+            <WebhookSettings webhooks={webhooks} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function WebhookSettings({
+  webhooks,
+  onCreate,
+  onDelete,
+}: {
+  webhooks: WebhookSubscription[]
+  onCreate: AppModalProps['onCreateWebhook']
+  onDelete: AppModalProps['onDeleteWebhook']
+}) {
+  const [name, setName] = useState('')
+  const [url, setUrl] = useState('')
+  const [event, setEvent] = useState('knowledge.indexed')
+  const [secret, setSecret] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function submit(eventObject: React.FormEvent<HTMLFormElement>) {
+    eventObject.preventDefault()
+    if (!name.trim() || !url.trim()) return
+    setSaving(true)
+    setError('')
+    try {
+      const createdSecret = await onCreate({ name: name.trim(), url: url.trim(), events: [event] })
+      setSecret(createdSecret ?? '')
+      setName('')
+      setUrl('')
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : 'Webhook could not be created.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="webhook-section">
+      <div className="audit-log-heading"><strong>Webhook integrations</strong><span>{webhooks.length} configured</span></div>
+      <form className="webhook-form" onSubmit={(eventObject) => void submit(eventObject)}>
+        <input value={name} onChange={(eventObject) => setName(eventObject.target.value)} placeholder="Integration name" aria-label="Webhook integration name" />
+        <input value={url} onChange={(eventObject) => setUrl(eventObject.target.value)} placeholder="https://example.com/aria" type="url" aria-label="Webhook HTTPS URL" />
+        <select value={event} onChange={(eventObject) => setEvent(eventObject.target.value)} aria-label="Webhook event">
+          <option value="knowledge.indexed">Knowledge indexed</option>
+          <option value="feedback.low_rating">Low rating</option>
+          <option value="agent_action.corrected">Agent correction</option>
+        </select>
+        <button className="icon-button" type="submit" disabled={saving || !name.trim() || !url.trim()} aria-label="Add webhook" title="Add webhook"><Plus size={16} /></button>
+      </form>
+      {error && <p className="notification-error" role="alert">{error}</p>}
+      {secret && <p className="webhook-secret" role="status"><strong>Copy this signing secret now:</strong> {secret}</p>}
+      {webhooks.length > 0 ? webhooks.map((webhook) => (
+        <div className="webhook-row" key={webhook.id}>
+          <div><strong>{webhook.name}</strong><span>{webhook.url}</span><small>{webhook.events.join(', ')}</small></div>
+          <button className="danger-icon-button" onClick={() => { if (window.confirm(`Delete webhook "${webhook.name}"?`)) void onDelete(webhook.id) }} aria-label={`Delete ${webhook.name}`} title="Delete webhook"><Trash2 size={14} /></button>
+        </div>
+      )) : <p className="audit-log-empty">No webhook integrations configured.</p>}
     </div>
   )
 }

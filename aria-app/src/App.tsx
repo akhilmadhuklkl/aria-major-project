@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, AnalyticsSummary, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
+import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, AnalyticsSummary, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
@@ -43,6 +43,7 @@ export default function App() {
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>()
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([])
   const [authUser, setAuthUser] = useState<AuthUser>()
   const [authRequired, setAuthRequired] = useState(false)
   const [authSetupAvailable, setAuthSetupAvailable] = useState(false)
@@ -115,10 +116,11 @@ export default function App() {
   useEffect(() => {
     if (activeModal !== 'settings') return
 
-    void Promise.allSettled([api.getSystemStatus(), api.getAuditLogs()])
-      .then(([statusResult, auditResult]) => {
+    void Promise.allSettled([api.getSystemStatus(), api.getAuditLogs(), api.getWebhooks()])
+      .then(([statusResult, auditResult, webhookResult]) => {
         if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
         if (auditResult.status === 'fulfilled') setAuditLogs(auditResult.value)
+        if (webhookResult.status === 'fulfilled') setWebhooks(webhookResult.value)
       })
       .catch(() => {
         // Existing settings values remain visible if the API is temporarily unavailable.
@@ -347,6 +349,17 @@ export default function App() {
     setShowLogin(authRequired)
   }
 
+  async function createWebhook(input: { name: string; url: string; events: string[] }) {
+    const created = await api.createWebhook(input)
+    setWebhooks((current) => [{ ...created }, ...current])
+    return created.secret
+  }
+
+  async function deleteWebhook(id: number) {
+    await api.deleteWebhook(id)
+    setWebhooks((current) => current.filter((webhook) => webhook.id !== id))
+  }
+
   if (authLoading) {
     return <main className="auth-loading"><div className="brand-mark"><span>✦</span></div><strong>Loading ARIA...</strong></main>
   }
@@ -449,6 +462,9 @@ export default function App() {
           analytics={analytics}
           systemStatus={systemStatus}
           auditLogs={auditLogs}
+          webhooks={webhooks}
+          onCreateWebhook={createWebhook}
+          onDeleteWebhook={deleteWebhook}
           onClose={() => setActiveModal(undefined)}
         />
       )}
