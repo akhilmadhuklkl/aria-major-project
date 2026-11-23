@@ -16,6 +16,7 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
   const [showOptions, setShowOptions] = useState(false)
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [draft, setDraft] = useState('')
+  const [tagDraft, setTagDraft] = useState('')
   const historyRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -30,6 +31,17 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
     if (!text) return
     onSendMessage(text, mode === 'note' ? 'note' : 'agent')
     setDraft('')
+  }
+
+  function addTag() {
+    const tag = tagDraft.trim()
+    if (!tag || (selected.tags ?? []).some((item) => item.toLowerCase() === tag.toLowerCase())) return
+    void onUpdateConversation(selected.id, { tags: [...(selected.tags ?? []), tag].slice(0, 8) })
+    setTagDraft('')
+  }
+
+  function removeTag(tagToRemove: string) {
+    void onUpdateConversation(selected.id, { tags: (selected.tags ?? []).filter((tag) => tag !== tagToRemove) })
   }
 
   return (
@@ -57,6 +69,11 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
               <button onClick={() => void onUpdateConversation(selected.id, { priority: selected.priority === 'High' ? 'Normal' : 'High' })}>{selected.priority} priority (toggle)</button>
               <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || undefined })}><option value="">Unassigned</option><option>Akhil</option><option>Support Team</option></select></label>
               <button onClick={() => void onUpdateConversation(selected.id, { escalated: !selected.escalated })}>{selected.escalated ? 'Remove escalation' : 'Escalate conversation'}</button>
+              <div className="conversation-tags-editor">
+                <span>Tags</span>
+                <div className="conversation-tags">{(selected.tags ?? []).map((tag) => <button key={tag} type="button" className="conversation-tag" onClick={() => removeTag(tag)} title={`Remove ${tag}`}>{tag} x</button>)}</div>
+                <div className="tag-entry"><input value={tagDraft} onChange={(event) => setTagDraft(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addTag() } }} placeholder="Add a tag" aria-label="Add conversation tag" /><button type="button" onClick={addTag} disabled={!tagDraft.trim()} aria-label="Add conversation tag">Add</button></div>
+              </div>
               <span>Topic: {selected.subject}</span>
             </div>
           )}

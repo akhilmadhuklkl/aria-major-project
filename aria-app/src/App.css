@@ -127,6 +127,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .topbar-popover strong, .topbar-popover span, .chat-options-menu strong, .chat-options-menu span { display: block; }
 .topbar-popover strong, .chat-options-menu strong { color: var(--ink); font-size: 10px; }
 .topbar-popover span, .chat-options-menu span { margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.conversation-tags-editor { margin-top: 8px; }
+.conversation-tags-editor > span { margin-top: 0; color: var(--ink); font-size: 10px; font-weight: 800; }
+.conversation-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.conversation-tag { padding: 3px 6px; border: 1px solid #cce4df; border-radius: 10px; background: var(--teal-soft); color: var(--teal-dark); font-size: 9px; cursor: pointer; }
+.tag-entry { display: flex; gap: 4px; margin-top: 6px; }
+.tag-entry input { min-width: 0; flex: 1; padding: 5px 6px; border: 1px solid var(--line); border-radius: 4px; font-size: 9px; }
+.tag-entry button { padding: 5px 7px; border: 0; border-radius: 4px; background: var(--teal-dark); color: white; font-size: 9px; cursor: pointer; }
+.tag-entry button:disabled { opacity: .45; cursor: not-allowed; }
 .notification-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .notification-heading button { border: 0; background: transparent; color: var(--teal-dark); font-size: 8px; }
 .notification-heading button:disabled { cursor: wait; opacity: .55; }
