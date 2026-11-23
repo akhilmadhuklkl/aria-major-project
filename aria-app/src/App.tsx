@@ -96,6 +96,19 @@ export default function App() {
     void api.getArchivedKnowledge().then(setArchivedKnowledge).catch(() => undefined)
   }, [authLoading, authRequired, authUser])
 
+  useEffect(() => {
+    if (authLoading || (authRequired && !authUser) || !topSearch.trim()) return
+    const timeout = window.setTimeout(() => {
+      void api.getConversationPage(50, 0, topSearch.trim()).then((page) => {
+        setConversations(page.items)
+        setConversationHasMore(page.hasMore)
+        setQueueCounts(page.queueCounts)
+        setSelectedConversation((current) => page.items.find((item) => item.id === current.id) ?? current)
+      }).catch(() => undefined)
+    }, 250)
+    return () => window.clearTimeout(timeout)
+  }, [authLoading, authRequired, authUser, topSearch])
+
   async function refreshSystemStatus() {
     try {
       const status = await api.getSystemStatus()

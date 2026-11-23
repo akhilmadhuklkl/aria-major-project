@@ -216,8 +216,8 @@ export const api = {
     return request(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
   },
 
-  async getConversationPage(limit = 50, offset = 0): Promise<{ items: Conversation[]; total: number; hasMore: boolean; queueCounts: ConversationQueueCounts }> {
-    const result = await request<{ items: Array<ConversationRow>; total: number; hasMore: boolean; queueCounts: ConversationQueueCounts }>(`/conversations/page?limit=${limit}&offset=${offset}`)
+  async getConversationPage(limit = 50, offset = 0, search = ''): Promise<{ items: Conversation[]; total: number; hasMore: boolean; queueCounts: ConversationQueueCounts }> {
+    const result = await request<{ items: Array<ConversationRow>; total: number; hasMore: boolean; queueCounts: ConversationQueueCounts }>(`/conversations/page?limit=${limit}&offset=${offset}&q=${encodeURIComponent(search)}`)
     return { ...result, items: result.items.map(mapConversationRow) }
   },
 

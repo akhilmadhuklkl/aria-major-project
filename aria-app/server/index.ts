@@ -569,7 +569,10 @@ app.get('/api/conversations', (_request, response) => {
 app.get('/api/conversations/page', (request, response) => {
   const limit = Math.min(Math.max(Number(request.query.limit ?? 50) || 50, 1), 100)
   const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0)
-  const total = (db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }).count
+  const search = String(request.query.q ?? '').trim()
+  const searchClause = search ? ` WHERE customer_name LIKE ? OR subject LIKE ? OR tags LIKE ?` : ''
+  const searchArgs = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []
+  const total = (db.prepare(`SELECT COUNT(*) AS count FROM conversations${searchClause}`).get(...searchArgs) as { count: number }).count
   const queueCounts = db.prepare(`
     SELECT
       COALESCE(SUM(CASE WHEN assigned_to IS NOT NULL AND assigned_to != '' THEN 1 ELSE 0 END), 0) AS mine,
@@ -580,12 +583,12 @@ app.get('/api/conversations/page', (request, response) => {
   const rows = db.prepare(`
     SELECT id, customer_name AS customer, subject, status, priority, topic,
       assigned_to AS assignedTo, tags, escalated, updated_at AS updatedAt
-    FROM conversations ORDER BY updated_at DESC LIMIT ? OFFSET ?
-  `).all(limit, offset).map((row) => {
+    FROM conversations${searchClause} ORDER BY updated_at DESC LIMIT ? OFFSET ?
+  `).all(...searchArgs, limit, offset).map((row) => {
     const item = row as Record<string, unknown>
     return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
   })
-  response.json({ items: rows, total, limit, offset, hasMore: offset + rows.length < total, queueCounts })
+  response.json({ items: rows, total, limit, offset, search, hasMore: offset + rows.length < total, queueCounts })
 })
 
 app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (request, response) => {
