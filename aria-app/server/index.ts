@@ -133,6 +133,7 @@ function getHealthSnapshot() {
       hybridThreshold: Number(process.env.RETRIEVAL_HYBRID_THRESHOLD ?? 0.28),
       semanticWeight: Number(process.env.RETRIEVAL_SEMANTIC_WEIGHT ?? 0.7),
       keywordWeight: Number(process.env.RETRIEVAL_KEYWORD_WEIGHT ?? 0.3),
+      confidenceThreshold: Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7),
     },
     authRequired,
     authSetupAvailable: getUserCount() === 0,

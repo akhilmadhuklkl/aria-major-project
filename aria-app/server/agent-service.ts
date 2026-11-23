@@ -108,37 +108,40 @@ export class LocalAgentService implements AgentService {
     if (!result) {
       if (knowledge.length > 0) {
         const primary = knowledge[0]
+        const confidence = 0.78
         return {
           answer: `Based on the ${primary.title.toLowerCase()}, ${primary.content} I recommend checking the customer details and escalating only if the request falls outside this policy.`,
-          confidence: 0.78,
+          confidence,
           sources,
           sourceScores,
           retrievalMethod,
           generationProvider: 'local-knowledge',
-          shouldEscalate: false,
+          shouldEscalate: confidence < getConfidenceThreshold(),
         }
       }
 
+      const confidence = 0.48
       return {
         answer:
           'I do not have enough verified business context to answer confidently. I can connect you with a support agent who can investigate this request.',
-        confidence: 0.48,
+        confidence,
         sources: [],
         sourceScores: [],
         retrievalMethod: 'none',
         generationProvider: 'local-knowledge',
-        shouldEscalate: true,
+        shouldEscalate: confidence < getConfidenceThreshold(),
       }
     }
 
+    const confidence = knowledge.length > 0 ? 0.94 : 0.91
     return {
       answer: result.answer,
-      confidence: knowledge.length > 0 ? 0.94 : 0.91,
+      confidence,
       sources,
       sourceScores,
       retrievalMethod,
       generationProvider: 'local-knowledge',
-      shouldEscalate: false,
+      shouldEscalate: confidence < getConfidenceThreshold(),
     }
   }
 }
@@ -183,14 +186,15 @@ Respond in the customer's selected language: ${language}.
       const text = extractMastraText(body)
       if (!text) throw new Error('Mastra response did not contain text')
 
+      const confidence = knowledge.length > 0 ? 0.88 : 0.62
       return {
         answer: text,
-        confidence: knowledge.length > 0 ? 0.88 : 0.62,
+        confidence,
         sources: knowledge.length > 0 ? knowledge.map((item) => item.title) : ['Mastra agent'],
         sourceScores: formatSourceScores(knowledge),
         retrievalMethod: knowledge[0]?.retrievalMethod ?? 'none',
         generationProvider: 'mastra-gemini',
-        shouldEscalate: knowledge.length === 0,
+        shouldEscalate: confidence < getConfidenceThreshold(),
       }
     } catch {
       return this.fallback.generateResponse(query, language)
@@ -208,6 +212,10 @@ export function createAgentService(retrieveKnowledge: KnowledgeRetriever) {
 
 export function getAgentProvider() {
   return process.env.MASTRA_AGENT_URL?.trim() ? 'mastra-remote' : 'local-knowledge-agent'
+}
+
+export function getConfidenceThreshold() {
+  return Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7)
 }
 
 function extractMastraText(body: Record<string, unknown>) {

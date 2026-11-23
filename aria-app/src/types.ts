@@ -163,6 +163,9 @@ export interface SystemStatus {
     embeddingModel: string
     storedEmbeddings: number
     dimensions: number
+    semanticThreshold?: number
+    hybridThreshold?: number
+    confidenceThreshold?: number
   }
   ai: {
     agentProvider: string

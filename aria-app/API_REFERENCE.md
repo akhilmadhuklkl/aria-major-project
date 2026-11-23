@@ -123,6 +123,8 @@ Example response:
 
 Returns a consolidated read-only status snapshot used by the Settings modal. This endpoint is useful during demo and viva because it proves the frontend is not showing only static text; it is reading live backend, database, retrieval, AI, and learning-loop status.
 
+The retrieval section also reports the active semantic, hybrid, weighting, graph-boost, and AI confidence thresholds used by the response pipeline.
+
 Example:
 
 ```powershell

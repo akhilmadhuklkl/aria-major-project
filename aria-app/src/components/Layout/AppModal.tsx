@@ -126,7 +126,7 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, onClos
                 label="Retrieval"
                 value={retrievalStatus}
                 detail={systemStatus
-                  ? `${systemStatus.retrieval.storedEmbeddings} embeddings stored with ${systemStatus.retrieval.dimensions} dimensions; ${systemStatus.retrieval.fallback} fallback remains available.`
+                  ? `${systemStatus.retrieval.storedEmbeddings} embeddings stored with ${systemStatus.retrieval.dimensions} dimensions; semantic threshold ${systemStatus.retrieval.semanticThreshold ?? 'default'}, hybrid threshold ${systemStatus.retrieval.hybridThreshold ?? 'default'}, confidence threshold ${systemStatus.retrieval.confidenceThreshold ?? 'default'}.`
                   : 'Stored embeddings and source scoring are enabled for grounded answer generation.'}
               />
               <StatusTile
