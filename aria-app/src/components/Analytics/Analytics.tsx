@@ -70,7 +70,7 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
         <span><strong>{summary?.escalations ?? 0}</strong> escalations</span>
         <span><strong>{(summary?.retrieval ?? []).find((item) => item.method === 'hybrid')?.count ?? 0}</strong> hybrid retrieval responses</span>
       </div>
-      <ChartsSection topics={summary?.topics} quality={summary?.averageQuality} />
+      <ChartsSection topics={summary?.topics} quality={summary?.averageQuality} qualityTrend={summary?.qualityTrend} />
       <LearningSources strongestSources={summary?.strongestSources} reviewSources={summary?.reviewSources} />
       <InsightsSection summary={summary} />
     </section>

@@ -145,6 +145,7 @@ export interface AnalyticsSummary {
   escalations?: number
   assistantResponses?: number
   averageLatencyMs?: number
+  qualityTrend?: QualityTrendData[]
 }
 
 export interface LearningSignals {
