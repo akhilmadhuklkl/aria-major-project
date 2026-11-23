@@ -19,6 +19,10 @@
 * { box-sizing: border-box; }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid #2aa99a; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
 
 .app-shell { display: flex; height: 100vh; overflow: hidden; background: var(--canvas); color: var(--ink); }
 .sidebar { width: 224px; height: 100vh; flex: 0 0 224px; overflow: hidden; background: #fbfcfc; border-right: 1px solid var(--line); padding: 18px 12px 14px; display: flex; flex-direction: column; }
@@ -448,6 +452,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .brand-mark { width: 34px; }
   .topbar { height: 62px; padding: 0 12px; }
   .topbar .search-box { display: none; }
+  .notifications-popover { right: -6px; width: min(300px, calc(100vw - 74px)); max-height: calc(100vh - 82px); overflow-y: auto; }
   .main-content { padding: 7px 8px 7px 7px; }
   .workspace-grid { width: 100%; max-width: calc(100vw - 68px); min-width: 0; grid-template-columns: minmax(0, 1fr); }
   .queue-panel { display: none; }
