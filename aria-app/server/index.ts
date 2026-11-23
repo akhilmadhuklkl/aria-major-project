@@ -8,6 +8,7 @@ import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
   archiveKnowledgeDocuments,
+  restoreKnowledgeDocuments,
   createAuditLog,
   createNotification,
   createKnowledgeDocument,
@@ -18,6 +19,7 @@ import {
   getGraphNode,
   inferTopic,
   listKnowledge,
+  listArchivedKnowledge,
   listGraphNodes,
   listGraphRelationships,
   listNotifications,
@@ -783,6 +785,10 @@ app.get('/api/knowledge', (_request, response) => {
   response.json(listKnowledge())
 })
 
+app.get('/api/knowledge/archived', roleGuard('admin', 'support_agent'), (_request, response) => {
+  response.json(listArchivedKnowledge())
+})
+
 app.post('/api/knowledge', roleGuard('admin', 'support_agent'), (request, response) => {
   const title = String(request.body?.title ?? '').trim()
   const category = String(request.body?.category ?? '').trim()
@@ -912,6 +918,17 @@ app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), (request
   }
   const result = archiveKnowledgeDocuments(ids)
   if (result.archived > 0) recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
+  response.json(result)
+})
+
+app.post('/api/knowledge/restore', roleGuard('admin', 'support_agent'), (request, response) => {
+  const ids = Array.isArray(request.body?.ids) ? request.body.ids.map((id: unknown) => Number(id)) : []
+  if (ids.length === 0 || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
+    response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
+    return
+  }
+  const result = restoreKnowledgeDocuments(ids)
+  if (result.restored > 0) recordAudit(request, { action: 'knowledge.restored', entityType: 'knowledge_document', metadata: { ids } })
   response.json(result)
 })
 

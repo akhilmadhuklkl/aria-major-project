@@ -456,6 +456,15 @@ export function listKnowledge() {
   `).all() as KnowledgeDocument[]
 }
 
+export function listArchivedKnowledge() {
+  return db.prepare(`
+    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
+    FROM knowledge_documents
+    WHERE archived_at IS NOT NULL
+    ORDER BY archived_at DESC
+  `).all() as KnowledgeDocument[]
+}
+
 export function createKnowledgeDocument(input: { title: string; category: string; content: string; status?: string; sourceFilename?: string }) {
   const now = new Date().toISOString()
   const created = db.prepare(`
@@ -485,6 +494,17 @@ export function archiveKnowledgeDocuments(ids: number[]) {
     WHERE id IN (${placeholders}) AND archived_at IS NULL
   `).run(new Date().toISOString(), new Date().toISOString(), ...uniqueIds)
   return { archived: result.changes }
+}
+
+export function restoreKnowledgeDocuments(ids: number[]) {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
+  if (uniqueIds.length === 0) return { restored: 0 }
+  const placeholders = uniqueIds.map(() => '?').join(', ')
+  const result = db.prepare(`
+    UPDATE knowledge_documents SET archived_at = NULL, updated_at = ?
+    WHERE id IN (${placeholders}) AND archived_at IS NOT NULL
+  `).run(new Date().toISOString(), ...uniqueIds)
+  return { restored: result.changes }
 }
 
 export function updateKnowledgeDocument(id: number, input: {

@@ -20,12 +20,14 @@ export interface KnowledgeBaseProps {
   onArchive: (ids: number[]) => Promise<void>
   onUpdate: (id: number, input: NewKnowledgeItem) => Promise<void>
   onGetVersions: (id: number) => Promise<KnowledgeVersion[]>
+  archivedItems: KnowledgeItem[]
+  onRestore: (ids: number[]) => Promise<void>
   onRefreshGraph: () => Promise<void>
   graphNodes: GraphNode[]
   graphRelationships: GraphRelationship[]
 }
 
-export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
+export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, archivedItems, onRestore, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [form, setForm] = useState<NewKnowledgeItem>({
@@ -43,16 +45,17 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [activeSection, setActiveSection] = useState<'documents' | 'graph'>('documents')
+  const [showArchived, setShowArchived] = useState(false)
   const [graphNodeForm, setGraphNodeForm] = useState({ id: '', type: 'SupportIssue', label: '' })
   const [graphRelationshipForm, setGraphRelationshipForm] = useState({ sourceId: '', targetId: '', type: 'RELATED_TO' })
   const [graphSaving, setGraphSaving] = useState(false)
   const visibleItems = useMemo(
-    () => items.filter((item) => (
+    () => (showArchived ? archivedItems : items).filter((item) => (
       item.title.toLowerCase().includes(query.toLowerCase())
       && (categoryFilter === 'all' || item.category === categoryFilter)
       && (statusFilter === 'all' || item.status === statusFilter)
     )),
-    [categoryFilter, items, query, statusFilter],
+    [archivedItems, categoryFilter, items, query, showArchived, statusFilter],
   )
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -167,6 +170,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
         <button className="secondary-button" onClick={() => setIsUploading((current) => !current)}>
           {isUploading ? <X size={16} /> : <Upload size={16} />} {isUploading ? 'Close' : 'Upload document'}
         </button>
+        <button className="secondary-button" onClick={() => setShowArchived((current) => !current)}>{showArchived ? 'Active documents' : 'Archived documents'}</button>
       </div>
       <div className="knowledge-tabs" role="tablist" aria-label="Knowledge views">
         <button className={activeSection === 'documents' ? 'active' : ''} role="tab" aria-selected={activeSection === 'documents'} onClick={() => setActiveSection('documents')}>Documents</button>
@@ -269,7 +273,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
         </div>
       )}
       {activeSection === 'documents' && <>
-        <KnowledgeTable items={visibleItems} onDelete={deleteItems} onArchive={onArchive} onUpdate={onUpdate} onGetVersions={onGetVersions} />
+        <KnowledgeTable items={visibleItems} onDelete={deleteItems} onArchive={onArchive} onUpdate={onUpdate} onGetVersions={onGetVersions} archived={showArchived} onRestore={onRestore} />
         <KnowledgeSummary items={items} />
       </>}
     </section>

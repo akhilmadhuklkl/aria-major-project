@@ -39,6 +39,7 @@ export default function App() {
   const [agentActionLoading, setAgentActionLoading] = useState(false)
   const [knowledgeQuery, setKnowledgeQuery] = useState('')
   const [remoteKnowledge, setRemoteKnowledge] = useState<KnowledgeItem[]>(knowledgeItems)
+  const [archivedKnowledge, setArchivedKnowledge] = useState<KnowledgeItem[]>([])
   const [graphNodes, setGraphNodes] = useState<GraphNode[]>([])
   const [graphRelationships, setGraphRelationships] = useState<GraphRelationship[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
@@ -92,6 +93,7 @@ export default function App() {
           setGraphRelationships(graphResult.value.relationships)
         }
       })
+    void api.getArchivedKnowledge().then(setArchivedKnowledge).catch(() => undefined)
   }, [authLoading, authRequired, authUser])
 
   async function refreshSystemStatus() {
@@ -371,6 +373,14 @@ export default function App() {
   async function archiveKnowledge(ids: number[]) {
     await api.archiveKnowledge(ids)
     setRemoteKnowledge((current) => current.filter((item) => !item.id || !ids.includes(item.id)))
+    void api.getArchivedKnowledge().then(setArchivedKnowledge).catch(() => undefined)
+  }
+
+  async function restoreKnowledge(ids: number[]) {
+    await api.restoreKnowledge(ids)
+    setArchivedKnowledge((current) => current.filter((item) => !item.id || !ids.includes(item.id)))
+    const active = await api.getKnowledge()
+    setRemoteKnowledge(active)
   }
 
   async function refreshAnalytics(range = '7d') {
@@ -502,6 +512,8 @@ export default function App() {
               onArchive={archiveKnowledge}
               onUpdate={updateKnowledge}
               onGetVersions={api.getKnowledgeVersions}
+              archivedItems={archivedKnowledge}
+              onRestore={restoreKnowledge}
               onRefreshGraph={refreshGraph}
               graphNodes={graphNodes}
               graphRelationships={graphRelationships}

@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, Edit3, FileText, MoreHorizontal, Save, Trash2, X } from 'lucide-react'
+import { Archive, Edit3, FileText, MoreHorizontal, RotateCcw, Save, Trash2, X } from 'lucide-react'
 import type { KnowledgeItem, KnowledgeVersion, NewKnowledgeItem } from '../../types'
 
 export interface KnowledgeTableProps {
@@ -8,9 +8,11 @@ export interface KnowledgeTableProps {
   onArchive: (ids: number[]) => Promise<void>
   onUpdate: (id: number, input: NewKnowledgeItem) => Promise<void>
   onGetVersions: (id: number) => Promise<KnowledgeVersion[]>
+  archived?: boolean
+  onRestore?: (ids: number[]) => Promise<void>
 }
 
-export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVersions }: KnowledgeTableProps) {
+export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVersions, archived = false, onRestore }: KnowledgeTableProps) {
   const [expandedTitle, setExpandedTitle] = useState<string>()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [deleting, setDeleting] = useState(false)
@@ -98,8 +100,8 @@ export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVers
         <div className="bulk-actions">
           <strong>{visibleSelectedIds.length} selected</strong>
           <div className="bulk-action-buttons">
-            <button className="secondary-button" disabled={deleting} onClick={() => void onArchive(visibleSelectedIds)}>
-              <Archive size={15} /> Archive selected
+            <button className="secondary-button" disabled={deleting} onClick={() => void (archived ? onRestore?.(visibleSelectedIds) : onArchive(visibleSelectedIds))}>
+              {archived ? <RotateCcw size={15} /> : <Archive size={15} />} {archived ? 'Restore selected' : 'Archive selected'}
             </button>
             <button className="danger-button" disabled={deleting} onClick={() => void deleteIds(visibleSelectedIds)}>
               <Trash2 size={15} /> {deleting ? 'Deleting...' : 'Delete selected'}
@@ -162,7 +164,7 @@ export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVers
                     >
                       <MoreHorizontal size={17} />
                     </button>
-                    <button
+                    {!archived && <button
                       className="icon-button archive-icon-button"
                       aria-label={`Archive ${item.title}`}
                       title="Archive knowledge record"
@@ -170,7 +172,8 @@ export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVers
                       onClick={() => item.id && void onArchive([item.id])}
                     >
                       <Archive size={16} />
-                    </button>
+                    </button>}
+                    {archived && <button className="icon-button archive-icon-button" aria-label={`Restore ${item.title}`} title="Restore knowledge record" disabled={deleting} onClick={() => item.id && onRestore && void onRestore([item.id])}><RotateCcw size={16} /></button>}
                     <button
                       className="danger-icon-button"
                       aria-label={`Delete ${item.title}`}
@@ -196,7 +199,7 @@ export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVers
                         <div className="row-actions"><button className="secondary-button" disabled={savingEdit || !editDraft.title.trim() || !editDraft.content.trim()} onClick={() => void saveEdit()}><Save size={14} /> {savingEdit ? 'Saving...' : 'Save changes'}</button><button className="icon-button" disabled={savingEdit} onClick={() => { setEditingId(undefined); setEditDraft(undefined) }} aria-label="Cancel edit"><X size={15} /></button></div>
                       </div>
                     ) : (
-                      <><span>{item.content || 'This knowledge source is indexed and ready for retrieval.'}</span><div className="knowledge-detail-actions"><button className="secondary-button knowledge-edit-button" onClick={() => startEditing(item)} disabled={!item.id}><Edit3 size={14} /> Edit document</button>{item.id && <button className="secondary-button knowledge-edit-button" onClick={() => void toggleVersions(item.id!)} disabled={loadingVersions === item.id}>{loadingVersions === item.id ? 'Loading history...' : versionsById[item.id] ? 'Hide history' : 'Version history'}</button>}</div>{item.id && versionsById[item.id] && <div className="knowledge-version-list">{versionsById[item.id].map((version) => <div className="knowledge-version" key={version.id}><strong>Version {version.version}</strong><time>{new Date(version.createdAt).toLocaleString()}</time><span>{version.title} · {version.category}</span></div>)}</div>}</>
+                      <><span>{item.content || 'This knowledge source is indexed and ready for retrieval.'}</span><div className="knowledge-detail-actions">{!archived && <button className="secondary-button knowledge-edit-button" onClick={() => startEditing(item)} disabled={!item.id}><Edit3 size={14} /> Edit document</button>}{item.id && <button className="secondary-button knowledge-edit-button" onClick={() => void toggleVersions(item.id!)} disabled={loadingVersions === item.id}>{loadingVersions === item.id ? 'Loading history...' : versionsById[item.id] ? 'Hide history' : 'Version history'}</button>}</div>{item.id && versionsById[item.id] && <div className="knowledge-version-list">{versionsById[item.id].map((version) => <div className="knowledge-version" key={version.id}><strong>Version {version.version}</strong><time>{new Date(version.createdAt).toLocaleString()}</time><span>{version.title} · {version.category}</span></div>)}</div>}</>
                     )}
                   </td>
                 </tr>

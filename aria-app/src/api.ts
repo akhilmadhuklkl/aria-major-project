@@ -269,6 +269,28 @@ export const api = {
     }))
   },
 
+  async getArchivedKnowledge(): Promise<KnowledgeItem[]> {
+    const rows = await request<Array<{
+      id: number
+      title: string
+      category: string
+      content: string
+      status: string
+      uses: number
+      updatedAt: string
+    }>>('/knowledge/archived')
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      category: row.category,
+      content: row.content,
+      status: row.status === 'review' ? 'Review' : 'Indexed',
+      uses: row.uses,
+      updated: new Date(row.updatedAt).toLocaleDateString(),
+    }))
+  },
+
   async addKnowledge(input: NewKnowledgeItem): Promise<KnowledgeItem> {
     const row = await request<{
       id: number
@@ -357,6 +379,13 @@ export const api = {
 
   archiveKnowledge(ids: number[]) {
     return request<{ archived: number }>('/knowledge/archive', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    })
+  },
+
+  restoreKnowledge(ids: number[]) {
+    return request<{ restored: number }>('/knowledge/restore', {
       method: 'POST',
       body: JSON.stringify({ ids }),
     })
