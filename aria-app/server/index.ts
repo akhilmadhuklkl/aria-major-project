@@ -807,6 +807,7 @@ app.post('/api/knowledge', roleGuard('admin', 'support_agent'), (request, respon
 
   try {
     const document = createKnowledgeDocument({ title, category, content, status })
+    createNotification({ kind: 'knowledge', title: 'Knowledge document created', message: `${document.title} was added to the knowledge base.` })
     recordAudit(request, { action: 'knowledge.created', entityType: 'knowledge_document', entityId: document.id, metadata: { category, status } })
     response.status(201).json(document)
   } catch {
@@ -909,6 +910,7 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (reques
         await embeddingService.dispose()
       }
     }
+    createNotification({ kind: 'knowledge', title: 'Knowledge document updated', message: `${updated.title} was saved and re-indexed for retrieval.` })
     recordAudit(request, { action: 'knowledge.updated', entityType: 'knowledge_document', entityId: id, metadata: { category, status } })
     response.json({ ...updated, indexed: status === 'indexed', reindexRequired: false })
   } catch {
@@ -932,7 +934,10 @@ app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), (request
     return
   }
   const result = archiveKnowledgeDocuments(ids)
-  if (result.archived > 0) recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
+  if (result.archived > 0) {
+    createNotification({ kind: 'knowledge', title: 'Knowledge documents archived', message: `${result.archived} knowledge document${result.archived === 1 ? '' : 's'} moved to the archive.` })
+    recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
+  }
   response.json(result)
 })
 
@@ -943,7 +948,10 @@ app.post('/api/knowledge/restore', roleGuard('admin', 'support_agent'), (request
     return
   }
   const result = restoreKnowledgeDocuments(ids)
-  if (result.restored > 0) recordAudit(request, { action: 'knowledge.restored', entityType: 'knowledge_document', metadata: { ids } })
+  if (result.restored > 0) {
+    createNotification({ kind: 'knowledge', title: 'Knowledge documents restored', message: `${result.restored} archived knowledge document${result.restored === 1 ? '' : 's'} restored.` })
+    recordAudit(request, { action: 'knowledge.restored', entityType: 'knowledge_document', metadata: { ids } })
+  }
   response.json(result)
 })
 
@@ -976,7 +984,10 @@ app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), (request, resp
   }
 
   const result = deleteKnowledgeDocuments(ids)
-  if (result.deleted > 0) recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', metadata: { ids } })
+  if (result.deleted > 0) {
+    createNotification({ kind: 'knowledge', title: 'Knowledge documents deleted', message: `${result.deleted} knowledge document${result.deleted === 1 ? '' : 's'} permanently deleted.` })
+    recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', metadata: { ids } })
+  }
   response.json(result)
 })
 
