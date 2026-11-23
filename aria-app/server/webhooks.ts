@@ -3,6 +3,7 @@ import { db } from './database.js'
 
 export type WebhookEvent = 'feedback.low_rating' | 'agent_action.corrected' | 'knowledge.indexed'
 type WebhookSubscription = { id: number; name: string; url: string; secret: string; events: string[]; active: boolean; createdAt: string; updatedAt: string }
+export type PublicWebhookSubscription = Omit<WebhookSubscription, 'secret'>
 
 export function createWebhookSubscription(input: { name: string; url: string; events?: string[] }) {
   const now = new Date().toISOString()
@@ -14,7 +15,7 @@ export function createWebhookSubscription(input: { name: string; url: string; ev
   return { id: Number(result.lastInsertRowid), name: input.name, url: input.url, events: input.events?.length ? input.events : ['*'], active: true, secret, createdAt: now }
 }
 
-export function listWebhookSubscriptions(): WebhookSubscription[] {
+function listWebhookSubscriptionsWithSecrets(): WebhookSubscription[] {
   return db.prepare(`
     SELECT id, name, url, secret, events, active, created_at AS createdAt, updated_at AS updatedAt
     FROM webhook_subscriptions ORDER BY created_at DESC
@@ -28,6 +29,18 @@ export function listWebhookSubscriptions(): WebhookSubscription[] {
   })
 }
 
+export function listWebhookSubscriptions(): PublicWebhookSubscription[] {
+  return listWebhookSubscriptionsWithSecrets().map((subscription) => ({
+    id: subscription.id,
+    name: subscription.name,
+    url: subscription.url,
+    events: subscription.events,
+    active: subscription.active,
+    createdAt: subscription.createdAt,
+    updatedAt: subscription.updatedAt,
+  }))
+}
+
 export function deleteWebhookSubscription(id: number) {
   return db.prepare('DELETE FROM webhook_subscriptions WHERE id = ?').run(id).changes > 0
 }
@@ -37,7 +50,7 @@ export function signWebhookPayload(secret: string, payload: string) {
 }
 
 export async function dispatchWebhookEvent(event: WebhookEvent, data: Record<string, unknown>) {
-  const subscriptions = listWebhookSubscriptions().filter((item) => item.active && (item.events.includes('*') || item.events.includes(event)))
+  const subscriptions = listWebhookSubscriptionsWithSecrets().filter((item) => item.active && (item.events.includes('*') || item.events.includes(event)))
   const payload = JSON.stringify({ event, data, deliveredAt: new Date().toISOString() })
   await Promise.allSettled(subscriptions.map(async (subscription) => {
     const controller = new AbortController()
