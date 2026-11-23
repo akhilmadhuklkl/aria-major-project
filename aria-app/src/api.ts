@@ -27,6 +27,18 @@ type ConversationRow = {
   updatedAt: string
 }
 
+export class ApiError extends Error {
+  readonly status: number
+  readonly requestId?: string
+
+  constructor(message: string, status: number, requestId?: string) {
+    super(requestId ? `${message} (Request ID: ${requestId})` : message)
+    this.name = 'ApiError'
+    this.status = status
+    this.requestId = requestId
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -39,8 +51,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   })
 
   if (!response.ok) {
-    const body = await response.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(body.error ?? `Request failed with status ${response.status}`)
+    const body = await response.json().catch(() => ({ error: 'Request failed' })) as { error?: string; requestId?: string }
+    throw new ApiError(body.error ?? `Request failed with status ${response.status}`, response.status, body.requestId ?? response.headers.get('X-Request-ID') ?? undefined)
   }
 
   return response.json() as Promise<T>
