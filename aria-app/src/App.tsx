@@ -342,6 +342,16 @@ export default function App() {
     void api.getSystemStatus().then(setSystemStatus).catch(() => undefined)
   }
 
+  async function updateKnowledge(id: number, input: NewKnowledgeItem) {
+    const updated = await api.updateKnowledge(id, input)
+    setRemoteKnowledge((current) => current.map((item) => item.id === id ? updated : item))
+    void Promise.allSettled([api.getAnalytics(), api.getSystemStatus()])
+      .then(([analyticsResult, statusResult]) => {
+        if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
+        if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
+      })
+  }
+
   async function deleteKnowledge(ids: number[]) {
     await api.deleteKnowledge(ids)
     setRemoteKnowledge((current) => current.filter((item) => !item.id || !ids.includes(item.id)))
@@ -490,6 +500,7 @@ export default function App() {
               onUpload={uploadKnowledge}
               onDelete={deleteKnowledge}
               onArchive={archiveKnowledge}
+              onUpdate={updateKnowledge}
               onRefreshGraph={refreshGraph}
               graphNodes={graphNodes}
               graphRelationships={graphRelationships}

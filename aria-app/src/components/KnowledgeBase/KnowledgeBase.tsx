@@ -18,12 +18,13 @@ export interface KnowledgeBaseProps {
   onUpload: (file: File, category: string, title?: string) => Promise<void>
   onDelete: (ids: number[]) => Promise<void>
   onArchive: (ids: number[]) => Promise<void>
+  onUpdate: (id: number, input: NewKnowledgeItem) => Promise<void>
   onRefreshGraph: () => Promise<void>
   graphNodes: GraphNode[]
   graphRelationships: GraphRelationship[]
 }
 
-export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
+export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [form, setForm] = useState<NewKnowledgeItem>({
@@ -267,7 +268,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
         </div>
       )}
       {activeSection === 'documents' && <>
-        <KnowledgeTable items={visibleItems} onDelete={deleteItems} onArchive={onArchive} />
+        <KnowledgeTable items={visibleItems} onDelete={deleteItems} onArchive={onArchive} onUpdate={onUpdate} />
         <KnowledgeSummary items={items} />
       </>}
     </section>

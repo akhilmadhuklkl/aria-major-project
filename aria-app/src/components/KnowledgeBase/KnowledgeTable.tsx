@@ -1,17 +1,21 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, FileText, MoreHorizontal, Trash2 } from 'lucide-react'
-import type { KnowledgeItem } from '../../types'
+import { Archive, Edit3, FileText, MoreHorizontal, Save, Trash2, X } from 'lucide-react'
+import type { KnowledgeItem, NewKnowledgeItem } from '../../types'
 
 export interface KnowledgeTableProps {
   items: KnowledgeItem[]
   onDelete: (ids: number[]) => Promise<void>
   onArchive: (ids: number[]) => Promise<void>
+  onUpdate: (id: number, input: NewKnowledgeItem) => Promise<void>
 }
 
-export function KnowledgeTable({ items, onDelete, onArchive }: KnowledgeTableProps) {
+export function KnowledgeTable({ items, onDelete, onArchive, onUpdate }: KnowledgeTableProps) {
   const [expandedTitle, setExpandedTitle] = useState<string>()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [deleting, setDeleting] = useState(false)
+  const [editingId, setEditingId] = useState<number>()
+  const [editDraft, setEditDraft] = useState<NewKnowledgeItem>()
+  const [savingEdit, setSavingEdit] = useState(false)
   const selectAllRef = useRef<HTMLInputElement>(null)
   const selectableIds = useMemo(() => items.map((item) => item.id).filter((id): id is number => Boolean(id)), [items])
   const visibleSelectedIds = selectedIds.filter((id) => selectableIds.includes(id))
@@ -49,6 +53,25 @@ export function KnowledgeTable({ items, onDelete, onArchive }: KnowledgeTablePro
       }
     } finally {
       setDeleting(false)
+    }
+  }
+
+  function startEditing(item: KnowledgeItem) {
+    if (!item.id) return
+    setExpandedTitle(item.title)
+    setEditingId(item.id)
+    setEditDraft({ title: item.title, category: item.category, content: item.content ?? '', status: item.status === 'Review' ? 'review' : 'indexed' })
+  }
+
+  async function saveEdit() {
+    if (!editingId || !editDraft || savingEdit) return
+    setSavingEdit(true)
+    try {
+      await onUpdate(editingId, editDraft)
+      setEditingId(undefined)
+      setEditDraft(undefined)
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -147,7 +170,17 @@ export function KnowledgeTable({ items, onDelete, onArchive }: KnowledgeTablePro
                 <tr key={`${item.title}-details`}>
                   <td className="knowledge-detail-row" colSpan={7}>
                     <strong>{item.title}</strong>
-                    <span>{item.content || 'This knowledge source is indexed and ready for retrieval.'}</span>
+                    {editingId === item.id && editDraft ? (
+                      <div className="knowledge-edit-form">
+                        <input value={editDraft.title} onChange={(event) => setEditDraft({ ...editDraft, title: event.target.value })} aria-label="Edit document title" />
+                        <select value={editDraft.category} onChange={(event) => setEditDraft({ ...editDraft, category: event.target.value })} aria-label="Edit document category"><option>FAQ</option><option>Policy</option><option>Procedure</option><option>Product</option></select>
+                        <select value={editDraft.status} onChange={(event) => setEditDraft({ ...editDraft, status: event.target.value as NewKnowledgeItem['status'] })} aria-label="Edit document status"><option value="indexed">Indexed</option><option value="review">Review</option></select>
+                        <textarea value={editDraft.content} onChange={(event) => setEditDraft({ ...editDraft, content: event.target.value })} aria-label="Edit document content" />
+                        <div className="row-actions"><button className="secondary-button" disabled={savingEdit || !editDraft.title.trim() || !editDraft.content.trim()} onClick={() => void saveEdit()}><Save size={14} /> {savingEdit ? 'Saving...' : 'Save changes'}</button><button className="icon-button" disabled={savingEdit} onClick={() => { setEditingId(undefined); setEditDraft(undefined) }} aria-label="Cancel edit"><X size={15} /></button></div>
+                      </div>
+                    ) : (
+                      <><span>{item.content || 'This knowledge source is indexed and ready for retrieval.'}</span><button className="secondary-button knowledge-edit-button" onClick={() => startEditing(item)} disabled={!item.id}><Edit3 size={14} /> Edit document</button></>
+                    )}
                   </td>
                 </tr>
               )}
