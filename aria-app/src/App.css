@@ -24,6 +24,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+.error-boundary { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: var(--canvas); color: var(--ink); }
+.error-boundary-card { width: min(100%, 420px); padding: 28px; border: 1px solid #d9e5e1; border-radius: 10px; background: var(--surface); box-shadow: var(--shadow); text-align: center; }
+.error-boundary-card .brand-mark { margin: 0 auto; background: var(--danger); font-weight: 800; }
+.error-boundary-card h1 { margin: 16px 0 0; font-size: 20px; }
+.error-boundary-card p { margin: 9px 0 20px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+
 .app-shell { display: flex; height: 100vh; overflow: hidden; background: var(--canvas); color: var(--ink); }
 .sidebar { width: 224px; height: 100vh; flex: 0 0 224px; overflow: hidden; background: #fbfcfc; border-right: 1px solid var(--line); padding: 18px 12px 14px; display: flex; flex-direction: column; }
 .brand { height: 42px; display: flex; align-items: center; gap: 10px; padding: 0 9px; font-size: 18px; font-weight: 800; color: #153d39; }
