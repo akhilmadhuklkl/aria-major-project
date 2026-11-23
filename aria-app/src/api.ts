@@ -143,6 +143,10 @@ export const api = {
     return result.user
   },
 
+  getSupportAgents() {
+    return request<AuthUser[]>('/support-agents')
+  },
+
   async logout() {
     try {
       await request<void>('/auth/logout', { method: 'POST' })

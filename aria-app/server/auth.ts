@@ -149,6 +149,15 @@ export function getUserCount() {
   return (db.prepare('SELECT COUNT(*) AS count FROM users').get() as { count: number }).count
 }
 
+export function listSupportAgents() {
+  return db.prepare(`
+    SELECT id, email, display_name AS displayName, role
+    FROM users
+    WHERE role IN ('admin', 'support_agent')
+    ORDER BY display_name COLLATE NOCASE
+  `).all() as AuthUser[]
+}
+
 function getUserById(id: number) {
   const row = db.prepare(`
     SELECT id, email, display_name AS displayName, role

@@ -21,6 +21,7 @@ export default function App() {
   const [conversationHasMore, setConversationHasMore] = useState(false)
   const [conversationLoading, setConversationLoading] = useState(false)
   const [queueCounts, setQueueCounts] = useState<ConversationQueueCounts>({ mine: 0, unassigned: 0, attention: 0 })
+  const [supportAgents, setSupportAgents] = useState<AuthUser[]>([])
   const [suggestions, setSuggestions] = useState<Record<number, string>>(assistantSuggestions)
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
   const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
@@ -94,6 +95,7 @@ export default function App() {
         }
       })
     void api.getArchivedKnowledge().then(setArchivedKnowledge).catch(() => undefined)
+    void api.getSupportAgents().then(setSupportAgents).catch(() => undefined)
   }, [authLoading, authRequired, authUser])
 
   useEffect(() => {
@@ -492,6 +494,7 @@ export default function App() {
               conversationHasMore={conversationHasMore}
               conversationLoading={conversationLoading}
               queueCounts={queueCounts}
+              supportAgents={supportAgents}
             />
           )}
           {view === 'customer' && (

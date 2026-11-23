@@ -1,4 +1,4 @@
-import type { AgentThreadMessage, Conversation, ConversationQueueCounts } from '../../types'
+import type { AgentThreadMessage, AuthUser, Conversation, ConversationQueueCounts } from '../../types'
 import { ConversationList } from './ConversationList'
 import { ChatPanel } from './ChatPanel'
 import { AIPanel } from './AIPanel'
@@ -22,6 +22,7 @@ export interface AgentWorkspaceProps {
   conversationHasMore: boolean
   conversationLoading: boolean
   queueCounts: ConversationQueueCounts
+  supportAgents: AuthUser[]
 }
 
 export function AgentWorkspace({
@@ -43,11 +44,12 @@ export function AgentWorkspace({
   conversationHasMore,
   conversationLoading,
   queueCounts,
+  supportAgents,
 }: AgentWorkspaceProps) {
   return (
     <section className="workspace-grid">
       <ConversationList selected={selected} conversations={conversations} onSelect={onSelect} searchQuery={searchQuery} onUpdateConversation={onUpdateConversation} onLoadMore={onLoadMore} conversationHasMore={conversationHasMore} conversationLoading={conversationLoading} queueCounts={queueCounts} />
-      <ChatPanel key={selected.id} selected={selected} messages={messages} onSendMessage={onSendMessage} onUpdateConversation={onUpdateConversation} onExport={onExport} />
+      <ChatPanel key={selected.id} selected={selected} messages={messages} onSendMessage={onSendMessage} onUpdateConversation={onUpdateConversation} onExport={onExport} supportAgents={supportAgents} />
       <AIPanel
         suggestion={suggestion}
         setSuggestion={setSuggestion}

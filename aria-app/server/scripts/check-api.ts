@@ -81,6 +81,13 @@ try {
     `total=${conversations.total}, mine=${conversations.queueCounts?.mine}, unassigned=${conversations.queueCounts?.unassigned}`,
   )
 
+  const supportAgents = await request<unknown[]>('/support-agents')
+  addResult(
+    'Support agent directory',
+    Array.isArray(supportAgents),
+    `${supportAgents.length} support agents returned`,
+  )
+
   const conversationSearch = await request<{ items: unknown[]; total: number; search: string }>('/conversations/page?limit=1&offset=0&q=refund')
   addResult(
     'Conversation search',

@@ -46,6 +46,7 @@ import {
   getAuthenticatedUser,
   getBearerToken,
   getUserCount,
+  listSupportAgents,
   requireAuth,
   requireRole,
   revokeSession,
@@ -564,6 +565,10 @@ app.get('/api/conversations', (_request, response) => {
     return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
   })
   response.json(rows)
+})
+
+app.get('/api/support-agents', roleGuard('admin', 'support_agent'), (_request, response) => {
+  response.json(listSupportAgents())
 })
 
 app.get('/api/conversations/page', (request, response) => {

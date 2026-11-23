@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Clock3, Download, Edit3, MoreHorizontal, Send } from 'lucide-react'
-import type { AgentThreadMessage, Conversation } from '../../types'
+import type { AgentThreadMessage, AuthUser, Conversation } from '../../types'
 import { Message } from '../Common/Message'
 
 export interface ChatPanelProps {
@@ -9,9 +9,10 @@ export interface ChatPanelProps {
   onSendMessage: (message: string, type?: 'agent' | 'note') => void
   onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
   onExport: () => Promise<void>
+  supportAgents: AuthUser[]
 }
 
-export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation, onExport }: ChatPanelProps) {
+export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation, onExport, supportAgents }: ChatPanelProps) {
   const [status, setStatus] = useState<'Open' | 'Pending' | 'Resolved'>(selected.status ?? 'Open')
   const [showOptions, setShowOptions] = useState(false)
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
@@ -67,7 +68,7 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
             <div className="chat-options-menu" role="status">
               <button onClick={() => { setShowOptions(false); void onExport() }}><Download size={14} /> Download conversation</button>
               <button onClick={() => void onUpdateConversation(selected.id, { priority: selected.priority === 'High' ? 'Normal' : 'High' })}>{selected.priority} priority (toggle)</button>
-              <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || undefined })}><option value="">Unassigned</option><option>Akhil</option><option>Support Team</option></select></label>
+              <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || undefined })}><option value="">Unassigned</option>{[...new Set([selected.assignedTo, ...supportAgents.map((agent) => agent.displayName), 'Support Team'].filter(Boolean))].map((agent) => <option key={agent} value={agent}>{agent}</option>)}</select></label>
               <button onClick={() => void onUpdateConversation(selected.id, { escalated: !selected.escalated })}>{selected.escalated ? 'Remove escalation' : 'Escalate conversation'}</button>
               <div className="conversation-tags-editor">
                 <span>Tags</span>
