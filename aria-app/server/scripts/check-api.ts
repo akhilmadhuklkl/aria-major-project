@@ -47,8 +47,23 @@ try {
   const analytics = await request<Record<string, unknown>>('/analytics/summary')
   addResult(
     'Analytics endpoint',
-    typeof analytics.conversations === 'number' && typeof analytics.feedbackRecords === 'number',
+    typeof analytics.conversations === 'number'
+      && typeof analytics.feedbackRecords === 'number'
+      && typeof analytics.averageLatencyMs === 'number'
+      && typeof analytics.averageConfidence === 'number'
+      && Array.isArray(analytics.qualityTrend),
     `conversations=${String(analytics.conversations)}, feedback=${String(analytics.feedbackRecords)}`,
+  )
+
+  const conversations = await request<{ items: unknown[]; total: number; queueCounts: { mine: number; unassigned: number; attention: number } }>('/conversations/page?limit=1&offset=0')
+  addResult(
+    'Conversation queue counts',
+    Array.isArray(conversations.items)
+      && typeof conversations.total === 'number'
+      && typeof conversations.queueCounts?.mine === 'number'
+      && typeof conversations.queueCounts?.unassigned === 'number'
+      && typeof conversations.queueCounts?.attention === 'number',
+    `total=${conversations.total}, mine=${conversations.queueCounts?.mine}, unassigned=${conversations.queueCounts?.unassigned}`,
   )
 
   const graph = await request<{ nodes: unknown[]; relationships: unknown[] }>('/knowledge-graph')
