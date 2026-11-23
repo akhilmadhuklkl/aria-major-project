@@ -154,6 +154,10 @@ function getHealthSnapshot() {
 app.use(helmet())
 app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : true }))
 app.use(express.json({ limit: '1mb' }))
+app.use((_request, response, next) => {
+  response.setHeader('X-Request-ID', crypto.randomUUID())
+  next()
+})
 app.use('/api/auth', authLimiter)
 
 app.use('/api', (request, response, next) => {
