@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, AnalyticsSummary, ChatMessage, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, ConversationQueueCounts, AnalyticsSummary, ChatMessage, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
@@ -20,6 +20,7 @@ export default function App() {
   const [conversations, setConversations] = useState<Conversation[]>(conversationsData)
   const [conversationHasMore, setConversationHasMore] = useState(false)
   const [conversationLoading, setConversationLoading] = useState(false)
+  const [queueCounts, setQueueCounts] = useState<ConversationQueueCounts>({ mine: 0, unassigned: 0, attention: 0 })
   const [suggestions, setSuggestions] = useState<Record<number, string>>(assistantSuggestions)
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
   const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
@@ -75,6 +76,7 @@ export default function App() {
         if (conversationsResult.status === 'fulfilled' && conversationsResult.value.items.length > 0) {
           setConversations(conversationsResult.value.items)
           setConversationHasMore(conversationsResult.value.hasMore)
+          setQueueCounts(conversationsResult.value.queueCounts)
           setSelectedConversation((current) => conversationsResult.value.items.find((item) => item.id === current.id) ?? conversationsResult.value.items[0])
         }
         if (knowledgeResult.status === 'fulfilled') setRemoteKnowledge(knowledgeResult.value)
@@ -455,6 +457,7 @@ export default function App() {
               onLoadMore={loadMoreConversations}
               conversationHasMore={conversationHasMore}
               conversationLoading={conversationLoading}
+              queueCounts={queueCounts}
             />
           )}
           {view === 'customer' && (

@@ -568,6 +568,13 @@ app.get('/api/conversations/page', (request, response) => {
   const limit = Math.min(Math.max(Number(request.query.limit ?? 50) || 50, 1), 100)
   const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0)
   const total = (db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }).count
+  const queueCounts = db.prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN assigned_to IS NOT NULL AND assigned_to != '' THEN 1 ELSE 0 END), 0) AS mine,
+      COALESCE(SUM(CASE WHEN assigned_to IS NULL OR assigned_to = '' THEN 1 ELSE 0 END), 0) AS unassigned,
+      COALESCE(SUM(CASE WHEN status IN ('open', 'pending') OR escalated = 1 THEN 1 ELSE 0 END), 0) AS attention
+    FROM conversations
+  `).get() as { mine: number; unassigned: number; attention: number }
   const rows = db.prepare(`
     SELECT id, customer_name AS customer, subject, status, priority, topic,
       assigned_to AS assignedTo, tags, escalated, updated_at AS updatedAt
@@ -576,7 +583,7 @@ app.get('/api/conversations/page', (request, response) => {
     const item = row as Record<string, unknown>
     return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
   })
-  response.json({ items: rows, total, limit, offset, hasMore: offset + rows.length < total })
+  response.json({ items: rows, total, limit, offset, hasMore: offset + rows.length < total, queueCounts })
 })
 
 app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (request, response) => {

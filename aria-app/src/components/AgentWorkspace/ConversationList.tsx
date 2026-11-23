@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Plus, SlidersHorizontal } from 'lucide-react'
-import type { Conversation } from '../../types'
+import type { Conversation, ConversationQueueCounts } from '../../types'
 
 export interface ConversationListProps {
   selected: Conversation
@@ -11,9 +11,10 @@ export interface ConversationListProps {
   onLoadMore: () => Promise<void>
   conversationHasMore: boolean
   conversationLoading: boolean
+  queueCounts: ConversationQueueCounts
 }
 
-export function ConversationList({ selected, conversations, onSelect, searchQuery, onLoadMore, conversationHasMore, conversationLoading }: ConversationListProps) {
+export function ConversationList({ selected, conversations, onSelect, searchQuery, onLoadMore, conversationHasMore, conversationLoading, queueCounts }: ConversationListProps) {
   const [queue, setQueue] = useState<'mine' | 'unassigned'>('mine')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -33,7 +34,7 @@ export function ConversationList({ selected, conversations, onSelect, searchQuer
   return (
     <div className="queue-panel">
       <div className="panel-heading">
-        <div><h2>Open conversations</h2><span>5 need attention</span></div>
+        <div><h2>Open conversations</h2><span>{queueCounts.attention} need attention</span></div>
         <button
           className="icon-button"
           aria-label="New conversation"
@@ -45,8 +46,8 @@ export function ConversationList({ selected, conversations, onSelect, searchQuer
       </div>
       {showNewNotice && <div className="queue-notice">New support conversations are created from the Customer Chat workflow.</div>}
       <div className="queue-tabs">
-        <button className={queue === 'mine' ? 'active' : ''} onClick={() => setQueue('mine')} aria-label="Mine conversations">Mine <b aria-hidden="true">5</b></button>
-        <button className={queue === 'unassigned' ? 'active' : ''} onClick={() => setQueue('unassigned')} aria-label="Unassigned conversations">Unassigned <b aria-hidden="true">3</b></button>
+        <button className={queue === 'mine' ? 'active' : ''} onClick={() => setQueue('mine')} aria-label="Mine conversations">Mine <b aria-hidden="true">{queueCounts.mine}</b></button>
+        <button className={queue === 'unassigned' ? 'active' : ''} onClick={() => setQueue('unassigned')} aria-label="Unassigned conversations">Unassigned <b aria-hidden="true">{queueCounts.unassigned}</b></button>
       </div>
       <div className="queue-filters">
         <SlidersHorizontal size={14} />

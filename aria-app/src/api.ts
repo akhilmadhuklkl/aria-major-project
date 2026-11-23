@@ -1,4 +1,4 @@
-import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, ConversationQueueCounts, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookSubscription } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 const AUTH_TOKEN_KEY = 'aria.auth.token'
@@ -216,8 +216,8 @@ export const api = {
     return request(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
   },
 
-  async getConversationPage(limit = 50, offset = 0): Promise<{ items: Conversation[]; total: number; hasMore: boolean }> {
-    const result = await request<{ items: Array<ConversationRow>; total: number; hasMore: boolean }>(`/conversations/page?limit=${limit}&offset=${offset}`)
+  async getConversationPage(limit = 50, offset = 0): Promise<{ items: Conversation[]; total: number; hasMore: boolean; queueCounts: ConversationQueueCounts }> {
+    const result = await request<{ items: Array<ConversationRow>; total: number; hasMore: boolean; queueCounts: ConversationQueueCounts }>(`/conversations/page?limit=${limit}&offset=${offset}`)
     return { ...result, items: result.items.map(mapConversationRow) }
   },
 

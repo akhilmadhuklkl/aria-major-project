@@ -56,6 +56,12 @@ export interface Conversation {
   escalated?: boolean
 }
 
+export interface ConversationQueueCounts {
+  mine: number
+  unassigned: number
+  attention: number
+}
+
 export interface AgentThreadMessage {
   from: 'customer' | 'agent' | 'system' | 'note'
   text: string
