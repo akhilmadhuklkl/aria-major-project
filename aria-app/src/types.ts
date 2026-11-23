@@ -160,6 +160,7 @@ export interface AnalyticsSummary {
   strongestSources: LearningSource[]
   reviewSources: LearningSource[]
   retrieval?: Array<{ method: string; count: number }>
+  providers?: Array<{ provider: string; count: number }>
   escalations?: number
   escalationRate?: number
   assistantResponses?: number

@@ -1049,6 +1049,11 @@ app.get('/api/analytics/summary', (request, response) => {
     SELECT COALESCE(retrieval_method, 'none') AS method, COUNT(*) AS count
     FROM messages${dateClause} GROUP BY retrieval_method ORDER BY count DESC
   `).all(...dateArgs) as Array<{ method: string; count: number }>
+  const providerRows = db.prepare(`
+    SELECT COALESCE(generation_provider, 'unknown') AS provider, COUNT(*) AS count
+    FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}
+    GROUP BY generation_provider ORDER BY count DESC
+  `).all(...dateArgs) as Array<{ provider: string; count: number }>
   const escalationCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE should_escalate = 1${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const responseMessageCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const latencyStats = db.prepare(`SELECT COALESCE(AVG(latency_ms), 0) AS averageLatencyMs FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageLatencyMs: number }
@@ -1074,6 +1079,7 @@ app.get('/api/analytics/summary', (request, response) => {
     correctionRate: feedbackStats.count ? Math.round((corrected.count / feedbackStats.count) * 100) : 0,
     feedbackRecords: feedbackStats.count,
     retrieval: retrievalRows,
+    providers: providerRows,
     escalations: escalationCount.count,
     escalationRate,
     assistantResponses: responseMessageCount.count,
