@@ -1,4 +1,4 @@
-import { BrainCircuit, Check, Clock3, Edit3, Star } from 'lucide-react'
+import { BrainCircuit, Check, Clock3, Edit3, Gauge, Star } from 'lucide-react'
 import { Metric } from '../Common/Metric'
 import type { AnalyticsSummary } from '../../types'
 
@@ -14,6 +14,7 @@ export function MetricStrip({ summary }: { summary?: AnalyticsSummary }) {
       <Metric icon={Check} label="AI acceptance rate" value={`${summary?.acceptanceRate ?? 0}%`} change="Based on agent actions" />
       <Metric icon={Edit3} label="Source quality" value={`${summary?.learningSignals?.averageSourceQuality ?? 0}/100`} change="Average tracked source score" />
       <Metric icon={Clock3} label="Average latency" value={summary?.averageLatencyMs ? `${summary.averageLatencyMs}ms` : '-'} change="Assistant response time" />
+      <Metric icon={Gauge} label="Average confidence" value={summary?.averageConfidence ? `${Math.round(summary.averageConfidence * 100)}%` : '-'} change="Assistant response confidence" />
     </div>
   )
 }

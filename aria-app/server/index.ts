@@ -992,6 +992,7 @@ app.get('/api/analytics/summary', (request, response) => {
   const escalationCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE should_escalate = 1${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const responseMessageCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const latencyStats = db.prepare(`SELECT COALESCE(AVG(latency_ms), 0) AS averageLatencyMs FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageLatencyMs: number }
+  const confidenceStats = db.prepare(`SELECT COALESCE(AVG(confidence), 0) AS averageConfidence FROM messages WHERE role = 'assistant' AND confidence IS NOT NULL${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageConfidence: number }
   const qualityTrend = db.prepare(`
     SELECT substr(created_at, 1, 10) AS day,
       COALESCE(AVG(quality_score), 0) AS quality,
@@ -1015,6 +1016,7 @@ app.get('/api/analytics/summary', (request, response) => {
     escalations: escalationCount.count,
     assistantResponses: responseMessageCount.count,
     averageLatencyMs: Math.round(latencyStats.averageLatencyMs),
+    averageConfidence: Number(confidenceStats.averageConfidence.toFixed(3)),
     qualityTrend: qualityTrend.map((item) => ({
       day: item.day.slice(5),
       quality: Math.round(item.quality),

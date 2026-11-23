@@ -145,6 +145,7 @@ export interface AnalyticsSummary {
   escalations?: number
   assistantResponses?: number
   averageLatencyMs?: number
+  averageConfidence?: number
   qualityTrend?: QualityTrendData[]
 }
 
