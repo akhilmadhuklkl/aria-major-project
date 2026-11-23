@@ -75,6 +75,13 @@ try {
     `total=${conversations.total}, mine=${conversations.queueCounts?.mine}, unassigned=${conversations.queueCounts?.unassigned}`,
   )
 
+  const conversationSearch = await request<{ items: unknown[]; total: number; search: string }>('/conversations/page?limit=1&offset=0&q=refund')
+  addResult(
+    'Conversation search',
+    conversationSearch.search === 'refund' && conversationSearch.total > 0 && conversationSearch.items.length > 0,
+    `query=${conversationSearch.search}, matches=${conversationSearch.total}`,
+  )
+
   const graph = await request<{ nodes: unknown[]; relationships: unknown[] }>('/knowledge-graph')
   addResult(
     'Knowledge Graph endpoint',
