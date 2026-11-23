@@ -623,6 +623,16 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
       assigned_to AS assignedTo, tags, escalated, created_at AS createdAt, updated_at AS updatedAt
     FROM conversations WHERE id = ?
   `).get(id) as Record<string, unknown>
+  const conversationChange = escalated !== undefined
+    ? (escalated ? 'marked for escalation' : 'removed from escalation')
+    : status
+      ? `moved to ${status}`
+      : priority
+        ? `set to ${priority} priority`
+        : assignedTo !== undefined
+          ? (assignedTo ? `assigned to ${assignedTo}` : 'returned to the unassigned queue')
+          : 'metadata updated'
+  createNotification({ kind: 'conversation', title: 'Conversation updated', message: `${String(updated.customer)} was ${conversationChange}.` })
   recordAudit(request, { action: 'conversation.updated', entityType: 'conversation', entityId: id, metadata: { status, priority, assignedTo, escalated } })
   response.json({ ...updated, tags: JSON.parse(String(updated.tags ?? '[]')), escalated: Boolean(updated.escalated) })
 })

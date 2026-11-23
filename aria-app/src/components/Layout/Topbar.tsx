@@ -33,6 +33,7 @@ export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlace
     escalation: 'Escalation',
     feedback: 'Feedback',
     knowledge: 'Knowledge',
+    conversation: 'Conversation',
     'agent-action': 'Agent action',
   }
   const formatNotificationTime = (createdAt: string) => new Date(createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
