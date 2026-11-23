@@ -97,13 +97,13 @@ export default function App() {
   }, [authLoading, authRequired, authUser])
 
   useEffect(() => {
-    if (authLoading || (authRequired && !authUser) || !topSearch.trim()) return
+    if (authLoading || (authRequired && !authUser)) return
     const timeout = window.setTimeout(() => {
       void api.getConversationPage(50, 0, topSearch.trim()).then((page) => {
         setConversations(page.items)
         setConversationHasMore(page.hasMore)
         setQueueCounts(page.queueCounts)
-        setSelectedConversation((current) => page.items.find((item) => item.id === current.id) ?? current)
+        setSelectedConversation((current) => page.items.find((item) => item.id === current.id) ?? page.items[0] ?? current)
       }).catch(() => undefined)
     }, 250)
     return () => window.clearTimeout(timeout)
