@@ -56,8 +56,12 @@ try {
     ...row,
     properties: row.properties ? JSON.parse(String(row.properties)) : {},
   }))
+  await copyTable('audit_logs', ['id', 'actor_user_id', 'actor_email', 'action', 'entity_type', 'entity_id', 'metadata', 'created_at'], (row) => ({
+    ...row,
+    metadata: row.metadata ? JSON.parse(String(row.metadata)) : {},
+  }))
 
-  for (const table of ['users', 'conversations', 'knowledge_documents', 'sessions', 'knowledge_document_versions', 'notifications', 'webhook_subscriptions', 'graph_relationships']) {
+  for (const table of ['users', 'conversations', 'knowledge_documents', 'sessions', 'knowledge_document_versions', 'notifications', 'webhook_subscriptions', 'graph_relationships', 'audit_logs']) {
     await client.query(`SELECT setval(pg_get_serial_sequence($1, 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1), true)`, [table])
   }
   await client.query(`

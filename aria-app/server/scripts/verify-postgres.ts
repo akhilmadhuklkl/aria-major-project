@@ -28,6 +28,7 @@ const expectedTables: Record<string, string[]> = {
   webhook_subscriptions: ['id', 'name', 'url', 'secret', 'events', 'active'],
   graph_nodes: ['id', 'type', 'properties'],
   graph_relationships: ['id', 'source_id', 'type', 'target_id', 'properties'],
+  audit_logs: ['id', 'actor_user_id', 'actor_email', 'action', 'entity_type', 'entity_id', 'metadata'],
 }
 
 const expectedIndexes = [
@@ -39,6 +40,8 @@ const expectedIndexes = [
   'idx_pg_notifications_read_created',
   'idx_pg_graph_relationships_source',
   'idx_pg_graph_relationships_target',
+  'idx_pg_audit_logs_created',
+  'idx_pg_audit_logs_entity',
 ]
 
 const client = await pool.connect()

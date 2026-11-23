@@ -42,6 +42,7 @@ flowchart LR
 | GET | `/auth/me` | Returns the authenticated user for the current bearer token. | Session restore |
 | POST | `/auth/logout` | Revokes the authenticated session. | Logout interface |
 | GET | `/system-status` | Returns live system, database, retrieval, AI, and learning-loop status for the Settings modal. | Settings modal, demo proof |
+| GET | `/audit-logs` | Lists recent administrative and support action metadata for authorized administrators. | Security audit trail |
 | GET | `/interim-status` | Returns interim milestone readiness and final pending items. | Report/demo evidence |
 | POST | `/chat` | Creates or continues a conversation and generates an assistant response. | Customer Chat |
 | GET | `/conversations` | Lists persisted support conversations. | Agent Workspace |

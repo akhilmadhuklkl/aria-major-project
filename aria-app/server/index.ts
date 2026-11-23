@@ -8,6 +8,7 @@ import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
   archiveKnowledgeDocuments,
+  createAuditLog,
   createNotification,
   createKnowledgeDocument,
   db,
@@ -20,6 +21,7 @@ import {
   listGraphNodes,
   listGraphRelationships,
   listNotifications,
+  listAuditLogs,
   markAllNotificationsRead,
   markNotificationRead,
   queryGraphPaths,
@@ -59,6 +61,15 @@ import { Neo4jGraphStore } from './neo4j-graph-store.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
+}
+
+function recordAudit(request: express.Request, input: Omit<Parameters<typeof createAuditLog>[0], 'actorUserId' | 'actorEmail'>) {
+  const actor = getAuthenticatedUser(request)
+  createAuditLog({
+    ...input,
+    actorUserId: actor?.id,
+    actorEmail: actor?.email,
+  })
 }
 
 const app = express()
@@ -188,6 +199,10 @@ app.get('/api/notifications', (_request, response) => {
   response.json(listNotifications())
 })
 
+app.get('/api/audit-logs', roleGuard('admin'), (request, response) => {
+  response.json(listAuditLogs(Number(request.query.limit ?? 50)))
+})
+
 app.post('/api/notifications/read-all', (_request, response) => {
   response.json({ markedRead: markAllNotificationsRead() })
 })
@@ -233,6 +248,7 @@ app.post('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), asyn
   response.status(201).json(neo4jGraphStore
     ? await neo4jGraphStore.upsertNode({ id, type, properties })
     : upsertGraphNode({ id, type: type as Parameters<typeof upsertGraphNode>[0]['type'], properties }))
+  recordAudit(request, { action: 'graph.node.created', entityType: 'graph_node', entityId: id, metadata: { type } })
 })
 
 app.post('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent'), async (request, response) => {
@@ -245,9 +261,11 @@ app.post('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent
     response.status(400).json({ error: 'existing source and target nodes plus relationship type are required' })
     return
   }
-  response.status(201).json(neo4jGraphStore
+  const created = neo4jGraphStore
     ? await neo4jGraphStore.createRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
-    : createGraphRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} }))
+    : createGraphRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
+  recordAudit(request, { action: 'graph.relationship.created', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
+  response.status(201).json(created)
 })
 
 app.delete('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent'), async (request, response) => {
@@ -265,6 +283,7 @@ app.delete('/api/knowledge-graph/relationships', roleGuard('admin', 'support_age
     response.status(404).json({ error: 'graph relationship was not found' })
     return
   }
+  recordAudit(request, { action: 'graph.relationship.deleted', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
   response.json({ deleted: true })
 })
 
@@ -275,6 +294,7 @@ app.delete('/api/knowledge-graph/nodes/:id', roleGuard('admin', 'support_agent')
     response.status(404).json({ error: 'graph node was not found' })
     return
   }
+  recordAudit(request, { action: 'graph.node.deleted', entityType: 'graph_node', entityId: id })
   response.json({ deleted: true })
 })
 
@@ -553,6 +573,7 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
       assigned_to AS assignedTo, tags, escalated, created_at AS createdAt, updated_at AS updatedAt
     FROM conversations WHERE id = ?
   `).get(id) as Record<string, unknown>
+  recordAudit(request, { action: 'conversation.updated', entityType: 'conversation', entityId: id, metadata: { status, priority, assignedTo, escalated } })
   response.json({ ...updated, tags: JSON.parse(String(updated.tags ?? '[]')), escalated: Boolean(updated.escalated) })
 })
 
@@ -705,6 +726,8 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), (request, re
     notifyWebhook('agent_action.corrected', { action, conversationId })
   }
 
+  recordAudit(request, { action: `agent.${action}`, entityType: 'conversation', entityId: conversationId, metadata: { feedbackType: action } })
+
   response.status(201).json(entry)
 })
 
@@ -729,7 +752,9 @@ app.post('/api/knowledge', roleGuard('admin', 'support_agent'), (request, respon
   }
 
   try {
-    response.status(201).json(createKnowledgeDocument({ title, category, content, status }))
+    const document = createKnowledgeDocument({ title, category, content, status })
+    recordAudit(request, { action: 'knowledge.created', entityType: 'knowledge_document', entityId: document.id, metadata: { category, status } })
+    response.status(201).json(document)
   } catch {
     response.status(409).json({ error: 'a knowledge document with this title already exists' })
   }
@@ -784,6 +809,7 @@ app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.si
 
     createNotification({ kind: 'knowledge', title: 'Knowledge document indexed', message: `${request.file.originalname} is ready for retrieval.` })
     notifyWebhook('knowledge.indexed', { title: document.title, sourceFilename: request.file.originalname })
+    recordAudit(request, { action: 'knowledge.uploaded', entityType: 'knowledge_document', entityId: document.id, metadata: { category, sourceFilename: request.file.originalname } })
     response.status(201).json({ ...document, indexed: true, sourceFilename: request.file.originalname })
   } catch (error) {
     if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
@@ -814,6 +840,7 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, res
       response.status(404).json({ error: 'knowledge document was not found' })
       return
     }
+    recordAudit(request, { action: 'knowledge.updated', entityType: 'knowledge_document', entityId: id, metadata: { category, status } })
     response.json({ ...updated, reindexRequired: status === 'indexed' })
   } catch {
     response.status(409).json({ error: 'a knowledge document with this title already exists' })
@@ -835,7 +862,9 @@ app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), (request
     response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
     return
   }
-  response.json(archiveKnowledgeDocuments(ids))
+  const result = archiveKnowledgeDocuments(ids)
+  if (result.archived > 0) recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
+  response.json(result)
 })
 
 app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, response) => {
@@ -852,6 +881,7 @@ app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, 
     return
   }
 
+  recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', entityId: id })
   response.json(result)
 })
 
@@ -865,7 +895,9 @@ app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), (request, resp
     return
   }
 
-  response.json(deleteKnowledgeDocuments(ids))
+  const result = deleteKnowledgeDocuments(ids)
+  if (result.deleted > 0) recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', metadata: { ids } })
+  response.json(result)
 })
 
 app.get('/api/analytics/summary', (request, response) => {

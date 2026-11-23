@@ -124,6 +124,10 @@ function runMigrations() {
       version: '006_knowledge_graph',
       file: resolve('server', 'migrations', '006_knowledge_graph.sql'),
     },
+    {
+      version: '007_audit_logs',
+      file: resolve('server', 'migrations', '007_audit_logs.sql'),
+    },
   ]
 
   for (const migration of migrations) {
@@ -384,6 +388,41 @@ export function createNotification(input: { kind: string; title: string; message
   const result = db.prepare('INSERT INTO notifications (kind, title, message, created_at) VALUES (?, ?, ?, ?)')
     .run(input.kind, input.title, input.message, createdAt)
   return { id: Number(result.lastInsertRowid), ...input, readAt: null, createdAt }
+}
+
+export function createAuditLog(input: {
+  actorUserId?: number
+  actorEmail?: string
+  action: string
+  entityType: string
+  entityId?: string | number
+  metadata?: Record<string, unknown>
+}) {
+  const createdAt = new Date().toISOString()
+  const result = db.prepare(`
+    INSERT INTO audit_logs (actor_user_id, actor_email, action, entity_type, entity_id, metadata, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.actorUserId ?? null,
+    input.actorEmail ?? 'local-demo',
+    input.action,
+    input.entityType,
+    input.entityId === undefined ? null : String(input.entityId),
+    JSON.stringify(input.metadata ?? {}),
+    createdAt,
+  )
+  return { id: Number(result.lastInsertRowid), ...input, createdAt }
+}
+
+export function listAuditLogs(limit = 50) {
+  return db.prepare(`
+    SELECT id, actor_user_id AS actorUserId, actor_email AS actorEmail,
+      action, entity_type AS entityType, entity_id AS entityId, metadata, created_at AS createdAt
+    FROM audit_logs ORDER BY created_at DESC LIMIT ?
+  `).all(Math.max(1, Math.min(limit, 100))).map((row) => {
+    const item = row as Record<string, unknown>
+    return { ...item, metadata: JSON.parse(String(item.metadata ?? '{}')) }
+  })
 }
 
 export function listNotifications(limit = 20) {

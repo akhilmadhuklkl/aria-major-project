@@ -134,6 +134,17 @@ CREATE TABLE IF NOT EXISTS graph_relationships (
   UNIQUE (source_id, type, target_id)
 );
 
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  actor_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  actor_email TEXT,
+  action TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_pg_conversations_status_updated ON conversations(status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pg_messages_conversation_created ON messages(conversation_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_pg_feedback_conversation_created ON feedback(conversation_id, created_at DESC);
@@ -146,3 +157,5 @@ CREATE INDEX IF NOT EXISTS idx_pg_notifications_read_created ON notifications(re
 CREATE INDEX IF NOT EXISTS idx_pg_webhook_subscriptions_active ON webhook_subscriptions(active);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_relationships_source ON graph_relationships(source_id, type);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_relationships_target ON graph_relationships(target_id, type);
+CREATE INDEX IF NOT EXISTS idx_pg_audit_logs_created ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_pg_audit_logs_entity ON audit_logs(entity_type, entity_id, created_at DESC);
