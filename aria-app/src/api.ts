@@ -1,4 +1,4 @@
-import type { AgentThreadMessage, AnalyticsSummary, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus } from './types'
+import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 const AUTH_TOKEN_KEY = 'aria.auth.token'
@@ -53,6 +53,10 @@ export const api = {
 
   getNotifications() {
     return request<Notification[]>('/notifications')
+  },
+
+  getAuditLogs(limit = 20) {
+    return request<AuditLog[]>(`/audit-logs?limit=${limit}`)
   },
 
   getGraphNodes() {

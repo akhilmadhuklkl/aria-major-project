@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, AuthUser, View, Conversation, AnalyticsSummary, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
+import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, AnalyticsSummary, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
@@ -42,6 +42,7 @@ export default function App() {
   const [graphRelationships, setGraphRelationships] = useState<GraphRelationship[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>()
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [authUser, setAuthUser] = useState<AuthUser>()
   const [authRequired, setAuthRequired] = useState(false)
   const [authSetupAvailable, setAuthSetupAvailable] = useState(false)
@@ -114,8 +115,11 @@ export default function App() {
   useEffect(() => {
     if (activeModal !== 'settings') return
 
-    void api.getSystemStatus()
-      .then(setSystemStatus)
+    void Promise.allSettled([api.getSystemStatus(), api.getAuditLogs()])
+      .then(([statusResult, auditResult]) => {
+        if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
+        if (auditResult.status === 'fulfilled') setAuditLogs(auditResult.value)
+      })
       .catch(() => {
         // Existing settings values remain visible if the API is temporarily unavailable.
       })
@@ -444,6 +448,7 @@ export default function App() {
           knowledgeItems={remoteKnowledge}
           analytics={analytics}
           systemStatus={systemStatus}
+          auditLogs={auditLogs}
           onClose={() => setActiveModal(undefined)}
         />
       )}

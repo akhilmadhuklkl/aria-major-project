@@ -84,6 +84,13 @@ button { cursor: pointer; }
 .settings-tile small { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
 .settings-tile strong { margin-top: 5px; color: var(--ink); font-size: 11px; }
 .settings-tile p { margin-top: 6px; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.audit-log-section { margin-top: 14px; border-top: 1px solid #e3eae8; padding-top: 12px; }
+.audit-log-heading { display: flex; justify-content: space-between; gap: 10px; color: var(--ink); font-size: 10px; }
+.audit-log-heading span { color: var(--muted); font-size: 9px; }
+.audit-log-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf1f0; font-size: 9px; }
+.audit-log-row strong { color: var(--ink); font-size: 9px; }
+.audit-log-row span, .audit-log-row time { color: var(--muted); }
+.audit-log-empty { margin: 8px 0 0; color: var(--muted); font-size: 9px; }
 .app-body { min-width: 0; height: 100vh; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .topbar { height: 70px; flex: 0 0 70px; padding: 0 22px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
 .topbar h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 750; }

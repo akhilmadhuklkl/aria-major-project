@@ -1,6 +1,6 @@
 import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Server, Settings, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { AnalyticsSummary, KnowledgeItem, SystemStatus } from '../../types'
+import type { AnalyticsSummary, AuditLog, KnowledgeItem, SystemStatus } from '../../types'
 
 type ModalType = 'help' | 'settings'
 
@@ -9,6 +9,7 @@ interface AppModalProps {
   knowledgeItems: KnowledgeItem[]
   analytics?: AnalyticsSummary
   systemStatus?: SystemStatus
+  auditLogs: AuditLog[]
   onClose: () => void
 }
 
@@ -35,7 +36,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -150,6 +151,16 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, onClos
                     : 'Analytics will load from the backend when the API is available.'}
                 </span>
               </div>
+            </div>
+            <div className="audit-log-section">
+              <div className="audit-log-heading"><strong>Recent audit activity</strong><span>{auditLogs.length} recent entries</span></div>
+              {auditLogs.length > 0 ? auditLogs.map((log) => (
+                <div className="audit-log-row" key={log.id}>
+                  <strong>{log.action}</strong>
+                  <span>{log.entityType}{log.entityId ? ` #${log.entityId}` : ''} · {log.actorEmail ?? 'local-demo'}</span>
+                  <time>{new Date(log.createdAt).toLocaleString()}</time>
+                </div>
+              )) : <p className="audit-log-empty">No recorded administrative activity yet.</p>}
             </div>
           </div>
         )}

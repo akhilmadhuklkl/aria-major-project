@@ -18,6 +18,17 @@ export interface Notification {
   createdAt: string
 }
 
+export interface AuditLog {
+  id: number
+  actorUserId?: number | null
+  actorEmail?: string | null
+  action: string
+  entityType: string
+  entityId?: string | null
+  metadata: Record<string, unknown>
+  createdAt: string
+}
+
 export interface Conversation {
   id: number
   customer: string
