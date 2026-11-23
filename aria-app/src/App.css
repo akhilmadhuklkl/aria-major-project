@@ -419,6 +419,18 @@ tbody tr:last-child td { border-bottom: 0; }
 .knowledge-summary span, .knowledge-summary strong, .knowledge-summary small { display: block; }
 .knowledge-summary strong { color: var(--ink); font-size: 10px; }
 .knowledge-summary small { margin-top: 3px; color: var(--muted); font-size: 8px; }
+.retrieval-breakdown { margin-top: 14px; padding: 16px; border: 1px solid #dfe8e5; border-radius: 7px; background: rgba(255, 255, 255, .92); box-shadow: 0 8px 22px rgba(27, 55, 50, .05); }
+.retrieval-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.retrieval-heading > div { display: flex; align-items: center; gap: 9px; }
+.retrieval-heading h3 { margin: 0; color: var(--ink); font-size: 13px; }
+.retrieval-heading span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+.retrieval-heading > strong { color: var(--teal-dark); font-size: 12px; }
+.retrieval-row { display: grid; grid-template-columns: 180px 1fr 32px; gap: 10px; align-items: center; margin-top: 13px; }
+.retrieval-row > div:first-child { display: flex; justify-content: space-between; gap: 8px; color: var(--ink); font-size: 10px; }
+.retrieval-row small { color: var(--muted); }
+.retrieval-row > strong { color: var(--ink); text-align: right; font-size: 10px; }
+.retrieval-bar { height: 7px; overflow: hidden; border-radius: 5px; background: #e8efed; }
+.retrieval-bar i { display: block; height: 100%; border-radius: inherit; background: var(--teal); }
 .knowledge-edit-form { display: grid; gap: 7px; margin-top: 8px; }
 .knowledge-edit-form input, .knowledge-edit-form select, .knowledge-edit-form textarea { width: 100%; box-sizing: border-box; padding: 7px 8px; border: 1px solid var(--line); border-radius: 5px; font: inherit; font-size: 10px; }
 .knowledge-edit-form textarea { min-height: 82px; resize: vertical; }

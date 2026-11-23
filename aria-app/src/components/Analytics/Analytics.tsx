@@ -4,6 +4,7 @@ import { MetricStrip } from './MetricStrip'
 import { ChartsSection } from './ChartsSection'
 import { InsightsSection } from './InsightsSection'
 import { LearningSources } from './LearningSources'
+import { RetrievalBreakdown } from './RetrievalBreakdown'
 import type { AnalyticsSummary } from '../../types'
 
 export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; onRefresh: (range?: string) => Promise<void> }) {
@@ -74,6 +75,7 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
       </div>
       <ChartsSection topics={summary?.topics} quality={summary?.averageQuality} qualityTrend={summary?.qualityTrend} />
       <LearningSources strongestSources={summary?.strongestSources} reviewSources={summary?.reviewSources} />
+      <RetrievalBreakdown retrieval={summary?.retrieval} />
       <InsightsSection summary={summary} />
     </section>
   )
