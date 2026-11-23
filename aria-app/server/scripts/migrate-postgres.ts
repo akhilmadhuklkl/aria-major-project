@@ -33,7 +33,7 @@ try {
     ...row,
     vector: JSON.parse(String(row.vector)),
   }))
-  await copyTable('messages', ['id', 'conversation_id', 'role', 'content', 'confidence', 'sources', 'source_scores', 'retrieval_method', 'generation_provider', 'should_escalate', 'created_at'], (row) => ({
+  await copyTable('messages', ['id', 'conversation_id', 'role', 'content', 'confidence', 'sources', 'source_scores', 'retrieval_method', 'generation_provider', 'latency_ms', 'should_escalate', 'created_at'], (row) => ({
     ...row,
     sources: row.sources ? JSON.parse(String(row.sources)) : null,
     source_scores: row.source_scores ? JSON.parse(String(row.source_scores)) : null,

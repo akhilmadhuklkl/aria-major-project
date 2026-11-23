@@ -19,7 +19,7 @@ const expectedTables: Record<string, string[]> = {
   users: ['id', 'email', 'display_name', 'role'],
   sessions: ['id', 'user_id', 'token_hash', 'expires_at', 'revoked_at'],
   conversations: ['id', 'customer_name', 'subject', 'status', 'priority', 'assigned_to', 'tags', 'escalated'],
-  messages: ['id', 'conversation_id', 'content', 'sources', 'source_scores', 'retrieval_method', 'generation_provider'],
+  messages: ['id', 'conversation_id', 'content', 'sources', 'source_scores', 'retrieval_method', 'generation_provider', 'latency_ms'],
   feedback: ['id', 'message_id', 'conversation_id', 'rating', 'quality_score'],
   knowledge_documents: ['id', 'title', 'category', 'content', 'status', 'archived_at'],
   knowledge_document_versions: ['id', 'knowledge_document_id', 'version', 'content'],

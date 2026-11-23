@@ -466,13 +466,14 @@ async function processChatRequest(query: string, requestedConversationId: number
   `).run(customerMessageId, conversationId, query, now)
 
   const result = await agent.generateResponse(query, language)
+  const latencyMs = Math.max(0, Date.now() - startedAt)
   const assistantMessageId = crypto.randomUUID()
   const assistantCreatedAt = new Date().toISOString()
 
   db.prepare(`
     INSERT INTO messages (
       id, conversation_id, role, content, confidence, sources, source_scores,
-      retrieval_method, generation_provider, should_escalate, created_at
+      retrieval_method, generation_provider, latency_ms, should_escalate, created_at
     )
     VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
@@ -484,6 +485,7 @@ async function processChatRequest(query: string, requestedConversationId: number
     JSON.stringify(result.sourceScores),
     result.retrievalMethod,
     result.generationProvider,
+    latencyMs,
     result.shouldEscalate ? 1 : 0,
     assistantCreatedAt,
   )
@@ -501,7 +503,7 @@ async function processChatRequest(query: string, requestedConversationId: number
     conversationId,
     role: 'assistant',
     createdAt: assistantCreatedAt,
-    latencyMs: Math.max(0, Date.now() - startedAt),
+    latencyMs,
     ...result,
   }
 }

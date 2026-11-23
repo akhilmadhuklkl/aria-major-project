@@ -82,6 +82,7 @@ db.exec(`
 ensureColumn('messages', 'source_scores', 'TEXT')
 ensureColumn('messages', 'retrieval_method', 'TEXT')
 ensureColumn('messages', 'generation_provider', 'TEXT')
+ensureColumn('messages', 'latency_ms', 'INTEGER')
 runMigrations()
 
 seedDatabase()

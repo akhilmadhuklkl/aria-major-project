@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS messages (
   source_scores JSONB,
   retrieval_method TEXT,
   generation_provider TEXT,
+  latency_ms INTEGER,
   should_escalate BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL
 );
