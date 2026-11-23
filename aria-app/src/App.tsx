@@ -92,6 +92,17 @@ export default function App() {
       })
   }, [authLoading, authRequired, authUser])
 
+  async function refreshSystemStatus() {
+    try {
+      const status = await api.getSystemStatus()
+      setSystemStatus(status)
+      setHealthUnavailable(false)
+    } catch (error) {
+      setHealthUnavailable(true)
+      throw error
+    }
+  }
+
   useEffect(() => {
     if (authLoading || (authRequired && !authUser)) return
     const refreshStatus = () => {
@@ -419,6 +430,7 @@ export default function App() {
           language={language}
           systemStatus={systemStatus}
           healthUnavailable={healthUnavailable}
+          onRefreshStatus={refreshSystemStatus}
         />
         <main className="main-content">
           {view === 'inbox' && (

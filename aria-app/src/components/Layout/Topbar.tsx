@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, Search } from 'lucide-react'
+import { Bell, RefreshCw, Search } from 'lucide-react'
 import type { Notification, SystemStatus, View } from '../../types'
 import { api } from '../../api'
 import type { Language } from '../../i18n'
@@ -14,9 +14,10 @@ export interface TopbarProps {
   language: Language
   systemStatus?: SystemStatus
   healthUnavailable: boolean
+  onRefreshStatus: () => Promise<void>
 }
 
-export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language, systemStatus, healthUnavailable }: TopbarProps) {
+export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language, systemStatus, healthUnavailable, onRefreshStatus }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationError, setNotificationError] = useState('')
@@ -71,12 +72,23 @@ export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlace
   }
   const serviceState = healthUnavailable ? 'degraded' : !systemStatus ? 'checking' : systemStatus.backend.status === 'operational' ? 'operational' : 'degraded'
   const serviceLabel = healthUnavailable ? 'Service unavailable' : serviceState === 'checking' ? 'Checking AI services' : serviceState === 'operational' ? 'AI services operational' : 'AI services degraded'
+  const [refreshingStatus, setRefreshingStatus] = useState(false)
+
+  async function refreshStatus() {
+    if (refreshingStatus) return
+    setRefreshingStatus(true)
+    try {
+      await onRefreshStatus()
+    } finally {
+      setRefreshingStatus(false)
+    }
+  }
 
   return (
     <header className="topbar">
       <div>
         <h1>{names[view]}</h1>
-        <span className={`online-status ${serviceState}`}><i /> {serviceLabel}</span>
+        <button className={`online-status status-refresh ${serviceState}`} onClick={() => void refreshStatus()} disabled={refreshingStatus} title="Refresh service status" aria-label="Refresh service status"><i /> {refreshingStatus ? 'Checking services...' : serviceLabel}<RefreshCw size={11} /></button>
       </div>
       <div className="topbar-actions">
         {searchEnabled && (

@@ -109,6 +109,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .topbar { height: 70px; flex: 0 0 70px; padding: 0 22px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
 .topbar h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 750; }
 .online-status { display: flex; align-items: center; gap: 5px; margin-top: 3px; color: var(--muted); font-size: 10px; }
+.status-refresh { padding: 0; border: 0; background: transparent; }
+.status-refresh:hover { color: var(--ink); }
+.status-refresh:disabled { cursor: wait; opacity: .7; }
 .online-status i, .status-button i { width: 6px; height: 6px; border-radius: 50%; background: #20a474; }
 .online-status.checking i { background: var(--warning); }
 .online-status.degraded i { background: var(--danger); }
