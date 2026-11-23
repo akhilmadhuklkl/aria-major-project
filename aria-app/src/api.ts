@@ -15,6 +15,18 @@ type ChatResponse = {
   shouldEscalate: boolean
 }
 
+type ConversationRow = {
+  id: number
+  customer: string
+  subject: string
+  status: string
+  priority: string
+  assignedTo?: string | null
+  tags?: string[]
+  escalated?: boolean
+  updatedAt: string
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -135,33 +147,14 @@ export const api = {
     return request(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
   },
 
+  async getConversationPage(limit = 50, offset = 0): Promise<{ items: Conversation[]; total: number; hasMore: boolean }> {
+    const result = await request<{ items: Array<ConversationRow>; total: number; hasMore: boolean }>(`/conversations/page?limit=${limit}&offset=${offset}`)
+    return { ...result, items: result.items.map(mapConversationRow) }
+  },
+
   async getConversations(): Promise<Conversation[]> {
-    const rows = await request<Array<{
-      id: number
-      customer: string
-      subject: string
-      status: string
-      priority: string
-      assignedTo?: string | null
-      tags?: string[]
-      escalated?: boolean
-      updatedAt: string
-    }>>('/conversations')
-    return rows.map((row) => ({
-      id: row.id,
-      customer: row.customer,
-      initials: row.customer.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 2).toUpperCase(),
-      subject: row.subject,
-      orderNumber: `AR-${String(20000 + row.id)}`,
-      preview: row.subject,
-      time: formatRelativeTime(row.updatedAt),
-      priority: row.priority.toLowerCase() === 'high' ? 'High' : 'Normal',
-      unread: false,
-      status: row.status.toLowerCase() === 'pending' ? 'Pending' : row.status.toLowerCase() === 'resolved' ? 'Resolved' : 'Open',
-      assignedTo: row.assignedTo ?? undefined,
-      tags: row.tags ?? [],
-      escalated: Boolean(row.escalated),
-    }))
+    const rows = await request<Array<ConversationRow>>('/conversations')
+    return rows.map(mapConversationRow)
   },
 
   async getConversationMessages(id: number): Promise<AgentThreadMessage[]> {
@@ -336,4 +329,22 @@ function formatRelativeTime(value: string) {
   const elapsedHours = Math.round(elapsedMinutes / 60)
   if (elapsedHours < 24) return `${elapsedHours}h`
   return `${Math.round(elapsedHours / 24)}d`
+}
+
+function mapConversationRow(row: ConversationRow): Conversation {
+  return {
+    id: row.id,
+    customer: row.customer,
+    initials: row.customer.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 2).toUpperCase(),
+    subject: row.subject,
+    orderNumber: `AR-${String(20000 + row.id)}`,
+    preview: row.subject,
+    time: formatRelativeTime(row.updatedAt),
+    priority: row.priority.toLowerCase() === 'high' ? 'High' : 'Normal',
+    unread: false,
+    status: row.status.toLowerCase() === 'pending' ? 'Pending' : row.status.toLowerCase() === 'resolved' ? 'Resolved' : 'Open',
+    assignedTo: row.assignedTo ?? undefined,
+    tags: row.tags ?? [],
+    escalated: Boolean(row.escalated),
+  }
 }

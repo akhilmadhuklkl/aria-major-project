@@ -18,6 +18,9 @@ export interface AgentWorkspaceProps {
   actionLoading: boolean
   onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
   onExport: () => Promise<void>
+  onLoadMore: () => Promise<void>
+  conversationHasMore: boolean
+  conversationLoading: boolean
 }
 
 export function AgentWorkspace({
@@ -35,10 +38,13 @@ export function AgentWorkspace({
   actionLoading,
   onUpdateConversation,
   onExport,
+  onLoadMore,
+  conversationHasMore,
+  conversationLoading,
 }: AgentWorkspaceProps) {
   return (
     <section className="workspace-grid">
-      <ConversationList selected={selected} conversations={conversations} onSelect={onSelect} searchQuery={searchQuery} onUpdateConversation={onUpdateConversation} />
+      <ConversationList selected={selected} conversations={conversations} onSelect={onSelect} searchQuery={searchQuery} onUpdateConversation={onUpdateConversation} onLoadMore={onLoadMore} conversationHasMore={conversationHasMore} conversationLoading={conversationLoading} />
       <ChatPanel key={selected.id} selected={selected} messages={messages} onSendMessage={onSendMessage} onUpdateConversation={onUpdateConversation} onExport={onExport} />
       <AIPanel
         suggestion={suggestion}

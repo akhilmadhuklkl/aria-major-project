@@ -8,9 +8,12 @@ export interface ConversationListProps {
   onSelect: (conversation: Conversation) => void
   searchQuery: string
   onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
+  onLoadMore: () => Promise<void>
+  conversationHasMore: boolean
+  conversationLoading: boolean
 }
 
-export function ConversationList({ selected, conversations, onSelect, searchQuery }: ConversationListProps) {
+export function ConversationList({ selected, conversations, onSelect, searchQuery, onLoadMore, conversationHasMore, conversationLoading }: ConversationListProps) {
   const [queue, setQueue] = useState<'mine' | 'unassigned'>('mine')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -74,6 +77,11 @@ export function ConversationList({ selected, conversations, onSelect, searchQuer
         ))}
         {visibleConversations.length === 0 && (
           <div className="queue-empty">No conversations match "{searchQuery}".</div>
+        )}
+        {conversationHasMore && !searchQuery.trim() && (
+          <button className="queue-load-more" onClick={() => void onLoadMore()} disabled={conversationLoading}>
+            {conversationLoading ? 'Loading conversations...' : 'Load more conversations'}
+          </button>
         )}
       </div>
     </div>

@@ -18,6 +18,8 @@ export default function App() {
   const [activeModal, setActiveModal] = useState<'help' | 'settings'>()
   const [selectedConversation, setSelectedConversation] = useState<Conversation>(conversationsData[0])
   const [conversations, setConversations] = useState<Conversation[]>(conversationsData)
+  const [conversationHasMore, setConversationHasMore] = useState(false)
+  const [conversationLoading, setConversationLoading] = useState(false)
   const [suggestions, setSuggestions] = useState<Record<number, string>>(assistantSuggestions)
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
   const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
@@ -65,11 +67,12 @@ export default function App() {
 
   useEffect(() => {
     if (authLoading || (authRequired && !authUser)) return
-    void Promise.allSettled([api.getConversations(), api.getKnowledge(), api.getAnalytics(), api.getSystemStatus(), api.getKnowledgeGraph()])
+    void Promise.allSettled([api.getConversationPage(), api.getKnowledge(), api.getAnalytics(), api.getSystemStatus(), api.getKnowledgeGraph()])
       .then(([conversationsResult, knowledgeResult, analyticsResult, statusResult, graphResult]) => {
-        if (conversationsResult.status === 'fulfilled' && conversationsResult.value.length > 0) {
-          setConversations(conversationsResult.value)
-          setSelectedConversation((current) => conversationsResult.value.find((item) => item.id === current.id) ?? conversationsResult.value[0])
+        if (conversationsResult.status === 'fulfilled' && conversationsResult.value.items.length > 0) {
+          setConversations(conversationsResult.value.items)
+          setConversationHasMore(conversationsResult.value.hasMore)
+          setSelectedConversation((current) => conversationsResult.value.items.find((item) => item.id === current.id) ?? conversationsResult.value.items[0])
         }
         if (knowledgeResult.status === 'fulfilled') setRemoteKnowledge(knowledgeResult.value)
         if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
@@ -80,6 +83,18 @@ export default function App() {
         }
       })
   }, [authLoading, authRequired, authUser])
+
+  async function loadMoreConversations() {
+    if (conversationLoading || !conversationHasMore) return
+    setConversationLoading(true)
+    try {
+      const page = await api.getConversationPage(50, conversations.length)
+      setConversations((current) => [...current, ...page.items.filter((item) => !current.some((existing) => existing.id === item.id))])
+      setConversationHasMore(page.hasMore)
+    } finally {
+      setConversationLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (authLoading || (authRequired && !authUser)) return
@@ -380,6 +395,9 @@ export default function App() {
               actionLoading={agentActionLoading}
               onUpdateConversation={updateConversation}
               onExport={exportSelectedConversation}
+              onLoadMore={loadMoreConversations}
+              conversationHasMore={conversationHasMore}
+              conversationLoading={conversationLoading}
             />
           )}
           {view === 'customer' && (

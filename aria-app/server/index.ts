@@ -502,6 +502,21 @@ app.get('/api/conversations', (_request, response) => {
   response.json(rows)
 })
 
+app.get('/api/conversations/page', (request, response) => {
+  const limit = Math.min(Math.max(Number(request.query.limit ?? 50) || 50, 1), 100)
+  const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0)
+  const total = (db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }).count
+  const rows = db.prepare(`
+    SELECT id, customer_name AS customer, subject, status, priority, topic,
+      assigned_to AS assignedTo, tags, escalated, updated_at AS updatedAt
+    FROM conversations ORDER BY updated_at DESC LIMIT ? OFFSET ?
+  `).all(limit, offset).map((row) => {
+    const item = row as Record<string, unknown>
+    return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
+  })
+  response.json({ items: rows, total, limit, offset, hasMore: offset + rows.length < total })
+})
+
 app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (request, response) => {
   const id = Number(request.params.id)
   const status = request.body?.status ? String(request.body.status).toLowerCase() : undefined
