@@ -13,9 +13,10 @@ export interface TopbarProps {
   searchPlaceholder: string
   language: Language
   systemStatus?: SystemStatus
+  healthUnavailable: boolean
 }
 
-export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language, systemStatus }: TopbarProps) {
+export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language, systemStatus, healthUnavailable }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationError, setNotificationError] = useState('')
@@ -68,8 +69,8 @@ export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlace
     knowledge: translate(language, 'knowledge'),
     analytics: translate(language, 'analytics'),
   }
-  const serviceState = !systemStatus ? 'checking' : systemStatus.backend.status === 'operational' ? 'operational' : 'degraded'
-  const serviceLabel = serviceState === 'checking' ? 'Checking AI services' : serviceState === 'operational' ? 'AI services operational' : 'AI services degraded'
+  const serviceState = healthUnavailable ? 'degraded' : !systemStatus ? 'checking' : systemStatus.backend.status === 'operational' ? 'operational' : 'degraded'
+  const serviceLabel = healthUnavailable ? 'Service unavailable' : serviceState === 'checking' ? 'Checking AI services' : serviceState === 'operational' ? 'AI services operational' : 'AI services degraded'
 
   return (
     <header className="topbar">

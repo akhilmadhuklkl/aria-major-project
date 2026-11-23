@@ -42,6 +42,7 @@ export default function App() {
   const [graphRelationships, setGraphRelationships] = useState<GraphRelationship[]>([])
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>()
+  const [healthUnavailable, setHealthUnavailable] = useState(false)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([])
   const [authUser, setAuthUser] = useState<AuthUser>()
@@ -78,7 +79,12 @@ export default function App() {
         }
         if (knowledgeResult.status === 'fulfilled') setRemoteKnowledge(knowledgeResult.value)
         if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
-        if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
+        if (statusResult.status === 'fulfilled') {
+          setSystemStatus(statusResult.value)
+          setHealthUnavailable(false)
+        } else {
+          setHealthUnavailable(true)
+        }
         if (graphResult.status === 'fulfilled') {
           setGraphNodes(graphResult.value.nodes)
           setGraphRelationships(graphResult.value.relationships)
@@ -88,7 +94,11 @@ export default function App() {
 
   useEffect(() => {
     if (authLoading || (authRequired && !authUser)) return
-    const refreshStatus = () => { void api.getSystemStatus().then(setSystemStatus).catch(() => undefined) }
+    const refreshStatus = () => {
+      void api.getSystemStatus()
+        .then((status) => { setSystemStatus(status); setHealthUnavailable(false) })
+        .catch(() => setHealthUnavailable(true))
+    }
     const interval = window.setInterval(refreshStatus, 30_000)
     return () => window.clearInterval(interval)
   }, [authLoading, authRequired, authUser])
@@ -126,7 +136,12 @@ export default function App() {
     const isAdmin = !authUser || authUser.role === 'admin'
     void Promise.allSettled([api.getSystemStatus(), isAdmin ? api.getAuditLogs() : Promise.resolve([]), isAdmin ? api.getWebhooks() : Promise.resolve([])])
       .then(([statusResult, auditResult, webhookResult]) => {
-        if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
+        if (statusResult.status === 'fulfilled') {
+          setSystemStatus(statusResult.value)
+          setHealthUnavailable(false)
+        } else {
+          setHealthUnavailable(true)
+        }
         if (auditResult.status === 'fulfilled') setAuditLogs(auditResult.value)
         if (webhookResult.status === 'fulfilled') setWebhooks(webhookResult.value)
       })
@@ -403,6 +418,7 @@ export default function App() {
           searchPlaceholder={view === 'knowledge' ? 'Search knowledge' : 'Search conversations'}
           language={language}
           systemStatus={systemStatus}
+          healthUnavailable={healthUnavailable}
         />
         <main className="main-content">
           {view === 'inbox' && (
