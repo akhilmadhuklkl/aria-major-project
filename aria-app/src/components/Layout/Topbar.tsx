@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Bell, Search } from 'lucide-react'
-import type { Notification, View } from '../../types'
+import type { Notification, SystemStatus, View } from '../../types'
 import { api } from '../../api'
 import type { Language } from '../../i18n'
 import { translate } from '../../i18n'
@@ -12,9 +12,10 @@ export interface TopbarProps {
   searchEnabled: boolean
   searchPlaceholder: string
   language: Language
+  systemStatus?: SystemStatus
 }
 
-export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language }: TopbarProps) {
+export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlaceholder, language, systemStatus }: TopbarProps) {
   const [showNotifications, setShowNotifications] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [notificationError, setNotificationError] = useState('')
@@ -67,12 +68,14 @@ export function Topbar({ view, searchQuery, onSearch, searchEnabled, searchPlace
     knowledge: translate(language, 'knowledge'),
     analytics: translate(language, 'analytics'),
   }
+  const serviceState = !systemStatus ? 'checking' : systemStatus.backend.status === 'operational' ? 'operational' : 'degraded'
+  const serviceLabel = serviceState === 'checking' ? 'Checking AI services' : serviceState === 'operational' ? 'AI services operational' : 'AI services degraded'
 
   return (
     <header className="topbar">
       <div>
         <h1>{names[view]}</h1>
-        <span className="online-status"><i /> AI services operational</span>
+        <span className={`online-status ${serviceState}`}><i /> {serviceLabel}</span>
       </div>
       <div className="topbar-actions">
         {searchEnabled && (

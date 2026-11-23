@@ -395,6 +395,7 @@ export default function App() {
           searchEnabled={view === 'inbox' || view === 'knowledge'}
           searchPlaceholder={view === 'knowledge' ? 'Search knowledge' : 'Search conversations'}
           language={language}
+          systemStatus={systemStatus}
         />
         <main className="main-content">
           {view === 'inbox' && (
