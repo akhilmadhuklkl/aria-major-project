@@ -18,18 +18,24 @@ export function ConversationList({ selected, conversations, onSelect, searchQuer
   const [queue, setQueue] = useState<'mine' | 'unassigned'>('mine')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
+  const [sortBy, setSortBy] = useState<'recent' | 'priority' | 'customer'>('recent')
   const [showNewNotice, setShowNewNotice] = useState(false)
   const visibleConversations = useMemo(() => {
     const base = queue === 'mine' ? conversations.filter((conversation) => conversation.assignedTo) : conversations.filter((conversation) => !conversation.assignedTo)
     const normalizedQuery = searchQuery.trim().toLowerCase()
-    return base.filter((conversation) => {
+    const filtered = base.filter((conversation) => {
       if (statusFilter !== 'all' && conversation.status !== statusFilter) return false
       if (priorityFilter !== 'all' && conversation.priority !== priorityFilter) return false
       if (!normalizedQuery) return true
       return [conversation.customer, conversation.subject, conversation.preview, conversation.priority, ...(conversation.tags ?? [])]
         .some((value) => value.toLowerCase().includes(normalizedQuery))
     })
-  }, [conversations, priorityFilter, queue, searchQuery, statusFilter])
+    return [...filtered].sort((first, second) => {
+      if (sortBy === 'priority') return (first.priority === 'High' ? 0 : 1) - (second.priority === 'High' ? 0 : 1) || first.customer.localeCompare(second.customer)
+      if (sortBy === 'customer') return first.customer.localeCompare(second.customer)
+      return 0
+    })
+  }, [conversations, priorityFilter, queue, searchQuery, sortBy, statusFilter])
 
   return (
     <div className="queue-panel">
@@ -56,6 +62,9 @@ export function ConversationList({ selected, conversations, onSelect, searchQuer
         </select>
         <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)} aria-label="Filter by priority">
           <option value="all">All priorities</option><option value="High">High</option><option value="Normal">Normal</option>
+        </select>
+        <select value={sortBy} onChange={(event) => setSortBy(event.target.value as typeof sortBy)} aria-label="Sort conversations">
+          <option value="recent">Recent</option><option value="priority">Priority</option><option value="customer">Customer</option>
         </select>
       </div>
       <div className="conversation-list">
