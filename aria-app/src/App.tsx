@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, AnalyticsSummary, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, AnalyticsSummary, ChatMessage, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
@@ -24,7 +24,7 @@ export default function App() {
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
   const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
   const [topSearch, setTopSearch] = useState('')
-  const [customerMessages, setCustomerMessages] = useState([
+  const [customerMessages, setCustomerMessages] = useState<ChatMessage[]>([
     { from: 'bot', text: 'Hello! I am ARIA. How can I help with your order today?' },
   ])
   const [customerInput, setCustomerInput] = useState('')
@@ -185,26 +185,28 @@ export default function App() {
     setRating(0)
     setChatError('')
     setChatLoading(true)
+    const streamingMessageId = `stream-${Date.now()}`
+    setCustomerMessages((current) => [...current, { from: 'bot', text: '', id: streamingMessageId }])
 
     try {
-      const result = await api.chat(message, customerConversationId, language)
+      const result = await api.chatStream(message, customerConversationId, language, (chunk) => {
+        setCustomerMessages((current) => current.map((item) => item.id === streamingMessageId ? { ...item, text: `${item.text}${chunk}` } : item))
+      })
       setCustomerConversationId(result.conversationId)
       setLastAssistantMessageId(result.id)
-      setCustomerMessages((current) => [
-        ...current,
-        {
-          from: 'bot',
-          text: result.answer,
-          id: result.id,
-          conversationId: result.conversationId,
-          confidence: result.confidence,
-          sources: result.sources,
-          sourceScores: result.sourceScores,
-          retrievalMethod: result.retrievalMethod,
-          generationProvider: result.generationProvider,
-        },
-      ])
+      setCustomerMessages((current) => current.map((item) => item.id === streamingMessageId ? {
+        ...item,
+        text: result.answer,
+        id: result.id,
+        conversationId: result.conversationId,
+        confidence: result.confidence,
+        sources: result.sources,
+        sourceScores: result.sourceScores,
+        retrievalMethod: result.retrievalMethod,
+        generationProvider: result.generationProvider,
+      } : item))
     } catch (error) {
+      setCustomerMessages((current) => current.filter((item) => item.id !== streamingMessageId))
       setChatError(error instanceof Error ? error.message : 'ARIA could not send a response.')
     } finally {
       setChatLoading(false)

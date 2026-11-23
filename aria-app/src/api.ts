@@ -157,6 +157,45 @@ export const api = {
     })
   },
 
+  async chatStream(message: string, conversationId: number | undefined, language: string, onChunk: (text: string) => void) {
+    const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
+    const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ message, conversationId, language }),
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ error: 'Request failed' })) as { error?: string; requestId?: string }
+      throw new ApiError(body.error ?? `Request failed with status ${response.status}`, response.status, body.requestId ?? response.headers.get('X-Request-ID') ?? undefined)
+    }
+    if (!response.body) throw new Error('Streaming response is unavailable.')
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let completed: ChatResponse | undefined
+    while (true) {
+      const { done, value } = await reader.read()
+      buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done })
+      const events = buffer.split('\n\n')
+      buffer = events.pop() ?? ''
+      for (const event of events) {
+        const line = event.split('\n').find((entry) => entry.startsWith('data: '))
+        if (!line) continue
+        const payload = JSON.parse(line.slice(6)) as { type: string; text?: string; response?: ChatResponse }
+        if (payload.type === 'chunk' && payload.text) onChunk(payload.text)
+        if (payload.type === 'complete' && payload.response) completed = payload.response
+      }
+      if (done) break
+    }
+    if (!completed) throw new Error('Streaming response ended before completion.')
+    return completed
+  },
+
   submitFeedback(input: { messageId: string; conversationId: number; rating: number }) {
     return request('/feedback', {
       method: 'POST',

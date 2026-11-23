@@ -445,17 +445,7 @@ app.get('/api/interim-status', (_request, response) => {
   })
 })
 
-app.post('/api/chat', chatLimiter, async (request, response) => {
-  const query = String(request.body?.message ?? '').trim()
-  const requestedConversationId = Number(request.body?.conversationId)
-  const requestedLanguage = String(request.body?.language ?? 'en').toLowerCase()
-  const language = ['en', 'hi', 'es'].includes(requestedLanguage) ? requestedLanguage : 'en'
-
-  if (!query) {
-    response.status(400).json({ error: 'message is required' })
-    return
-  }
-
+async function processChatRequest(query: string, requestedConversationId: number, language: string) {
   const now = new Date().toISOString()
   let conversationId = Number.isInteger(requestedConversationId) ? requestedConversationId : 0
 
@@ -505,13 +495,49 @@ app.post('/api/chat', chatLimiter, async (request, response) => {
     createNotification({ kind: 'escalation', title: 'Conversation needs human review', message: 'ARIA flagged this conversation for support-agent follow-up.' })
   }
 
-  response.json({
+  return {
     id: assistantMessageId,
     conversationId,
     role: 'assistant',
     createdAt: assistantCreatedAt,
     ...result,
-  })
+  }
+}
+
+function parseChatRequest(request: express.Request) {
+  const query = String(request.body?.message ?? '').trim()
+  const requestedConversationId = Number(request.body?.conversationId)
+  const requestedLanguage = String(request.body?.language ?? 'en').toLowerCase()
+  const language = ['en', 'hi', 'es'].includes(requestedLanguage) ? requestedLanguage : 'en'
+  return { query, requestedConversationId, language }
+}
+
+app.post('/api/chat', chatLimiter, async (request, response) => {
+  const { query, requestedConversationId, language } = parseChatRequest(request)
+  if (!query) {
+    response.status(400).json({ error: 'message is required' })
+    return
+  }
+  response.json(await processChatRequest(query, requestedConversationId, language))
+})
+
+app.post('/api/chat/stream', chatLimiter, async (request, response) => {
+  const { query, requestedConversationId, language } = parseChatRequest(request)
+  if (!query) {
+    response.status(400).json({ error: 'message is required' })
+    return
+  }
+
+  response.setHeader('Content-Type', 'text/event-stream')
+  response.setHeader('Cache-Control', 'no-cache')
+  response.setHeader('Connection', 'keep-alive')
+  const result = await processChatRequest(query, requestedConversationId, language)
+  const chunks = result.answer.match(/\S+\s*/g) ?? [result.answer]
+  for (const chunk of chunks) {
+    response.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`)
+  }
+  response.write(`data: ${JSON.stringify({ type: 'complete', response: result })}\n\n`)
+  response.end()
 })
 
 app.get('/api/conversations', (_request, response) => {
