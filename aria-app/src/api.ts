@@ -186,9 +186,10 @@ export const api = {
       for (const event of events) {
         const line = event.split('\n').find((entry) => entry.startsWith('data: '))
         if (!line) continue
-        const payload = JSON.parse(line.slice(6)) as { type: string; text?: string; response?: ChatResponse }
+        const payload = JSON.parse(line.slice(6)) as { type: string; text?: string; response?: ChatResponse; message?: string; requestId?: string }
         if (payload.type === 'chunk' && payload.text) onChunk(payload.text)
         if (payload.type === 'complete' && payload.response) completed = payload.response
+        if (payload.type === 'error') throw new ApiError(payload.message ?? 'Streaming response failed.', 500, payload.requestId)
       }
       if (done) break
     }

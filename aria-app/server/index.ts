@@ -531,12 +531,19 @@ app.post('/api/chat/stream', chatLimiter, async (request, response) => {
   response.setHeader('Content-Type', 'text/event-stream')
   response.setHeader('Cache-Control', 'no-cache')
   response.setHeader('Connection', 'keep-alive')
-  const result = await processChatRequest(query, requestedConversationId, language)
-  const chunks = result.answer.match(/\S+\s*/g) ?? [result.answer]
-  for (const chunk of chunks) {
-    response.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`)
+  try {
+    const result = await processChatRequest(query, requestedConversationId, language)
+    const chunks = result.answer.match(/\S+\s*/g) ?? [result.answer]
+    for (const chunk of chunks) {
+      response.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`)
+    }
+    response.write(`data: ${JSON.stringify({ type: 'complete', response: result })}\n\n`)
+  } catch (error) {
+    const requestId = String(response.getHeader('X-Request-ID') ?? 'unknown')
+    const message = error instanceof Error ? error.message : 'Streaming response failed'
+    console.error(`[${requestId}] ${request.method} ${request.originalUrl} failed: ${message}`)
+    response.write(`data: ${JSON.stringify({ type: 'error', message: 'ARIA could not complete the response.', requestId })}\n\n`)
   }
-  response.write(`data: ${JSON.stringify({ type: 'complete', response: result })}\n\n`)
   response.end()
 })
 
