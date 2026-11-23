@@ -36,6 +36,13 @@ try {
     `${knowledge.length} records returned`,
   )
 
+  const archivedKnowledge = await request<unknown[]>('/knowledge/archived')
+  addResult(
+    'Archived knowledge endpoint',
+    Array.isArray(archivedKnowledge),
+    `${archivedKnowledge.length} archived records returned`,
+  )
+
   const status = await request<Record<string, unknown>>('/system-status')
   const backend = status.backend as Record<string, unknown> | undefined
   addResult(
