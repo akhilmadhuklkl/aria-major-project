@@ -1,4 +1,4 @@
-import type { AnalyticsSummary, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus } from './types'
+import type { AgentThreadMessage, AnalyticsSummary, AuthUser, Conversation, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 const AUTH_TOKEN_KEY = 'aria.auth.token'
@@ -133,6 +133,44 @@ export const api = {
 
   updateConversation(id: number, input: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) {
     return request(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
+  },
+
+  async getConversations(): Promise<Conversation[]> {
+    const rows = await request<Array<{
+      id: number
+      customer: string
+      subject: string
+      status: string
+      priority: string
+      assignedTo?: string | null
+      tags?: string[]
+      escalated?: boolean
+      updatedAt: string
+    }>>('/conversations')
+    return rows.map((row) => ({
+      id: row.id,
+      customer: row.customer,
+      initials: row.customer.split(/\s+/).map((part) => part[0] ?? '').join('').slice(0, 2).toUpperCase(),
+      subject: row.subject,
+      orderNumber: `AR-${String(20000 + row.id)}`,
+      preview: row.subject,
+      time: formatRelativeTime(row.updatedAt),
+      priority: row.priority.toLowerCase() === 'high' ? 'High' : 'Normal',
+      unread: false,
+      status: row.status.toLowerCase() === 'pending' ? 'Pending' : row.status.toLowerCase() === 'resolved' ? 'Resolved' : 'Open',
+      assignedTo: row.assignedTo ?? undefined,
+      tags: row.tags ?? [],
+      escalated: Boolean(row.escalated),
+    }))
+  },
+
+  async getConversationMessages(id: number): Promise<AgentThreadMessage[]> {
+    const rows = await request<Array<{ role: string; content: string; createdAt: string }>>(`/conversations/${id}/messages`)
+    return rows.map((row) => ({
+      from: (row.role === 'customer' || row.role === 'user' ? 'customer' : row.role === 'system' ? 'system' : 'agent') as AgentThreadMessage['from'],
+      text: row.content,
+      time: new Date(row.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+    }))
   },
 
   async exportConversation(id: number) {
@@ -290,4 +328,12 @@ export const api = {
   getSystemStatus() {
     return request<SystemStatus>('/system-status')
   },
+}
+
+function formatRelativeTime(value: string) {
+  const elapsedMinutes = Math.max(0, Math.round((Date.now() - new Date(value).getTime()) / 60_000))
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m`
+  const elapsedHours = Math.round(elapsedMinutes / 60)
+  if (elapsedHours < 24) return `${elapsedHours}h`
+  return `${Math.round(elapsedHours / 24)}d`
 }

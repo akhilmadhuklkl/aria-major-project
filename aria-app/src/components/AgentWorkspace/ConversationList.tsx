@@ -1,16 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Plus, SlidersHorizontal } from 'lucide-react'
 import type { Conversation } from '../../types'
-import { conversations } from '../../constants'
 
 export interface ConversationListProps {
   selected: Conversation
+  conversations: Conversation[]
   onSelect: (conversation: Conversation) => void
   searchQuery: string
   onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
 }
 
-export function ConversationList({ selected, onSelect, searchQuery }: ConversationListProps) {
+export function ConversationList({ selected, conversations, onSelect, searchQuery }: ConversationListProps) {
   const [queue, setQueue] = useState<'mine' | 'unassigned'>('mine')
   const [statusFilter, setStatusFilter] = useState('all')
   const [priorityFilter, setPriorityFilter] = useState('all')
@@ -25,7 +25,7 @@ export function ConversationList({ selected, onSelect, searchQuery }: Conversati
       return [conversation.customer, conversation.subject, conversation.preview, conversation.priority, ...(conversation.tags ?? [])]
         .some((value) => value.toLowerCase().includes(normalizedQuery))
     })
-  }, [priorityFilter, queue, searchQuery, statusFilter])
+  }, [conversations, priorityFilter, queue, searchQuery, statusFilter])
 
   return (
     <div className="queue-panel">

@@ -17,6 +17,7 @@ export default function App() {
   const [view, setView] = useState<View>('inbox')
   const [activeModal, setActiveModal] = useState<'help' | 'settings'>()
   const [selectedConversation, setSelectedConversation] = useState<Conversation>(conversationsData[0])
+  const [conversations, setConversations] = useState<Conversation[]>(conversationsData)
   const [suggestions, setSuggestions] = useState<Record<number, string>>(assistantSuggestions)
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
   const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
@@ -64,8 +65,12 @@ export default function App() {
 
   useEffect(() => {
     if (authLoading || (authRequired && !authUser)) return
-    void Promise.allSettled([api.getKnowledge(), api.getAnalytics(), api.getSystemStatus(), api.getKnowledgeGraph()])
-      .then(([knowledgeResult, analyticsResult, statusResult, graphResult]) => {
+    void Promise.allSettled([api.getConversations(), api.getKnowledge(), api.getAnalytics(), api.getSystemStatus(), api.getKnowledgeGraph()])
+      .then(([conversationsResult, knowledgeResult, analyticsResult, statusResult, graphResult]) => {
+        if (conversationsResult.status === 'fulfilled' && conversationsResult.value.length > 0) {
+          setConversations(conversationsResult.value)
+          setSelectedConversation((current) => conversationsResult.value.find((item) => item.id === current.id) ?? conversationsResult.value[0])
+        }
         if (knowledgeResult.status === 'fulfilled') setRemoteKnowledge(knowledgeResult.value)
         if (analyticsResult.status === 'fulfilled') setAnalytics(analyticsResult.value)
         if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
@@ -75,6 +80,15 @@ export default function App() {
         }
       })
   }, [authLoading, authRequired, authUser])
+
+  useEffect(() => {
+    if (authLoading || (authRequired && !authUser)) return
+    void api.getConversationMessages(selectedConversation.id)
+      .then((messages) => setAgentThreads((current) => ({ ...current, [selectedConversation.id]: messages })))
+      .catch(() => {
+        // Seeded thread data remains available if the API is temporarily unavailable.
+      })
+  }, [authLoading, authRequired, authUser, selectedConversation.id])
 
   async function refreshGraph() {
     const graph = await api.getKnowledgeGraph()
@@ -353,6 +367,7 @@ export default function App() {
           {view === 'inbox' && (
             <AgentWorkspace
               selected={selectedConversation}
+              conversations={conversations}
               onSelect={selectAgentConversation}
               messages={agentThreads[selectedConversation.id] ?? []}
               onSendMessage={addAgentMessage}

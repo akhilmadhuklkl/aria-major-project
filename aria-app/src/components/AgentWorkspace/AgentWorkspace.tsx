@@ -5,6 +5,7 @@ import { AIPanel } from './AIPanel'
 
 export interface AgentWorkspaceProps {
   selected: Conversation
+  conversations: Conversation[]
   onSelect: (conversation: Conversation) => void
   messages: AgentThreadMessage[]
   onSendMessage: (message: string, type?: 'agent' | 'note') => void
@@ -21,6 +22,7 @@ export interface AgentWorkspaceProps {
 
 export function AgentWorkspace({
   selected,
+  conversations,
   onSelect,
   messages,
   onSendMessage,
@@ -36,7 +38,7 @@ export function AgentWorkspace({
 }: AgentWorkspaceProps) {
   return (
     <section className="workspace-grid">
-      <ConversationList selected={selected} onSelect={onSelect} searchQuery={searchQuery} onUpdateConversation={onUpdateConversation} />
+      <ConversationList selected={selected} conversations={conversations} onSelect={onSelect} searchQuery={searchQuery} onUpdateConversation={onUpdateConversation} />
       <ChatPanel key={selected.id} selected={selected} messages={messages} onSendMessage={onSendMessage} onUpdateConversation={onUpdateConversation} onExport={onExport} />
       <AIPanel
         suggestion={suggestion}
