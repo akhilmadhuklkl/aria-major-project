@@ -9,11 +9,17 @@ const bearerToken = process.env.SMOKE_API_TOKEN?.trim()
 const results: CheckResult[] = []
 
 try {
-  const health = await request<Record<string, unknown>>('/health')
+  const healthResult = await requestWithMetadata<Record<string, unknown>>('/health')
+  const health = healthResult.body
   addResult(
     'Health endpoint',
     health.status === 'operational',
     `status=${String(health.status)}, database=${String(health.database)}`,
+  )
+  addResult(
+    'Request correlation ID',
+    Boolean(healthResult.requestId),
+    healthResult.requestId ? `requestId=${healthResult.requestId}` : 'X-Request-ID header missing',
   )
 
   const readiness = await request<Record<string, unknown>>('/ready')
@@ -70,6 +76,10 @@ console.log(`${passed}/${results.length} checks passed`)
 if (failed > 0) process.exit(1)
 
 async function request<T>(path: string): Promise<T> {
+  return (await requestWithMetadata<T>(path)).body
+}
+
+async function requestWithMetadata<T>(path: string): Promise<{ body: T; requestId: string | null }> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     headers: bearerToken ? { Authorization: `Bearer ${bearerToken}` } : undefined,
   })
@@ -77,7 +87,7 @@ async function request<T>(path: string): Promise<T> {
     const text = await response.text().catch(() => '')
     throw new Error(`${path} returned ${response.status}${text ? `: ${text}` : ''}`)
   }
-  return response.json() as Promise<T>
+  return { body: await response.json() as T, requestId: response.headers.get('X-Request-ID') }
 }
 
 function addResult(name: string, passed: boolean, detail: string) {
