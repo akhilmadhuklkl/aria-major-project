@@ -874,7 +874,7 @@ app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.si
   }
 })
 
-app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, response) => {
+app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = Number(request.params.id)
   const title = String(request.body?.title ?? '').trim()
   const category = String(request.body?.category ?? '').trim()
@@ -894,8 +894,23 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, res
       response.status(404).json({ error: 'knowledge document was not found' })
       return
     }
+    if (status === 'indexed') {
+      const embeddingService = new LocalEmbeddingService()
+      try {
+        const embeddingText = createKnowledgeEmbeddingText(updated)
+        const vector = await embeddingService.embed(embeddingText)
+        upsertKnowledgeEmbedding({
+          knowledgeDocumentId: updated.id,
+          model: embeddingModel,
+          vector,
+          contentHash: createContentHash(embeddingText),
+        })
+      } finally {
+        await embeddingService.dispose()
+      }
+    }
     recordAudit(request, { action: 'knowledge.updated', entityType: 'knowledge_document', entityId: id, metadata: { category, status } })
-    response.json({ ...updated, reindexRequired: status === 'indexed' })
+    response.json({ ...updated, indexed: status === 'indexed', reindexRequired: false })
   } catch {
     response.status(409).json({ error: 'a knowledge document with this title already exists' })
   }
