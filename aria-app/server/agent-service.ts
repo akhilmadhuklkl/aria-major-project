@@ -205,12 +205,15 @@ Respond in the customer's selected language: ${language}.
 export function createAgentService(retrieveKnowledge: KnowledgeRetriever) {
   const fallback = new LocalAgentService(retrieveKnowledge)
   const mastraEndpoint = process.env.MASTRA_AGENT_URL?.trim()
+  const provider = process.env.AI_PROVIDER?.trim().toLowerCase() ?? 'auto'
 
-  if (mastraEndpoint) return new RemoteMastraAgentService(mastraEndpoint, fallback, retrieveKnowledge)
+  if (provider !== 'local' && mastraEndpoint) return new RemoteMastraAgentService(mastraEndpoint, fallback, retrieveKnowledge)
   return fallback
 }
 
 export function getAgentProvider() {
+  const provider = process.env.AI_PROVIDER?.trim().toLowerCase() ?? 'auto'
+  if (provider === 'local') return 'local-knowledge-agent'
   return process.env.MASTRA_AGENT_URL?.trim() ? 'mastra-remote' : 'local-knowledge-agent'
 }
 
