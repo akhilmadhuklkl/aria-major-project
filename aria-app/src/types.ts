@@ -116,6 +116,7 @@ export interface ChatMessage {
   sourceScores?: SourceScore[]
   retrievalMethod?: 'hybrid' | 'semantic' | 'keyword' | 'none'
   generationProvider?: 'mastra-gemini' | 'local-knowledge'
+  latencyMs?: number
 }
 
 export interface SourceScore {

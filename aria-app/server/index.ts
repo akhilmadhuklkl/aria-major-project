@@ -446,6 +446,7 @@ app.get('/api/interim-status', (_request, response) => {
 })
 
 async function processChatRequest(query: string, requestedConversationId: number, language: string) {
+  const startedAt = Date.now()
   const now = new Date().toISOString()
   let conversationId = Number.isInteger(requestedConversationId) ? requestedConversationId : 0
 
@@ -500,6 +501,7 @@ async function processChatRequest(query: string, requestedConversationId: number
     conversationId,
     role: 'assistant',
     createdAt: assistantCreatedAt,
+    latencyMs: Math.max(0, Date.now() - startedAt),
     ...result,
   }
 }

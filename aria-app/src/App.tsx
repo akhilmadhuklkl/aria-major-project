@@ -204,6 +204,7 @@ export default function App() {
         sourceScores: result.sourceScores,
         retrievalMethod: result.retrievalMethod,
         generationProvider: result.generationProvider,
+        latencyMs: result.latencyMs,
       } : item))
     } catch (error) {
       setCustomerMessages((current) => current.filter((item) => item.id !== streamingMessageId))

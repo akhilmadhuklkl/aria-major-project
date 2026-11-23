@@ -7,6 +7,7 @@ type ChatResponse = {
   id: string
   conversationId: number
   answer: string
+  latencyMs: number
   confidence: number
   sources: string[]
   sourceScores: SourceScore[]

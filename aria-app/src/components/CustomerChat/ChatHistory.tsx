@@ -1,4 +1,4 @@
-import { Bot, BrainCircuit, Check, CheckCircle2, Copy, Database, Download, Plus, RefreshCw, Send, ShieldCheck, Sparkles } from 'lucide-react'
+import { Bot, BrainCircuit, Check, CheckCircle2, Clock3, Copy, Database, Download, Plus, RefreshCw, Send, ShieldCheck, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import type { ChatMessage } from '../../types'
 import { FeedbackPrompt } from './FeedbackPrompt'
@@ -75,6 +75,9 @@ export function ChatHistory({
                   )}
                   {message.generationProvider && (
                     <span className="evidence-chip provider"><Sparkles size={12} /> {message.generationProvider === 'mastra-gemini' ? 'Mastra + Gemini' : 'Local fallback'}</span>
+                  )}
+                  {message.latencyMs !== undefined && (
+                    <span className="evidence-chip latency"><Clock3 size={12} /> {message.latencyMs}ms response</span>
                   )}
                   {message.sources?.map((source) => {
                     const sourceScore = message.sourceScores?.find((item) => item.title === source)
