@@ -1,21 +1,24 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { Archive, Edit3, FileText, MoreHorizontal, Save, Trash2, X } from 'lucide-react'
-import type { KnowledgeItem, NewKnowledgeItem } from '../../types'
+import type { KnowledgeItem, KnowledgeVersion, NewKnowledgeItem } from '../../types'
 
 export interface KnowledgeTableProps {
   items: KnowledgeItem[]
   onDelete: (ids: number[]) => Promise<void>
   onArchive: (ids: number[]) => Promise<void>
   onUpdate: (id: number, input: NewKnowledgeItem) => Promise<void>
+  onGetVersions: (id: number) => Promise<KnowledgeVersion[]>
 }
 
-export function KnowledgeTable({ items, onDelete, onArchive, onUpdate }: KnowledgeTableProps) {
+export function KnowledgeTable({ items, onDelete, onArchive, onUpdate, onGetVersions }: KnowledgeTableProps) {
   const [expandedTitle, setExpandedTitle] = useState<string>()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [deleting, setDeleting] = useState(false)
   const [editingId, setEditingId] = useState<number>()
   const [editDraft, setEditDraft] = useState<NewKnowledgeItem>()
   const [savingEdit, setSavingEdit] = useState(false)
+  const [versionsById, setVersionsById] = useState<Record<number, KnowledgeVersion[]>>({})
+  const [loadingVersions, setLoadingVersions] = useState<number>()
   const selectAllRef = useRef<HTMLInputElement>(null)
   const selectableIds = useMemo(() => items.map((item) => item.id).filter((id): id is number => Boolean(id)), [items])
   const visibleSelectedIds = selectedIds.filter((id) => selectableIds.includes(id))
@@ -72,6 +75,20 @@ export function KnowledgeTable({ items, onDelete, onArchive, onUpdate }: Knowled
       setEditDraft(undefined)
     } finally {
       setSavingEdit(false)
+    }
+  }
+
+  async function toggleVersions(id: number) {
+    if (versionsById[id]) {
+      setVersionsById((current) => { const next = { ...current }; delete next[id]; return next })
+      return
+    }
+    setLoadingVersions(id)
+    try {
+      const versions = await onGetVersions(id)
+      setVersionsById((current) => ({ ...current, [id]: versions }))
+    } finally {
+      setLoadingVersions(undefined)
     }
   }
 
@@ -179,7 +196,7 @@ export function KnowledgeTable({ items, onDelete, onArchive, onUpdate }: Knowled
                         <div className="row-actions"><button className="secondary-button" disabled={savingEdit || !editDraft.title.trim() || !editDraft.content.trim()} onClick={() => void saveEdit()}><Save size={14} /> {savingEdit ? 'Saving...' : 'Save changes'}</button><button className="icon-button" disabled={savingEdit} onClick={() => { setEditingId(undefined); setEditDraft(undefined) }} aria-label="Cancel edit"><X size={15} /></button></div>
                       </div>
                     ) : (
-                      <><span>{item.content || 'This knowledge source is indexed and ready for retrieval.'}</span><button className="secondary-button knowledge-edit-button" onClick={() => startEditing(item)} disabled={!item.id}><Edit3 size={14} /> Edit document</button></>
+                      <><span>{item.content || 'This knowledge source is indexed and ready for retrieval.'}</span><div className="knowledge-detail-actions"><button className="secondary-button knowledge-edit-button" onClick={() => startEditing(item)} disabled={!item.id}><Edit3 size={14} /> Edit document</button>{item.id && <button className="secondary-button knowledge-edit-button" onClick={() => void toggleVersions(item.id!)} disabled={loadingVersions === item.id}>{loadingVersions === item.id ? 'Loading history...' : versionsById[item.id] ? 'Hide history' : 'Version history'}</button>}</div>{item.id && versionsById[item.id] && <div className="knowledge-version-list">{versionsById[item.id].map((version) => <div className="knowledge-version" key={version.id}><strong>Version {version.version}</strong><time>{new Date(version.createdAt).toLocaleString()}</time><span>{version.title} · {version.category}</span></div>)}</div>}</>
                     )}
                   </td>
                 </tr>

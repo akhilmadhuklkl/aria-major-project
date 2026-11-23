@@ -78,6 +78,18 @@ export interface KnowledgeItem {
   uses: number
 }
 
+export interface KnowledgeVersion {
+  id: number
+  knowledgeDocumentId: number
+  version: number
+  title: string
+  category: string
+  content: string
+  sourceFilename: string | null
+  createdAt: string
+  archivedAt: string | null
+}
+
 export interface GraphNode {
   id: string
   type: string

@@ -501,6 +501,7 @@ export default function App() {
               onDelete={deleteKnowledge}
               onArchive={archiveKnowledge}
               onUpdate={updateKnowledge}
+              onGetVersions={api.getKnowledgeVersions}
               onRefreshGraph={refreshGraph}
               graphNodes={graphNodes}
               graphRelationships={graphRelationships}

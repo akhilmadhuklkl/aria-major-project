@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { BookOpenCheck, Plus, Search, ShieldCheck, Upload, X } from 'lucide-react'
-import type { GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem } from '../../types'
+import type { GraphNode, GraphRelationship, KnowledgeItem, KnowledgeVersion, NewKnowledgeItem } from '../../types'
 import { api } from '../../api'
 import { KnowledgeGraphCanvas } from './KnowledgeGraphCanvas'
 import { KnowledgeTable } from './KnowledgeTable'
@@ -19,12 +19,13 @@ export interface KnowledgeBaseProps {
   onDelete: (ids: number[]) => Promise<void>
   onArchive: (ids: number[]) => Promise<void>
   onUpdate: (id: number, input: NewKnowledgeItem) => Promise<void>
+  onGetVersions: (id: number) => Promise<KnowledgeVersion[]>
   onRefreshGraph: () => Promise<void>
   graphNodes: GraphNode[]
   graphRelationships: GraphRelationship[]
 }
 
-export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
+export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [form, setForm] = useState<NewKnowledgeItem>({
@@ -268,7 +269,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
         </div>
       )}
       {activeSection === 'documents' && <>
-        <KnowledgeTable items={visibleItems} onDelete={deleteItems} onArchive={onArchive} onUpdate={onUpdate} />
+        <KnowledgeTable items={visibleItems} onDelete={deleteItems} onArchive={onArchive} onUpdate={onUpdate} onGetVersions={onGetVersions} />
         <KnowledgeSummary items={items} />
       </>}
     </section>
