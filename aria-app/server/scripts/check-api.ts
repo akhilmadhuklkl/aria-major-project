@@ -51,6 +51,7 @@ try {
       && typeof analytics.feedbackRecords === 'number'
       && typeof analytics.averageLatencyMs === 'number'
       && typeof analytics.averageConfidence === 'number'
+      && typeof analytics.escalationRate === 'number'
       && Array.isArray(analytics.qualityTrend),
     `conversations=${String(analytics.conversations)}, feedback=${String(analytics.feedbackRecords)}`,
   )

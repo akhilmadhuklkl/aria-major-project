@@ -161,6 +161,7 @@ export interface AnalyticsSummary {
   reviewSources: LearningSource[]
   retrieval?: Array<{ method: string; count: number }>
   escalations?: number
+  escalationRate?: number
   assistantResponses?: number
   averageLatencyMs?: number
   averageConfidence?: number

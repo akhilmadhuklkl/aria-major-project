@@ -32,6 +32,7 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
       ['Average latency (ms)', String(summary?.averageLatencyMs ?? 0)],
       ['Average confidence', summary?.averageConfidence == null ? '0' : `${Math.round(summary.averageConfidence * 100)}%`],
       ['Escalations', String(summary?.escalations ?? 0)],
+      ['Escalation rate', `${summary?.escalationRate ?? 0}%`],
       ['Feedback records', String(summary?.feedbackRecords ?? 0)],
     ]
     const csv = rows.map((row) => row.map((value) => `"${value.replaceAll('"', '""')}"`).join(',')).join('\n')
@@ -68,7 +69,7 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
       <MetricStrip summary={summary} />
       <div className="analytics-summary-line">
         <span><strong>{summary?.assistantResponses ?? 0}</strong> assistant responses</span>
-        <span><strong>{summary?.escalations ?? 0}</strong> escalations</span>
+        <span><strong>{summary?.escalations ?? 0}</strong> escalations ({summary?.escalationRate ?? 0}%)</span>
         <span><strong>{(summary?.retrieval ?? []).find((item) => item.method === 'hybrid')?.count ?? 0}</strong> hybrid retrieval responses</span>
       </div>
       <ChartsSection topics={summary?.topics} quality={summary?.averageQuality} qualityTrend={summary?.qualityTrend} />

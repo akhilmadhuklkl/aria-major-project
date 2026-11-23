@@ -1017,6 +1017,7 @@ app.get('/api/analytics/summary', (request, response) => {
   const responseMessageCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const latencyStats = db.prepare(`SELECT COALESCE(AVG(latency_ms), 0) AS averageLatencyMs FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageLatencyMs: number }
   const confidenceStats = db.prepare(`SELECT COALESCE(AVG(confidence), 0) AS averageConfidence FROM messages WHERE role = 'assistant' AND confidence IS NOT NULL${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageConfidence: number }
+  const escalationRate = responseMessageCount.count ? Math.round((escalationCount.count / responseMessageCount.count) * 100) : 0
   const qualityTrend = db.prepare(`
     SELECT substr(created_at, 1, 10) AS day,
       COALESCE(AVG(quality_score), 0) AS quality,
@@ -1038,6 +1039,7 @@ app.get('/api/analytics/summary', (request, response) => {
     feedbackRecords: feedbackStats.count,
     retrieval: retrievalRows,
     escalations: escalationCount.count,
+    escalationRate,
     assistantResponses: responseMessageCount.count,
     averageLatencyMs: Math.round(latencyStats.averageLatencyMs),
     averageConfidence: Number(confidenceStats.averageConfidence.toFixed(3)),
