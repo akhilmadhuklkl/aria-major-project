@@ -135,6 +135,18 @@ export const api = {
     return request(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
   },
 
+  async exportConversation(id: number) {
+    const token = window.localStorage.getItem(AUTH_TOKEN_KEY)
+    const response = await fetch(`${API_BASE_URL}/conversations/${id}/export`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ error: 'Conversation export failed' }))
+      throw new Error(body.error ?? `Conversation export failed with status ${response.status}`)
+    }
+    return response.blob()
+  },
+
   async getKnowledge(): Promise<KnowledgeItem[]> {
     const rows = await request<Array<{
       id: number

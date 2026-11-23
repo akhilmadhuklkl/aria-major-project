@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Clock3, Edit3, MoreHorizontal, Send } from 'lucide-react'
+import { ChevronDown, Clock3, Download, Edit3, MoreHorizontal, Send } from 'lucide-react'
 import type { AgentThreadMessage, Conversation } from '../../types'
 import { Message } from '../Common/Message'
 
@@ -8,9 +8,10 @@ export interface ChatPanelProps {
   messages: AgentThreadMessage[]
   onSendMessage: (message: string, type?: 'agent' | 'note') => void
   onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
+  onExport: () => Promise<void>
 }
 
-export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation }: ChatPanelProps) {
+export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation, onExport }: ChatPanelProps) {
   const [status, setStatus] = useState<'Open' | 'Pending' | 'Resolved'>(selected.status ?? 'Open')
   const [showOptions, setShowOptions] = useState(false)
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
@@ -52,6 +53,7 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
           <button className="icon-button" aria-label="Conversation options" onClick={() => setShowOptions((current) => !current)}><MoreHorizontal size={18} /></button>
           {showOptions && (
             <div className="chat-options-menu" role="status">
+              <button onClick={() => { setShowOptions(false); void onExport() }}><Download size={14} /> Download conversation</button>
               <button onClick={() => void onUpdateConversation(selected.id, { priority: selected.priority === 'High' ? 'Normal' : 'High' })}>{selected.priority} priority (toggle)</button>
               <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || undefined })}><option value="">Unassigned</option><option>Akhil</option><option>Support Team</option></select></label>
               <button onClick={() => void onUpdateConversation(selected.id, { escalated: !selected.escalated })}>{selected.escalated ? 'Remove escalation' : 'Escalate conversation'}</button>

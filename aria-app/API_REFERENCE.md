@@ -45,6 +45,7 @@ flowchart LR
 | GET | `/interim-status` | Returns interim milestone readiness and final pending items. | Report/demo evidence |
 | POST | `/chat` | Creates or continues a conversation and generates an assistant response. | Customer Chat |
 | GET | `/conversations` | Lists persisted support conversations. | Agent Workspace |
+| GET | `/conversations/:id/export` | Downloads a plain-text export of conversation metadata and messages. | Agent Workspace |
 | GET | `/conversations/:id/messages` | Lists messages for one conversation. | Agent Workspace |
 | POST | `/feedback` | Stores customer rating or feedback for an assistant message. | Customer Chat, learning loop |
 | POST | `/agent-actions` | Stores agent accept, edit, or reject actions as quality feedback. | Agent Workspace |

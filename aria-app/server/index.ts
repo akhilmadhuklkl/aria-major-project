@@ -540,6 +540,50 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
   response.json({ ...updated, tags: JSON.parse(String(updated.tags ?? '[]')), escalated: Boolean(updated.escalated) })
 })
 
+app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (request, response) => {
+  const id = Number(request.params.id)
+  if (!Number.isInteger(id) || id <= 0) {
+    response.status(400).json({ error: 'a valid conversation id is required' })
+    return
+  }
+
+  const conversation = db.prepare(`
+    SELECT customer_name AS customer, subject, status, priority, topic, assigned_to AS assignedTo,
+      created_at AS createdAt, updated_at AS updatedAt
+    FROM conversations WHERE id = ?
+  `).get(id) as Record<string, unknown> | undefined
+  if (!conversation) {
+    response.status(404).json({ error: 'conversation was not found' })
+    return
+  }
+
+  const messages = db.prepare(`
+    SELECT role, content, created_at AS createdAt
+    FROM messages WHERE conversation_id = ? ORDER BY created_at ASC
+  `).all(id) as Array<{ role: string; content: string; createdAt: string }>
+
+  const lines = [
+    'ARIA Conversation Export',
+    '========================',
+    `Customer: ${String(conversation.customer)}`,
+    `Subject: ${String(conversation.subject)}`,
+    `Status: ${String(conversation.status)}`,
+    `Priority: ${String(conversation.priority)}`,
+    `Topic: ${String(conversation.topic)}`,
+    `Assigned to: ${String(conversation.assignedTo ?? 'Unassigned')}`,
+    `Created: ${String(conversation.createdAt)}`,
+    `Updated: ${String(conversation.updatedAt)}`,
+    '',
+    'Messages',
+    '--------',
+    ...messages.flatMap((message) => [`[${message.createdAt}] ${message.role}`, message.content, '']),
+  ]
+
+  response.setHeader('Content-Type', 'text/plain; charset=utf-8')
+  response.setHeader('Content-Disposition', `attachment; filename="aria-conversation-${id}.txt"`)
+  response.send(lines.join('\n'))
+})
+
 app.get('/api/conversations/:id/messages', (request, response) => {
   const rows = db.prepare(`
     SELECT

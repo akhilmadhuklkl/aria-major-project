@@ -225,6 +225,16 @@ export default function App() {
     setSelectedConversation((current) => current.id === id ? { ...current, ...changes } : current)
   }
 
+  async function exportSelectedConversation() {
+    const blob = await api.exportConversation(selectedConversation.id)
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `aria-conversation-${selectedConversation.id}.txt`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function submitAgentAction(action: 'accepted' | 'edited' | 'rejected') {
     if (agentActionLoading) return
     const statusByAction = {
@@ -354,6 +364,7 @@ export default function App() {
               regenerate={regenerateSuggestion}
               actionLoading={agentActionLoading}
               onUpdateConversation={updateConversation}
+              onExport={exportSelectedConversation}
             />
           )}
           {view === 'customer' && (
