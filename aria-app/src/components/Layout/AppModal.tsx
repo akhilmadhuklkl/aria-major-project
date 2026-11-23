@@ -12,6 +12,7 @@ interface AppModalProps {
   systemStatus?: SystemStatus
   auditLogs: AuditLog[]
   webhooks: WebhookSubscription[]
+  isAdmin: boolean
   onCreateWebhook: (input: { name: string; url: string; events: string[] }) => Promise<string | undefined>
   onDeleteWebhook: (id: number) => Promise<void>
   onClose: () => void
@@ -40,7 +41,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, onCreateWebhook, onDeleteWebhook, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, isAdmin, onCreateWebhook, onDeleteWebhook, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -156,7 +157,7 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
                 </span>
               </div>
             </div>
-            <div className="audit-log-section">
+            {isAdmin && <div className="audit-log-section">
               <div className="audit-log-heading"><strong>Recent audit activity</strong><span>{auditLogs.length} recent entries</span></div>
               {auditLogs.length > 0 ? auditLogs.map((log) => (
                 <div className="audit-log-row" key={log.id}>
@@ -165,8 +166,8 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
                   <time>{new Date(log.createdAt).toLocaleString()}</time>
                 </div>
               )) : <p className="audit-log-empty">No recorded administrative activity yet.</p>}
-            </div>
-            <WebhookSettings webhooks={webhooks} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />
+            </div>}
+            {isAdmin && <WebhookSettings webhooks={webhooks} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />}
           </div>
         )}
       </section>

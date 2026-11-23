@@ -45,7 +45,7 @@ export function Sidebar({ view, onChange, onHelp, onSettings, user, onLogin, onL
       </nav>
       <div className="sidebar-bottom">
         <button className="nav-item" onClick={onHelp} aria-label={translate(language, 'help')} title={translate(language, 'help')}><CircleHelp size={19} /><span>{translate(language, 'help')}</span></button>
-        <button className="nav-item" onClick={onSettings} aria-label={translate(language, 'settings')} title={translate(language, 'settings')}><Settings size={19} /><span>{translate(language, 'settings')}</span></button>
+        {user?.role !== 'customer' && <button className="nav-item" onClick={onSettings} aria-label={translate(language, 'settings')} title={translate(language, 'settings')}><Settings size={19} /><span>{translate(language, 'settings')}</span></button>}
         <label className="language-picker"><span>{translate(language, 'language')}</span><select value={language} onChange={(event) => onLanguageChange(event.target.value as Language)} aria-label={translate(language, 'language')}><option value="en">English</option><option value="hi">हिन्दी</option><option value="es">Español</option></select></label>
         {user ? (
           <div className="profile-mini">

@@ -116,7 +116,8 @@ export default function App() {
   useEffect(() => {
     if (activeModal !== 'settings') return
 
-    void Promise.allSettled([api.getSystemStatus(), api.getAuditLogs(), api.getWebhooks()])
+    const isAdmin = !authUser || authUser.role === 'admin'
+    void Promise.allSettled([api.getSystemStatus(), isAdmin ? api.getAuditLogs() : Promise.resolve([]), isAdmin ? api.getWebhooks() : Promise.resolve([])])
       .then(([statusResult, auditResult, webhookResult]) => {
         if (statusResult.status === 'fulfilled') setSystemStatus(statusResult.value)
         if (auditResult.status === 'fulfilled') setAuditLogs(auditResult.value)
@@ -125,7 +126,7 @@ export default function App() {
       .catch(() => {
         // Existing settings values remain visible if the API is temporarily unavailable.
       })
-  }, [activeModal])
+  }, [activeModal, authUser])
 
   useEffect(() => {
     if (!activeModal) return
@@ -463,6 +464,7 @@ export default function App() {
           systemStatus={systemStatus}
           auditLogs={auditLogs}
           webhooks={webhooks}
+          isAdmin={!authUser || authUser.role === 'admin'}
           onCreateWebhook={createWebhook}
           onDeleteWebhook={deleteWebhook}
           onClose={() => setActiveModal(undefined)}
