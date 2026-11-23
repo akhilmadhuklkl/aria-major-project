@@ -51,12 +51,6 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
   const retrievalStatus = systemStatus
     ? `${systemStatus.retrieval.primary} ready`
     : 'Semantic ready'
-  const aiStatus = systemStatus?.ai.agentProvider === 'mastra-remote'
-    ? 'Cloud connected'
-    : systemStatus?.ai.mastraReady
-      ? 'Mastra ready'
-      : 'Checking'
-
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -137,10 +131,10 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
               />
               <StatusTile
                 icon={PlugZap}
-                label="Mastra Cloud"
-                value={aiStatus}
+                label="AI generation"
+                value={systemStatus?.ai.agentProvider === 'mastra-remote' ? 'Mastra remote' : 'Local fallback'}
                 detail={systemStatus
-                  ? `${systemStatus.ai.llmProvider} using ${systemStatus.ai.model}; provider key ${systemStatus.ai.providerConfigured ? 'configured' : 'not configured'}.`
+                  ? `${systemStatus.ai.agentProvider} with ${systemStatus.ai.llmProvider} using ${systemStatus.ai.model}; provider key ${systemStatus.ai.providerConfigured ? 'configured' : 'not configured'}.`
                   : 'Mastra Cloud server and Studio are deployed, with Gemini-backed agent responses and observability traces verified.'}
               />
             </div>
