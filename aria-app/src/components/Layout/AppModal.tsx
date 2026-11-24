@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Server, Settings, Trash2, X } from 'lucide-react'
+import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Server, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { AnalyticsSummary, AuditLog, KnowledgeItem, SystemStatus, WebhookSubscription } from '../../types'
+import type { AnalyticsSummary, AuditLog, AuthUser, KnowledgeItem, SystemStatus, WebhookSubscription } from '../../types'
 
 type ModalType = 'help' | 'settings'
 
@@ -12,9 +12,11 @@ interface AppModalProps {
   systemStatus?: SystemStatus
   auditLogs: AuditLog[]
   webhooks: WebhookSubscription[]
+  users: AuthUser[]
   isAdmin: boolean
   onCreateWebhook: (input: { name: string; url: string; events: string[] }) => Promise<string | undefined>
   onDeleteWebhook: (id: number) => Promise<void>
+  onCreateUser: (input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) => Promise<void>
   onClose: () => void
 }
 
@@ -41,7 +43,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, isAdmin, onCreateWebhook, onDeleteWebhook, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, users, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -162,9 +164,55 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
               )) : <p className="audit-log-empty">No recorded administrative activity yet.</p>}
             </div>}
             {isAdmin && <WebhookSettings webhooks={webhooks} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />}
+            {isAdmin && <UserManagement users={users} onCreate={onCreateUser} />}
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function UserManagement({ users, onCreate }: { users: AuthUser[]; onCreate: AppModalProps['onCreateUser'] }) {
+  const [displayName, setDisplayName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'support_agent' | 'customer'>('support_agent')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      await onCreate({ displayName: displayName.trim(), email: email.trim(), password, role })
+      setDisplayName('')
+      setEmail('')
+      setPassword('')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'User could not be created.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="user-management-section">
+      <div className="audit-log-heading"><strong><UserPlus size={15} /> User management</strong><span>{users.length} accounts</span></div>
+      <form className="user-management-form" onSubmit={(event) => void submit(event)}>
+        <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} placeholder="Display name" aria-label="New user display name" required />
+        <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email address" type="email" aria-label="New user email" required />
+        <input value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Temporary password" type="password" minLength={8} aria-label="New user password" required />
+        <select value={role} onChange={(event) => setRole(event.target.value as typeof role)} aria-label="New user role">
+          <option value="support_agent">Support agent</option>
+          <option value="customer">Customer</option>
+        </select>
+        <button className="icon-button" type="submit" disabled={saving} aria-label="Create user" title="Create user"><Plus size={16} /></button>
+      </form>
+      {error && <p className="notification-error" role="alert">{error}</p>}
+      <div className="user-management-list">
+        {users.map((user) => <div className="user-management-row" key={user.id}><strong>{user.displayName}</strong><span>{user.email}</span><small>{user.role.replace('_', ' ')}</small></div>)}
+      </div>
     </div>
   )
 }

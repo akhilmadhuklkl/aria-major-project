@@ -48,6 +48,7 @@ export default function App() {
   const [healthUnavailable, setHealthUnavailable] = useState(false)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([])
+  const [users, setUsers] = useState<AuthUser[]>([])
   const [authUser, setAuthUser] = useState<AuthUser>()
   const [authRequired, setAuthRequired] = useState(false)
   const [authSetupAvailable, setAuthSetupAvailable] = useState(false)
@@ -164,8 +165,8 @@ export default function App() {
     if (activeModal !== 'settings') return
 
     const isAdmin = !authUser || authUser.role === 'admin'
-    void Promise.allSettled([api.getSystemStatus(), isAdmin ? api.getAuditLogs() : Promise.resolve([]), isAdmin ? api.getWebhooks() : Promise.resolve([])])
-      .then(([statusResult, auditResult, webhookResult]) => {
+    void Promise.allSettled([api.getSystemStatus(), isAdmin ? api.getAuditLogs() : Promise.resolve([]), isAdmin ? api.getWebhooks() : Promise.resolve([]), isAdmin ? api.getUsers() : Promise.resolve([])])
+      .then(([statusResult, auditResult, webhookResult, usersResult]) => {
         if (statusResult.status === 'fulfilled') {
           setSystemStatus(statusResult.value)
           setHealthUnavailable(false)
@@ -174,6 +175,7 @@ export default function App() {
         }
         if (auditResult.status === 'fulfilled') setAuditLogs(auditResult.value)
         if (webhookResult.status === 'fulfilled') setWebhooks(webhookResult.value)
+        if (usersResult.status === 'fulfilled') setUsers(usersResult.value)
       })
       .catch(() => {
         // Existing settings values remain visible if the API is temporarily unavailable.
@@ -434,6 +436,12 @@ export default function App() {
     setWebhooks((current) => current.filter((webhook) => webhook.id !== id))
   }
 
+  async function createUser(input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) {
+    const created = await api.createUser(input)
+    setUsers((current) => [...current, created].sort((first, second) => first.displayName.localeCompare(second.displayName)))
+    if (created.role !== 'customer') setSupportAgents((current) => [...current, created].sort((first, second) => first.displayName.localeCompare(second.displayName)))
+  }
+
   if (authLoading) {
     return <main className="auth-loading"><div className="brand-mark"><span>✦</span></div><strong>Loading ARIA...</strong></main>
   }
@@ -547,9 +555,11 @@ export default function App() {
           systemStatus={systemStatus}
           auditLogs={auditLogs}
           webhooks={webhooks}
+          users={users}
           isAdmin={!authUser || authUser.role === 'admin'}
           onCreateWebhook={createWebhook}
           onDeleteWebhook={deleteWebhook}
+          onCreateUser={createUser}
           onClose={() => setActiveModal(undefined)}
         />
       )}

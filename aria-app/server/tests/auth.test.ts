@@ -6,6 +6,7 @@ import {
   createUser,
   ensureAuthSchema,
   getUserFromToken,
+  listUsers,
   revokeSession,
   validateCredentials,
 } from '../auth.js'
@@ -50,6 +51,25 @@ test('users authenticate through expiring revocable sessions', () => {
     assert.equal(getUserFromToken(session.token), undefined)
   } finally {
     db.prepare('DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = ?)').run(email)
+    db.prepare('DELETE FROM users WHERE email = ?').run(email)
+  }
+})
+
+test('admin user directory returns public identity fields only', () => {
+  const email = `directory-test-${Date.now()}@example.com`
+  const user = createUser({
+    email,
+    displayName: 'Directory Test Customer',
+    role: 'customer',
+    password: 'password123',
+  })
+
+  try {
+    const listed = listUsers().find((item) => item.id === user?.id)
+    assert.deepEqual(listed, user)
+    assert.equal('passwordHash' in (listed ?? {}), false)
+    assert.equal('passwordSalt' in (listed ?? {}), false)
+  } finally {
     db.prepare('DELETE FROM users WHERE email = ?').run(email)
   }
 })

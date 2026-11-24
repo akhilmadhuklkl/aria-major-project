@@ -158,6 +158,14 @@ export function listSupportAgents() {
   `).all() as AuthUser[]
 }
 
+export function listUsers() {
+  return db.prepare(`
+    SELECT id, email, display_name AS displayName, role
+    FROM users
+    ORDER BY role, display_name COLLATE NOCASE
+  `).all() as AuthUser[]
+}
+
 function getUserById(id: number) {
   const row = db.prepare(`
     SELECT id, email, display_name AS displayName, role

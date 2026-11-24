@@ -36,4 +36,12 @@ test.describe('ARIA application smoke coverage', () => {
     await search.fill('does-not-exist')
     await expect(page.getByText('No conversations match "does-not-exist".', { exact: true })).toBeVisible()
   })
+
+  test('opens admin settings with user management controls', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByText('User management', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Create user' })).toBeVisible()
+  })
 })

@@ -147,6 +147,14 @@ export const api = {
     return request<AuthUser[]>('/support-agents')
   },
 
+  getUsers() {
+    return request<AuthUser[]>('/users')
+  },
+
+  createUser(input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) {
+    return request<AuthUser>('/users', { method: 'POST', body: JSON.stringify(input) })
+  },
+
   async logout() {
     try {
       await request<void>('/auth/logout', { method: 'POST' })

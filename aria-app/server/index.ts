@@ -47,6 +47,7 @@ import {
   getBearerToken,
   getUserCount,
   listSupportAgents,
+  listUsers,
   requireAuth,
   requireRole,
   revokeSession,
@@ -208,6 +209,37 @@ app.get('/api/notifications', (_request, response) => {
 
 app.get('/api/audit-logs', roleGuard('admin'), (request, response) => {
   response.json(listAuditLogs(Number(request.query.limit ?? 50)))
+})
+
+app.get('/api/users', roleGuard('admin'), (_request, response) => {
+  response.json(listUsers())
+})
+
+app.post('/api/users', roleGuard('admin'), (request, response) => {
+  const credentials = validateCredentials(request.body ?? {})
+  if ('error' in credentials) {
+    response.status(400).json({ error: credentials.error })
+    return
+  }
+
+  const displayName = String(request.body?.displayName ?? '').trim()
+  const role = String(request.body?.role ?? '')
+  if (!displayName) {
+    response.status(400).json({ error: 'Display name is required' })
+    return
+  }
+  if (role !== 'support_agent' && role !== 'customer') {
+    response.status(400).json({ error: 'New users can only be support agents or customers' })
+    return
+  }
+
+  try {
+    const user = createUser({ email: credentials.email, displayName, password: credentials.password, role })
+    recordAudit(request, { action: 'user.created', entityType: 'user', entityId: user?.id, metadata: { role } })
+    response.status(201).json(user)
+  } catch {
+    response.status(409).json({ error: 'A user with this email already exists' })
+  }
 })
 
 app.post('/api/notifications/read-all', (_request, response) => {
