@@ -163,4 +163,26 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByTitle('Remove browser-smoke')).toBeVisible()
   })
 
+  test('creates and deletes an ontology node from Graph Explorer', async ({ page }) => {
+    const nodeId = `browser:smoke-${Date.now()}`
+    const nodeLabel = `Browser Smoke Node ${Date.now()}`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('tab', { name: 'Graph Explorer' }).click()
+    await page.getByRole('textbox', { name: 'Ontology node id' }).fill(nodeId)
+    await page.getByRole('textbox', { name: 'Ontology node label' }).fill(nodeLabel)
+    await page.getByRole('button', { name: 'Save node' }).click()
+
+    const graphNode = page.getByRole('button', { name: `Graph node ${nodeLabel}` })
+    await expect(graphNode).toBeVisible()
+    await graphNode.focus()
+    await graphNode.press('Enter')
+    page.once('dialog', (dialog) => void dialog.accept())
+    await page.getByRole('button', { name: 'Delete node' }).click()
+    await page.reload()
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('tab', { name: 'Graph Explorer' }).click()
+    await expect(graphNode).toHaveCount(0)
+  })
+
 })

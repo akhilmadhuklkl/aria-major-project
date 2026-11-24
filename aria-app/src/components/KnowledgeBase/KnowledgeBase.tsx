@@ -23,12 +23,13 @@ export interface KnowledgeBaseProps {
   archivedItems: KnowledgeItem[]
   onRestore: (ids: number[]) => Promise<void>
   onRefreshGraph: () => Promise<void>
+  onGraphNodeDeleted: (nodeId: string) => void
   onGetGraphPaths: (id: string) => Promise<{ node: GraphNode; paths: Array<{ nodes: string[]; relationships: string[] }> }>
   graphNodes: GraphNode[]
   graphRelationships: GraphRelationship[]
 }
 
-export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, archivedItems, onRestore, onRefreshGraph, onGetGraphPaths, graphNodes, graphRelationships }: KnowledgeBaseProps) {
+export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, archivedItems, onRestore, onRefreshGraph, onGraphNodeDeleted, onGetGraphPaths, graphNodes, graphRelationships }: KnowledgeBaseProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [form, setForm] = useState<NewKnowledgeItem>({
@@ -138,7 +139,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
 
   async function deleteGraphNode(node: GraphNode) {
     await api.deleteGraphNode(node.id)
-    await onRefreshGraph()
+    onGraphNodeDeleted(node.id)
   }
 
   async function deleteGraphRelationship(relationship: GraphRelationship) {
@@ -249,11 +250,11 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
           <div className="graph-management-grid">
             <form className="graph-management-form" onSubmit={createGraphNode}>
               <strong>Add ontology node</strong>
-              <input value={graphNodeForm.id} onChange={(event) => setGraphNodeForm({ ...graphNodeForm, id: event.target.value })} placeholder="Stable id, e.g. issue:delivery-delay" required />
+              <input aria-label="Ontology node id" value={graphNodeForm.id} onChange={(event) => setGraphNodeForm({ ...graphNodeForm, id: event.target.value })} placeholder="Stable id, e.g. issue:delivery-delay" required />
               <select value={graphNodeForm.type} onChange={(event) => setGraphNodeForm({ ...graphNodeForm, type: event.target.value })} aria-label="Ontology node type">
                 {['Customer', 'Order', 'Product', 'Payment', 'Refund', 'Delivery', 'Subscription', 'SupportIssue', 'SupportProcedure', 'KnowledgeDocument', 'SupportAgent'].map((type) => <option key={type}>{type}</option>)}
               </select>
-              <input value={graphNodeForm.label} onChange={(event) => setGraphNodeForm({ ...graphNodeForm, label: event.target.value })} placeholder="Display label" required />
+              <input aria-label="Ontology node label" value={graphNodeForm.label} onChange={(event) => setGraphNodeForm({ ...graphNodeForm, label: event.target.value })} placeholder="Display label" required />
               <button className="secondary-button" disabled={graphSaving}>Save node</button>
             </form>
             <form className="graph-management-form" onSubmit={createGraphRelationship}>

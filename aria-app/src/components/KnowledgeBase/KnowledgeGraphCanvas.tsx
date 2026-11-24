@@ -126,7 +126,7 @@ export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDel
             <label className="graph-edit-label"><span>Display label</span><input value={editedLabel} onChange={(event) => setEditedLabel(event.target.value)} /></label>
             <dl>{Object.entries(selected.properties).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{String(value)}</dd></div>)}</dl>
             <button className="secondary-button graph-save-button" disabled={!editedLabel.trim()} onClick={() => void onUpdateNode(selected, editedLabel.trim())}>Save changes</button>
-            <button className="danger-button graph-delete-button" onClick={() => { if (window.confirm(`Delete ${labelFor(selected)} and its connected relationships?`)) void onDeleteNode(selected).then(() => setSelectedId(undefined)) }}>Delete node</button>
+            <button className="danger-button graph-delete-button" onClick={() => { if (!window.confirm(`Delete ${labelFor(selected)} and its connected relationships?`)) return; setSelectedId(undefined); void onDeleteNode(selected) }}>Delete node</button>
             <div className="graph-paths"><span className="graph-detail-kicker">Reasoning paths</span>{paths.length ? paths.slice(0, 6).map((path, index) => <div className="graph-path" key={`${path.nodes.join('-')}-${index}`}>{path.nodes.map((nodeId, nodeIndex) => <span key={nodeId}>{labelById.get(nodeId) ?? nodeId}{nodeIndex < path.relationships.length ? ` --${path.relationships[nodeIndex]}--> ` : ''}</span>)}</div>) : <p>No connected reasoning paths found.</p>}</div>
           </>
         ) : (

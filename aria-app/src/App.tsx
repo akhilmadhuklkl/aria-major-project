@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, ConversationQueueCounts, AnalyticsSummary, ChatMessage, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, RuntimeMetrics, SystemStatus, WebhookDelivery, WebhookSubscription } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
@@ -44,6 +44,7 @@ export default function App() {
   const [archivedKnowledge, setArchivedKnowledge] = useState<KnowledgeItem[]>([])
   const [graphNodes, setGraphNodes] = useState<GraphNode[]>([])
   const [graphRelationships, setGraphRelationships] = useState<GraphRelationship[]>([])
+  const graphRequestVersion = useRef(0)
   const [analytics, setAnalytics] = useState<AnalyticsSummary>()
   const [systemStatus, setSystemStatus] = useState<SystemStatus>()
   const [runtimeMetrics, setRuntimeMetrics] = useState<RuntimeMetrics>()
@@ -77,6 +78,7 @@ export default function App() {
 
   useEffect(() => {
     if (authLoading || (authRequired && !authUser)) return
+    const requestVersion = ++graphRequestVersion.current
     void Promise.allSettled([api.getConversationPage(), api.getKnowledge(), api.getAnalytics(), api.getSystemStatus(), api.getKnowledgeGraph()])
       .then(([conversationsResult, knowledgeResult, analyticsResult, statusResult, graphResult]) => {
         if (conversationsResult.status === 'fulfilled' && conversationsResult.value.items.length > 0) {
@@ -93,7 +95,7 @@ export default function App() {
         } else {
           setHealthUnavailable(true)
         }
-        if (graphResult.status === 'fulfilled') {
+        if (graphResult.status === 'fulfilled' && requestVersion === graphRequestVersion.current) {
           setGraphNodes(graphResult.value.nodes)
           setGraphRelationships(graphResult.value.relationships)
         }
@@ -164,9 +166,17 @@ export default function App() {
   }, [authLoading, authRequired, authUser, selectedConversation.id])
 
   async function refreshGraph() {
+    const requestVersion = ++graphRequestVersion.current
     const graph = await api.getKnowledgeGraph()
-    setGraphNodes(graph.nodes)
-    setGraphRelationships(graph.relationships)
+    if (requestVersion === graphRequestVersion.current) {
+      setGraphNodes(graph.nodes)
+      setGraphRelationships(graph.relationships)
+    }
+  }
+
+  function handleGraphNodeDeleted(nodeId: string) {
+    setGraphNodes((current) => current.filter((item) => item.id !== nodeId))
+    setGraphRelationships((current) => current.filter((item) => item.sourceId !== nodeId && item.targetId !== nodeId))
   }
 
   useEffect(() => {
@@ -556,6 +566,7 @@ export default function App() {
               archivedItems={archivedKnowledge}
               onRestore={restoreKnowledge}
               onRefreshGraph={refreshGraph}
+              onGraphNodeDeleted={handleGraphNodeDeleted}
               onGetGraphPaths={api.getGraphPaths}
               graphNodes={graphNodes}
               graphRelationships={graphRelationships}
