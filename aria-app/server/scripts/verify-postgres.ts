@@ -72,6 +72,9 @@ try {
     WHERE schemaname = 'public'
   `)
   const indexes = new Set(indexRows.rows.map((row) => row.indexname))
+  const migrationMarker = await client.query<{ version: string }>(`
+    SELECT version FROM schema_migrations WHERE version = 'sqlite_import'
+  `)
 
   const failures: string[] = []
   for (const [table, requiredColumns] of Object.entries(expectedTables)) {
@@ -86,6 +89,7 @@ try {
   for (const index of expectedIndexes) {
     if (!indexes.has(index)) failures.push(`missing index: ${index}`)
   }
+  if (migrationMarker.rowCount !== 1) failures.push('missing migration marker: sqlite_import')
 
   console.log('\nARIA PostgreSQL Verification')
   console.log('----------------------------------------')
