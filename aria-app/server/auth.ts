@@ -101,6 +101,21 @@ export function revokeSession(token: string) {
     .run(new Date().toISOString(), hashToken(token))
 }
 
+export function changeUserPassword(userId: number, currentPassword: string, nextPassword: string) {
+  const row = db.prepare(`
+    SELECT password_hash AS passwordHash, password_salt AS passwordSalt
+    FROM users WHERE id = ?
+  `).get(userId) as { passwordHash: string; passwordSalt: string } | undefined
+  if (!row || !matchesPassword(currentPassword, row.passwordHash, row.passwordSalt)) return false
+
+  const salt = randomBytes(16).toString('hex')
+  db.prepare('UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?')
+    .run(hashPassword(nextPassword, salt), salt, new Date().toISOString(), userId)
+  db.prepare('UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL')
+    .run(new Date().toISOString(), userId)
+  return true
+}
+
 export function getUserFromToken(token: string) {
   const row = db.prepare(`
     SELECT users.id, users.email, users.display_name AS displayName, users.role,
@@ -177,6 +192,12 @@ function getUserById(id: number) {
 
 function hashPassword(password: string, salt: string) {
   return scryptSync(password, salt, 64).toString('hex')
+}
+
+function matchesPassword(password: string, passwordHash: string, passwordSalt: string) {
+  const expected = Buffer.from(passwordHash, 'hex')
+  const actual = Buffer.from(hashPassword(password, passwordSalt), 'hex')
+  return expected.length === actual.length && timingSafeEqual(expected, actual)
 }
 
 function hashToken(token: string) {

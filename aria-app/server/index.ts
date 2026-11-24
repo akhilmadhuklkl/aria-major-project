@@ -40,6 +40,7 @@ import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-ada
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
 import {
   authenticateUser,
+  changeUserPassword,
   createSession,
   createUser,
   ensureAuthSchema,
@@ -405,6 +406,30 @@ app.post('/api/auth/login', (request, response) => {
     return
   }
   response.json({ user, ...createSession(user) })
+})
+
+app.post('/api/auth/password', requireAuth, (request, response) => {
+  const user = getAuthenticatedUser(request)
+  const currentPassword = String(request.body?.currentPassword ?? '')
+  const nextPassword = String(request.body?.newPassword ?? '')
+  if (!user || currentPassword.length === 0) {
+    response.status(400).json({ error: 'Current password is required' })
+    return
+  }
+  if (nextPassword.length < 8) {
+    response.status(400).json({ error: 'New password must contain at least 8 characters' })
+    return
+  }
+  if (currentPassword === nextPassword) {
+    response.status(400).json({ error: 'New password must be different from the current password' })
+    return
+  }
+  if (!changeUserPassword(user.id, currentPassword, nextPassword)) {
+    response.status(401).json({ error: 'Current password is incorrect' })
+    return
+  }
+  recordAudit(request, { action: 'user.password_changed', entityType: 'user', entityId: user.id })
+  response.status(204).send()
 })
 
 app.get('/api/auth/me', requireAuth, (request, response) => {

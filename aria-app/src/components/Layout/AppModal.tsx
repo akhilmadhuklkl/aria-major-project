@@ -13,10 +13,12 @@ interface AppModalProps {
   auditLogs: AuditLog[]
   webhooks: WebhookSubscription[]
   users: AuthUser[]
+  currentUser?: AuthUser
   isAdmin: boolean
   onCreateWebhook: (input: { name: string; url: string; events: string[] }) => Promise<string | undefined>
   onDeleteWebhook: (id: number) => Promise<void>
   onCreateUser: (input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) => Promise<void>
+  onChangePassword: (input: { currentPassword: string; newPassword: string }) => Promise<void>
   onClose: () => void
 }
 
@@ -43,7 +45,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, users, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -165,9 +167,48 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
             </div>}
             {isAdmin && <WebhookSettings webhooks={webhooks} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />}
             {isAdmin && <UserManagement users={users} onCreate={onCreateUser} />}
+            {currentUser && <PasswordManagement onChange={onChangePassword} />}
           </div>
         )}
       </section>
+    </div>
+  )
+}
+
+function PasswordManagement({ onChange }: { onChange: AppModalProps['onChangePassword'] }) {
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSaving(true)
+    setError('')
+    setSaved(false)
+    try {
+      await onChange({ currentPassword, newPassword })
+      setCurrentPassword('')
+      setNewPassword('')
+      setSaved(true)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Password could not be changed.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="password-management-section">
+      <div className="audit-log-heading"><strong>Change password</strong><span>All sessions end after a successful change</span></div>
+      <form className="password-management-form" onSubmit={(event) => void submit(event)}>
+        <input value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} type="password" placeholder="Current password" aria-label="Current password" required />
+        <input value={newPassword} onChange={(event) => setNewPassword(event.target.value)} type="password" minLength={8} placeholder="New password" aria-label="New password" required />
+        <button className="secondary-button" type="submit" disabled={saving}>{saving ? 'Updating...' : 'Update password'}</button>
+      </form>
+      {error && <p className="notification-error" role="alert">{error}</p>}
+      {saved && <p className="webhook-secret" role="status">Password updated. Please sign in again.</p>}
     </div>
   )
 }

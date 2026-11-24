@@ -425,6 +425,11 @@ export default function App() {
     setShowLogin(authRequired)
   }
 
+  async function changePassword(input: { currentPassword: string; newPassword: string }) {
+    await api.changePassword(input)
+    await logout()
+  }
+
   async function createWebhook(input: { name: string; url: string; events: string[] }) {
     const created = await api.createWebhook(input)
     setWebhooks((current) => [{ ...created }, ...current])
@@ -556,10 +561,12 @@ export default function App() {
           auditLogs={auditLogs}
           webhooks={webhooks}
           users={users}
+          currentUser={authUser}
           isAdmin={!authUser || authUser.role === 'admin'}
           onCreateWebhook={createWebhook}
           onDeleteWebhook={deleteWebhook}
           onCreateUser={createUser}
+          onChangePassword={changePassword}
           onClose={() => setActiveModal(undefined)}
         />
       )}

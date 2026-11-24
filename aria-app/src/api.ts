@@ -56,6 +56,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     throw new ApiError(body.error ?? `Request failed with status ${response.status}`, response.status, body.requestId ?? response.headers.get('X-Request-ID') ?? undefined)
   }
 
+  if (response.status === 204) return undefined as T
+
   return response.json() as Promise<T>
 }
 
@@ -161,6 +163,10 @@ export const api = {
     } finally {
       window.localStorage.removeItem(AUTH_TOKEN_KEY)
     }
+  },
+
+  changePassword(input: { currentPassword: string; newPassword: string }) {
+    return request<void>('/auth/password', { method: 'POST', body: JSON.stringify(input) })
   },
 
   chat(message: string, conversationId?: number, language = 'en') {

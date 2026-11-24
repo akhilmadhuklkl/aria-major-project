@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   authenticateUser,
+  changeUserPassword,
   createSession,
   createUser,
   ensureAuthSchema,
@@ -70,6 +71,22 @@ test('admin user directory returns public identity fields only', () => {
     assert.equal('passwordHash' in (listed ?? {}), false)
     assert.equal('passwordSalt' in (listed ?? {}), false)
   } finally {
+    db.prepare('DELETE FROM users WHERE email = ?').run(email)
+  }
+})
+
+test('changing a password invalidates existing sessions', () => {
+  const email = `password-test-${Date.now()}@example.com`
+  const user = createUser({ email, displayName: 'Password Test User', role: 'support_agent', password: 'password123' })
+  try {
+    const session = createSession(user!)
+    assert.equal(changeUserPassword(user!.id, 'wrong-password', 'new-password123'), false)
+    assert.equal(changeUserPassword(user!.id, 'password123', 'new-password123'), true)
+    assert.equal(authenticateUser(email, 'password123'), undefined)
+    assert.ok(authenticateUser(email, 'new-password123'))
+    assert.equal(getUserFromToken(session.token), undefined)
+  } finally {
+    db.prepare('DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = ?)').run(email)
     db.prepare('DELETE FROM users WHERE email = ?').run(email)
   }
 })
