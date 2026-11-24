@@ -121,4 +121,14 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.locator('.action-status')).toHaveText('Rejected - negative feedback recorded')
   })
 
+  test('records accepted and edited ARIA assistant actions', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByRole('button', { name: 'Accept' }).click()
+    await expect(page.locator('.action-status')).toHaveText('Accepted and recorded as positive feedback')
+
+    await page.getByRole('button', { name: 'Edit & send' }).click()
+    await expect(page.locator('.action-status')).toHaveText('Saved as an agent correction')
+  })
+
 })
