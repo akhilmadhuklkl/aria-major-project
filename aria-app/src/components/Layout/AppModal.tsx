@@ -289,6 +289,7 @@ function WebhookSettings({
   const [secret, setSecret] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [testingId, setTestingId] = useState<number>()
 
   async function submit(eventObject: React.FormEvent<HTMLFormElement>) {
     eventObject.preventDefault()
@@ -304,6 +305,18 @@ function WebhookSettings({
       setError(submissionError instanceof Error ? submissionError.message : 'Webhook could not be created.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function sendTest(id: number) {
+    setTestingId(id)
+    setError('')
+    try {
+      await onTest(id)
+    } catch (testError) {
+      setError(testError instanceof Error ? testError.message : 'Webhook test delivery failed.')
+    } finally {
+      setTestingId(undefined)
     }
   }
 
@@ -325,7 +338,7 @@ function WebhookSettings({
       {webhooks.length > 0 ? webhooks.map((webhook) => (
         <div className="webhook-row" key={webhook.id}>
           <div><strong>{webhook.name}</strong><span>{webhook.url}</span><small>{webhook.events.join(', ')} · {webhook.active ? 'Active' : 'Paused'}</small></div>
-          <button className="icon-button" onClick={() => void onTest(webhook.id)} aria-label={`Send test to ${webhook.name}`} title="Send test delivery"><Send size={14} /></button>
+          <button className="icon-button" onClick={() => void sendTest(webhook.id)} disabled={testingId !== undefined} aria-busy={testingId === webhook.id} aria-label={`Send test to ${webhook.name}`} title="Send test delivery"><Send size={14} /></button>
           <button className="icon-button" onClick={() => void onUpdate(webhook.id, !webhook.active)} aria-label={`${webhook.active ? 'Pause' : 'Activate'} ${webhook.name}`} title={webhook.active ? 'Pause webhook' : 'Activate webhook'}><Power size={14} /></button>
           <button className="danger-icon-button" onClick={() => { if (window.confirm(`Delete webhook "${webhook.name}"?`)) void onDelete(webhook.id) }} aria-label={`Delete ${webhook.name}`} title="Delete webhook"><Trash2 size={14} /></button>
         </div>
