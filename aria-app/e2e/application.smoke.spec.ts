@@ -149,4 +149,18 @@ test.describe('ARIA application smoke coverage', () => {
     expect(download.suggestedFilename()).toMatch(/^aria-conversation-\d+\.txt$/)
   })
 
+  test('updates conversation status and tags from Agent Workspace', async ({ page }) => {
+    await page.goto('/')
+
+    const statusButton = page.getByRole('button', { name: /Conversation status:/ })
+    await expect(statusButton).toBeVisible()
+    await statusButton.click()
+    await expect(page.getByRole('button', { name: 'Conversation status: Pending' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Conversation options' }).click()
+    await page.getByRole('textbox', { name: 'Add conversation tag' }).fill('browser-smoke')
+    await page.getByRole('button', { name: 'Add conversation tag' }).click()
+    await expect(page.getByTitle('Remove browser-smoke')).toBeVisible()
+  })
+
 })
