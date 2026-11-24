@@ -1,4 +1,6 @@
 import './env.js'
+import { existsSync } from 'node:fs'
+import { resolve } from 'node:path'
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
@@ -1218,6 +1220,20 @@ app.get('/api/analytics/summary', (request, response) => {
     reviewSources,
   })
 })
+
+const frontendDist = resolve('dist')
+if (process.env.NODE_ENV === 'production' && existsSync(frontendDist)) {
+  app.use(express.static(frontendDist))
+  app.use((request, response, next) => {
+    if (request.method !== 'GET' || request.path.startsWith('/api')) {
+      next()
+      return
+    }
+    response.sendFile(resolve(frontendDist, 'index.html'), (error) => {
+      if (error) next(error)
+    })
+  })
+}
 
 app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
   void _next

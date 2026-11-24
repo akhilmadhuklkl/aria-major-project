@@ -4,8 +4,9 @@
 
 1. Copy `.env.example` to `.env` and set the required provider key.
 2. Run `docker compose up --build` from `aria-app/`.
-3. Verify liveness at `http://localhost:8787/api/health` and readiness at `http://localhost:8787/api/ready`.
-4. Run the non-mutating API smoke check with `npm run check:api`.
+3. Open `http://localhost:8787/` for the built React application.
+4. Verify liveness at `http://localhost:8787/api/health` and readiness at `http://localhost:8787/api/ready`.
+5. Run the non-mutating API smoke check with `npm run check:api`.
 
 ## SQLite backup
 

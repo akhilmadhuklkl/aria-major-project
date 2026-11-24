@@ -57,6 +57,7 @@ jobs:
           docker run --detach --name aria-api-ci --publish 8788:8787 --env PORT=8787 aria-app:ci
           for attempt in {1..30}; do
             if curl --fail --silent http://127.0.0.1:8788/api/ready; then
+              curl --fail --silent http://127.0.0.1:8788/ | grep --quiet '<div id="root"></div>'
               exit 0
             fi
             sleep 1
