@@ -99,6 +99,8 @@ jobs:
           cache-dependency-path: aria-app/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Run PostgreSQL migration preflight
+        run: npm run preflight:postgres
       - name: Migrate SQLite data to PostgreSQL
         run: npm run migrate:postgres
       - name: Verify PostgreSQL schema and indexes
