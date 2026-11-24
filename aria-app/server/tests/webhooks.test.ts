@@ -74,3 +74,34 @@ test('dispatches a signed webhook and records delivery success', async () => {
     await new Promise<void>((resolve) => server?.close(() => resolve()))
   }
 })
+
+test('retries failed webhook delivery three times and records the failure', async () => {
+  const server = createServer((_request, response) => {
+    attempts += 1
+    response.writeHead(500)
+    response.end('receiver unavailable')
+  })
+  let attempts = 0
+  await new Promise<void>((resolve, reject) => {
+    server?.once('error', reject)
+    server?.listen(0, '127.0.0.1', () => resolve())
+  })
+
+  const subscription = createWebhookSubscription({
+    name: `Delivery failure ${Date.now()}`,
+    url: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
+    events: ['knowledge.indexed'],
+  })
+  try {
+    await dispatchWebhookEvent('knowledge.indexed', { title: 'Unavailable policy receiver' })
+    const delivery = listWebhookDeliveries().find((item) => Number((item as { webhookId: number }).webhookId) === subscription.id) as { status: string; attempts: number; responseStatus: number; error?: string } | undefined
+    assert.equal(attempts, 3)
+    assert.equal(delivery?.status, 'failed')
+    assert.equal(delivery?.attempts, 3)
+    assert.equal(delivery?.responseStatus, 500)
+    assert.equal(delivery?.error, 'HTTP 500')
+  } finally {
+    deleteWebhookSubscription(subscription.id)
+    await new Promise<void>((resolve) => server?.close(() => resolve()))
+  }
+})
