@@ -245,6 +245,8 @@ export interface SystemStatus {
     agentProvider: string
     mastraReady: boolean
     mastraServerEnabled: boolean
+    mastraRuntime: 'remote' | 'embedded' | 'fallback'
+    mastraEndpointConfigured: boolean
     model: string
     llmProvider: string
     providerConfigured: boolean

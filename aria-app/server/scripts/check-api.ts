@@ -56,6 +56,11 @@ try {
     typeof ai?.agentProvider === 'string' && ai.agentProvider.length > 0,
     `provider=${String(ai?.agentProvider ?? 'unknown')}`,
   )
+  addResult(
+    'Mastra runtime mode',
+    ai?.mastraRuntime === 'remote' || ai?.mastraRuntime === 'embedded' || ai?.mastraRuntime === 'fallback',
+    `runtime=${String(ai?.mastraRuntime ?? 'unknown')}`,
+  )
 
   const implementationStatus = await request<{ readyForDemo: boolean; completed: string[]; pendingForFinal: string[] }>('/interim-status')
   addResult(

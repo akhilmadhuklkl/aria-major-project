@@ -140,9 +140,9 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
               <StatusTile
                 icon={PlugZap}
                 label="AI generation"
-                value={systemStatus?.ai.agentProvider === 'mastra-remote' ? 'Mastra remote' : 'Local fallback'}
+                value={systemStatus?.ai.mastraRuntime === 'remote' ? 'Mastra remote' : systemStatus?.ai.mastraRuntime === 'embedded' ? 'Mastra Server' : 'Local fallback'}
                 detail={systemStatus
-                  ? `${systemStatus.ai.agentProvider} with ${systemStatus.ai.llmProvider} using ${systemStatus.ai.model}; provider key ${systemStatus.ai.providerConfigured ? 'configured' : 'not configured'}.`
+                  ? `${systemStatus.ai.agentProvider} with ${systemStatus.ai.llmProvider} using ${systemStatus.ai.model}; ${systemStatus.ai.mastraEndpointConfigured ? 'remote agent endpoint configured' : systemStatus.ai.mastraServerEnabled ? 'embedded Mastra Server enabled' : 'local knowledge fallback active'}.`
                   : 'Mastra Cloud server and Studio are deployed, with Gemini-backed agent responses and observability traces verified.'}
               />
               <StatusTile
