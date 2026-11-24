@@ -43,6 +43,33 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByText('No conversations match "does-not-exist".', { exact: true })).toBeVisible()
   })
 
+  test('submits a customer question and renders an assistant response', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Customer chat' }).click()
+
+    const question = page.getByRole('textbox', { name: 'Customer support question' })
+    await question.fill('How long does a refund take after approval?')
+    await page.getByRole('button', { name: 'Send message' }).click()
+
+    await expect(page.getByText('How long does a refund take after approval?', { exact: true })).toBeVisible()
+    await expect(page.locator('.customer-bubble.bot')).toHaveCount(2, { timeout: 30_000 })
+  })
+
+  test('creates and deletes a knowledge record from the table', async ({ page }) => {
+    const title = `Browser smoke knowledge ${Date.now()}`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('button', { name: 'Add knowledge' }).click()
+    await page.getByRole('textbox', { name: 'Knowledge title' }).fill(title)
+    await page.getByRole('textbox', { name: 'Knowledge answering note' }).fill('Temporary browser smoke record.')
+    await page.getByRole('button', { name: 'Save knowledge' }).click()
+
+    const row = page.locator('tr').filter({ hasText: title })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: `Delete ${title}` }).click()
+    await expect(row).toHaveCount(0)
+  })
+
   test('opens admin settings with user management controls', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Settings' }).click()

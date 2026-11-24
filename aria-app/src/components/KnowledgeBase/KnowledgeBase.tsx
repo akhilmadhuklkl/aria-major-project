@@ -196,7 +196,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
         <form className="knowledge-form" onSubmit={submit}>
           <label>
             <span>Title</span>
-            <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required />
+            <input aria-label="Knowledge title" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required />
           </label>
           <label>
             <span>Category</span>
@@ -216,7 +216,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
           </label>
           <label className="knowledge-content">
             <span>Answering note</span>
-            <textarea value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} required />
+            <textarea aria-label="Knowledge answering note" value={form.content} onChange={(event) => setForm({ ...form, content: event.target.value })} required />
           </label>
           {error && <p className="inline-error">{error}</p>}
           <button className="primary-button" disabled={saving}>{saving ? 'Saving...' : 'Save knowledge'}</button>
