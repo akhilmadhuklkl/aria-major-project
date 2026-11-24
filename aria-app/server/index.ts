@@ -66,6 +66,7 @@ import {
 import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, testWebhookSubscription, updateWebhookSubscription } from './webhooks.js'
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
+import { databaseEngine } from './database-runtime.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
@@ -137,7 +138,7 @@ function getHealthSnapshot() {
     agentProvider: getAgentProvider(),
     mastraRuntime: hasRemoteMastraAgent ? 'remote' : mastraServerEnabled ? 'embedded' : 'fallback',
     mastraEndpointConfigured: hasRemoteMastraAgent,
-    database: 'sqlite',
+    database: databaseEngine,
     graphStore: neo4jGraphStore ? 'neo4j' : 'sqlite',
     mastraReady: true,
     mastraServerEnabled,

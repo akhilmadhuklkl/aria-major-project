@@ -1,11 +1,9 @@
 import { mkdirSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { databaseEngine } from './database-runtime.js'
 
-const configuredDatabaseEngine = (process.env.DATABASE_ENGINE ?? 'sqlite').trim().toLowerCase()
-if (configuredDatabaseEngine !== 'sqlite') {
-  throw new Error(`DATABASE_ENGINE=${configuredDatabaseEngine} is not supported by the current runtime adapter. Use DATABASE_ENGINE=sqlite until PostgreSQL runtime support is enabled.`)
-}
+void databaseEngine
 
 const databasePath = resolve('data', 'aria.db')
 mkdirSync(dirname(databasePath), { recursive: true })
