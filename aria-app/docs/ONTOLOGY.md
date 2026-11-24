@@ -1,10 +1,10 @@
 # ARIA Knowledge Graph Ontology
 
-> Design baseline for the Knowledge Graph and Ontology future enhancement.
+> Design baseline for ARIA's implemented Knowledge Graph and Ontology layer.
 
 ## Purpose
 
-ARIA currently combines semantic retrieval with keyword fallback. This ontology defines the support-domain concepts and relationships that a future graph layer can use alongside that retrieval pipeline. It is a design artifact only; the current application does not yet query a knowledge graph.
+ARIA combines semantic retrieval, keyword fallback, and graph evidence from the support-domain ontology. The current application supports graph exploration, node and relationship management, path queries, and graph-aware hybrid retrieval. SQLite is the default graph store, with optional Neo4j support for larger workloads.
 
 ## Initial Scope
 
@@ -64,7 +64,7 @@ These facts allow a question such as “When should my refund arrive?” to be c
 
 ## Retrieval Integration
 
-The future backend flow should preserve the current semantic retrieval path and add graph evidence as a second signal:
+The backend preserves the semantic retrieval path and adds graph evidence as a second signal:
 
 ```text
 Customer question
