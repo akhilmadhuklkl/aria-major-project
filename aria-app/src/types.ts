@@ -255,3 +255,13 @@ export interface SystemStatus {
   }
 }
 
+export interface RuntimeMetrics {
+  startedAt: string
+  uptimeSeconds: number
+  requests: number
+  errors: number
+  errorRate: number
+  averageLatencyMs: number
+  routes: Array<{ route: string; requests: number; errors: number; averageLatencyMs: number }>
+}
+

@@ -63,6 +63,7 @@ import {
 } from './embedding-service.js'
 import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions } from './webhooks.js'
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
+import { getRuntimeMetrics, recordRequest } from './metrics.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
@@ -161,6 +162,8 @@ app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : true }))
 app.use(express.json({ limit: '1mb' }))
 app.use((_request, response, next) => {
   response.setHeader('X-Request-ID', crypto.randomUUID())
+  const startedAt = performance.now()
+  response.on('finish', () => recordRequest({ method: _request.method, route: _request.route?.path ?? _request.path, status: response.statusCode, latencyMs: Math.round(performance.now() - startedAt) }))
   next()
 })
 app.use('/api/auth', authLimiter)
@@ -484,6 +487,10 @@ app.get('/api/system-status', (_request, response) => {
       learnedSources: sourceStats.filter((source) => calculateFeedbackAdjustment(source) !== 0).length,
     },
   })
+})
+
+app.get('/api/metrics', roleGuard('admin'), (_request, response) => {
+  response.json(getRuntimeMetrics())
 })
 
 app.get('/api/interim-status', (_request, response) => {

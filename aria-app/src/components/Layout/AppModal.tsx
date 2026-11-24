@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Server, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { AnalyticsSummary, AuditLog, AuthUser, KnowledgeItem, SystemStatus, WebhookDelivery, WebhookSubscription } from '../../types'
+import type { AnalyticsSummary, AuditLog, AuthUser, KnowledgeItem, RuntimeMetrics, SystemStatus, WebhookDelivery, WebhookSubscription } from '../../types'
 
 type ModalType = 'help' | 'settings'
 
@@ -13,6 +13,7 @@ interface AppModalProps {
   auditLogs: AuditLog[]
   webhooks: WebhookSubscription[]
   webhookDeliveries: WebhookDelivery[]
+  runtimeMetrics?: RuntimeMetrics
   users: AuthUser[]
   currentUser?: AuthUser
   isAdmin: boolean
@@ -46,7 +47,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, webhookDeliveries, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, webhookDeliveries, runtimeMetrics, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -141,6 +142,12 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
                 detail={systemStatus
                   ? `${systemStatus.ai.agentProvider} with ${systemStatus.ai.llmProvider} using ${systemStatus.ai.model}; provider key ${systemStatus.ai.providerConfigured ? 'configured' : 'not configured'}.`
                   : 'Mastra Cloud server and Studio are deployed, with Gemini-backed agent responses and observability traces verified.'}
+              />
+              <StatusTile
+                icon={Server}
+                label="Runtime metrics"
+                value={runtimeMetrics ? `${runtimeMetrics.requests} requests` : 'Collecting'}
+                detail={runtimeMetrics ? `${runtimeMetrics.errorRate * 100}% error rate, ${runtimeMetrics.averageLatencyMs}ms average latency, ${runtimeMetrics.uptimeSeconds}s uptime.` : 'Request count and latency metrics will appear after the API responds.'}
               />
             </div>
             <div className="modal-callout muted">

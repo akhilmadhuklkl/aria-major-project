@@ -48,6 +48,7 @@ test.describe('ARIA application smoke coverage', () => {
     await page.getByRole('button', { name: 'Settings' }).click()
     await expect(page.getByRole('dialog')).toBeVisible()
     await expect(page.getByText('User management', { exact: true })).toBeVisible()
+    await expect(page.getByText('Runtime metrics', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Create user' })).toBeVisible()
   })
 
