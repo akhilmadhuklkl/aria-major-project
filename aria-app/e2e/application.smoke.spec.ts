@@ -112,4 +112,13 @@ test.describe('ARIA application smoke coverage', () => {
     }
   })
 
+  test('records an ARIA assistant rejection as a learning action', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.getByText('Action meaning', { exact: true })).toBeVisible()
+    await expect(page.getByText('Reject records that the suggestion was not useful.', { exact: false })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Reject' }).click()
+    await expect(page.locator('.action-status')).toHaveText('Rejected - negative feedback recorded')
+  })
+
 })
