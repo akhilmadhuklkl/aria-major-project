@@ -87,6 +87,33 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(row).toHaveCount(0)
   })
 
+  test('bulk selects and deletes knowledge records', async ({ page }) => {
+    const firstTitle = `Browser bulk knowledge A ${Date.now()}`
+    const secondTitle = `${firstTitle} B`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+
+    for (const title of [firstTitle, secondTitle]) {
+      await page.getByRole('button', { name: 'Add knowledge' }).click()
+      await page.getByRole('textbox', { name: 'Knowledge title' }).fill(title)
+      await page.getByRole('textbox', { name: 'Knowledge answering note' }).fill('Temporary bulk browser smoke record.')
+      await page.getByRole('button', { name: 'Save knowledge' }).click()
+      await expect(page.locator('tr').filter({ hasText: title })).toBeVisible()
+    }
+
+    await page.getByRole('checkbox', { name: `Select ${firstTitle}`, exact: true }).check()
+    await page.getByRole('checkbox', { name: `Select ${secondTitle}`, exact: true }).check()
+    await expect(page.getByText('2 selected', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Delete selected' }).click()
+    await expect(page.locator('tr').filter({ hasText: firstTitle })).toHaveCount(0)
+    await expect(page.locator('tr').filter({ hasText: secondTitle })).toHaveCount(0)
+
+    await page.reload()
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await expect(page.locator('tr').filter({ hasText: firstTitle })).toHaveCount(0)
+    await expect(page.locator('tr').filter({ hasText: secondTitle })).toHaveCount(0)
+  })
+
   test('opens admin settings with user management controls', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Settings' }).click()
