@@ -74,10 +74,9 @@ export async function dispatchWebhookEvent(event: WebhookEvent, data: Record<str
 
 export async function testWebhookSubscription(id: number) {
   const subscription = listWebhookSubscriptionsWithSecrets().find((item) => item.id === id)
-  if (!subscription) return false
+  if (!subscription) return undefined
   const payload = JSON.stringify({ event: 'knowledge.indexed', data: { test: true, source: 'ARIA webhook settings' }, deliveredAt: new Date().toISOString() })
-  await deliverWebhook(subscription, 'knowledge.indexed', payload)
-  return true
+  return deliverWebhook(subscription, 'knowledge.indexed', payload)
 }
 
 async function deliverWebhook(subscription: WebhookSubscription, event: WebhookEvent, payload: string) {
@@ -98,7 +97,7 @@ async function deliverWebhook(subscription: WebhookSubscription, event: WebhookE
       if (response.ok) {
         db.prepare(`INSERT INTO webhook_delivery_logs (webhook_id, event, status, response_status, attempts, created_at) VALUES (?, ?, 'delivered', ?, ?, ?)`)
           .run(subscription.id, event, responseStatus, attempts, new Date().toISOString())
-        return
+        return true
       }
       lastError = `HTTP ${response.status}`
     } catch (error) {
@@ -110,4 +109,5 @@ async function deliverWebhook(subscription: WebhookSubscription, event: WebhookE
   }
   db.prepare(`INSERT INTO webhook_delivery_logs (webhook_id, event, status, response_status, attempts, error, created_at) VALUES (?, ?, 'failed', ?, ?, ?, ?)`)
     .run(subscription.id, event, responseStatus, attempts - 1, lastError.slice(0, 500), new Date().toISOString())
+  return false
 }

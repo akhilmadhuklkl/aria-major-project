@@ -386,8 +386,17 @@ app.patch('/api/integrations/webhooks/:id', roleGuard('admin'), (request, respon
 
 app.post('/api/integrations/webhooks/:id/test', roleGuard('admin'), async (request, response) => {
   const id = Number(request.params.id)
-  if (!Number.isInteger(id) || id <= 0 || !(await testWebhookSubscription(id))) {
+  if (!Number.isInteger(id) || id <= 0) {
     response.status(404).json({ error: 'webhook was not found' })
+    return
+  }
+  const delivered = await testWebhookSubscription(id)
+  if (delivered === undefined) {
+    response.status(404).json({ error: 'webhook was not found' })
+    return
+  }
+  if (!delivered) {
+    response.status(502).json({ delivered: false, error: 'webhook test delivery failed; check delivery history' })
     return
   }
   response.json({ delivered: true, event: 'knowledge.indexed' })

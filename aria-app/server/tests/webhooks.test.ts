@@ -51,7 +51,7 @@ test('webhook activation can be paused without deleting configuration', () => {
 })
 
 test('webhook test delivery rejects unknown subscriptions', async () => {
-  assert.equal(await testWebhookSubscription(999999999), false)
+  assert.equal(await testWebhookSubscription(999999999), undefined)
 })
 
 test('dispatches a signed webhook and records delivery success', async () => {
