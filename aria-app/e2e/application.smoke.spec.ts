@@ -273,4 +273,37 @@ test.describe('ARIA application smoke coverage', () => {
     expect(download.suggestedFilename()).toBe('aria-analytics-30d.csv')
   })
 
+  test('captures customer feedback for an AI response', async ({ page }) => {
+    await page.route('**/api/chat/stream', async (route) => {
+      const response = {
+        id: 'browser-smoke-message',
+        conversationId: 1,
+        answer: 'A browser-smoke response for feedback testing.',
+        confidence: 0.92,
+        sources: ['Refund and return policy'],
+        sourceScores: [{ title: 'Refund and return policy', score: 0.92 }],
+        retrievalMethod: 'keyword',
+        generationProvider: 'local-knowledge',
+        latencyMs: 12,
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: `data: ${JSON.stringify({ type: 'chunk', text: response.answer })}\n\ndata: ${JSON.stringify({ type: 'complete', response })}\n\n`,
+      })
+    })
+    await page.route('**/api/feedback', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ saved: true }) })
+    })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Customer chat' }).click()
+    await page.getByRole('textbox', { name: 'Customer support question' }).fill('How long does a refund take after approval?')
+    await page.getByRole('button', { name: 'Send message' }).click()
+    await expect(page.locator('.customer-bubble.bot')).toHaveCount(2, { timeout: 30_000 })
+
+    await page.getByRole('button', { name: 'Rate 5 out of 5' }).click()
+    await page.getByRole('button', { name: 'Submit' }).click()
+    await expect(page.getByText('Thanks. Your feedback helps ARIA improve.', { exact: true })).toBeVisible()
+  })
+
 })
