@@ -21,6 +21,22 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('button', { name: 'Agent workspace' })).toBeVisible()
   })
 
+  test('signs in an existing administrator from the authentication screen', async ({ page }) => {
+    const user = { id: 2, email: 'agent@example.com', displayName: 'Existing Admin', role: 'admin' }
+    await page.route('**/api/health', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ authRequired: true, authSetupAvailable: false }) })
+    })
+    await page.route('**/api/auth/login', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user, token: 'browser-login-token', expiresAt: new Date(Date.now() + 60_000).toISOString() }) })
+    })
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Email address' }).fill('agent@example.com')
+    await page.getByLabel('Password').fill('browser-password-123')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByRole('button', { name: 'Agent workspace' })).toBeVisible()
+  })
+
   test('navigates through the core modules and renders graph and analytics views', async ({ page }) => {
     await page.goto('/')
 
