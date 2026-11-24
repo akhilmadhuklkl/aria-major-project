@@ -321,4 +321,19 @@ test.describe('ARIA application smoke coverage', () => {
     expect(download.suggestedFilename()).toBe('aria-customer-conversation.txt')
   })
 
+  test('switches the interface language for navigation and Customer Chat', async ({ page }) => {
+    await page.goto('/')
+    const language = page.getByRole('combobox', { name: 'Language' })
+    await language.selectOption('hi')
+    await expect(page.getByRole('button', { name: 'ग्राहक चैट' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'ज्ञान आधार' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'ग्राहक चैट' }).click()
+    const question = page.locator('.customer-composer input')
+    await expect(question).toBeAttached()
+    await expect(question).toHaveAttribute('placeholder', 'सहायता प्रश्न पूछें...')
+    await expect(question).toHaveAttribute('aria-label', 'Customer support question')
+    await expect(page.getByText('सत्यापित AI सहायता सहायक', { exact: true })).toBeVisible()
+  })
+
 })
