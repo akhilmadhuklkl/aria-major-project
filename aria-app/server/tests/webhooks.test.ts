@@ -128,8 +128,10 @@ test('retries failed webhook delivery three times and records the failure', asyn
 
 test('delivers only subscribed events and supports wildcard subscriptions', async () => {
   const receivedEvents: string[] = []
-  const server = createServer((_request, response) => {
-    receivedEvents.push(String(_request.headers['x-aria-event']))
+  const server = createServer((request, response) => {
+    if (new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.has('hook')) {
+      receivedEvents.push(String(request.headers['x-aria-event']))
+    }
     response.writeHead(204)
     response.end()
   })

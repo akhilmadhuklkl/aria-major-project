@@ -19,6 +19,7 @@ npm run backup:sqlite
 Backups are written to the ignored `backups/` directory. To choose a specific output path, set `SQLITE_BACKUP_PATH`; to choose a directory while retaining timestamped filenames, set `SQLITE_BACKUP_DIR`. The command refuses to overwrite an existing backup and runs SQLite integrity verification before reporting success.
 
 The default container uses SQLite with the `/app/data` volume. Do not commit `.env` or provider keys.
+Set `DATABASE_ENGINE=sqlite` explicitly for the current runtime. The application fails fast for unsupported runtime values instead of silently falling back to SQLite.
 
 ## PostgreSQL migration preparation
 
