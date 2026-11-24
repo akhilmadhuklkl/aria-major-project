@@ -255,7 +255,13 @@ test.describe('ARIA application smoke coverage', () => {
     await page.getByRole('button', { name: 'Add knowledge' }).click()
     await page.getByRole('textbox', { name: 'Knowledge title' }).fill(title)
     await page.getByRole('textbox', { name: 'Knowledge answering note' }).fill('Temporary browser smoke record.')
+    const createKnowledgeResponse = page.waitForResponse((response) => (
+      response.url().endsWith('/api/knowledge')
+      && response.request().method() === 'POST'
+      && response.status() === 201
+    ))
     await page.getByRole('button', { name: 'Save knowledge' }).click()
+    await createKnowledgeResponse
 
     const row = page.locator('tr').filter({ hasText: title })
     await expect(row).toBeVisible()
