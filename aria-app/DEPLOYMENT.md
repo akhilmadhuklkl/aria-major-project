@@ -29,6 +29,14 @@ docker compose --profile postgres up -d postgres
 DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run migrate:postgres
 ```
 
+Before running the import, use the non-mutating preflight to validate the connection and SQLite source:
+
+```bash
+DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run preflight:postgres
+```
+
+The preflight performs a PostgreSQL `SELECT 1`, checks SQLite integrity, and prints source row counts. It does not create, update, or delete PostgreSQL data.
+
 The migration script imports the current SQLite records, embeddings, sessions, conversation metadata, knowledge-document versions, notifications, webhook subscriptions, and Knowledge Graph nodes/relationships inside a transaction. The application still requires a separate database-adapter cutover before PostgreSQL can be used as its runtime database.
 
 After migration, verify the target schema without changing data:

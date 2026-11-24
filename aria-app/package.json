@@ -20,6 +20,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "migrate:postgres": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/migrate-postgres.ts",
+    "preflight:postgres": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/preflight-postgres.ts",
     "verify:postgres": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/verify-postgres.ts",
     "migrate:neo4j": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/migrate-neo4j.ts",
     "verify:neo4j": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/verify-neo4j.ts",
