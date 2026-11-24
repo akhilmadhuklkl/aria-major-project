@@ -481,6 +481,11 @@ export default function App() {
     setWebhooks((current) => current.map((webhook) => webhook.id === id ? { ...webhook, active } : webhook))
   }
 
+  async function testWebhook(id: number) {
+    await api.testWebhook(id)
+    setWebhookDeliveries(await api.getWebhookDeliveries())
+  }
+
   async function createUser(input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) {
     const created = await api.createUser(input)
     setUsers((current) => [...current, created].sort((first, second) => first.displayName.localeCompare(second.displayName)))
@@ -611,6 +616,7 @@ export default function App() {
           onCreateWebhook={createWebhook}
           onDeleteWebhook={deleteWebhook}
           onUpdateWebhook={updateWebhook}
+          onTestWebhook={testWebhook}
           onCreateUser={createUser}
           onChangePassword={changePassword}
           onClose={() => setActiveModal(undefined)}

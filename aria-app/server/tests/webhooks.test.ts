@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import test from 'node:test'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, signWebhookPayload, updateWebhookSubscription } from '../webhooks.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, signWebhookPayload, testWebhookSubscription, updateWebhookSubscription } from '../webhooks.js'
 
 test('webhook signatures are deterministic HMAC SHA-256 values', () => {
   assert.equal(signWebhookPayload('secret', '{"ok":true}'), 'f6b4a2841c93f8bf2fb8f2c13d8fb0b6c8e8019f09ee405d248daa8385fad638')
@@ -48,6 +48,10 @@ test('webhook activation can be paused without deleting configuration', () => {
   } finally {
     deleteWebhookSubscription(subscription.id)
   }
+})
+
+test('webhook test delivery rejects unknown subscriptions', async () => {
+  assert.equal(await testWebhookSubscription(999999999), false)
 })
 
 test('dispatches a signed webhook and records delivery success', async () => {

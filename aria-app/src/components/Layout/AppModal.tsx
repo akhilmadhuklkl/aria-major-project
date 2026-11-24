@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Power, Server, Settings, Trash2, UserPlus, X } from 'lucide-react'
+import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Power, Send, Server, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { AnalyticsSummary, AuditLog, AuthUser, KnowledgeItem, RuntimeMetrics, SystemStatus, WebhookDelivery, WebhookSubscription } from '../../types'
 
@@ -20,6 +20,7 @@ interface AppModalProps {
   onCreateWebhook: (input: { name: string; url: string; events: string[] }) => Promise<string | undefined>
   onDeleteWebhook: (id: number) => Promise<void>
   onUpdateWebhook: (id: number, active: boolean) => Promise<void>
+  onTestWebhook: (id: number) => Promise<void>
   onCreateUser: (input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) => Promise<void>
   onChangePassword: (input: { currentPassword: string; newPassword: string }) => Promise<void>
   onClose: () => void
@@ -48,7 +49,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, webhookDeliveries, runtimeMetrics, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onUpdateWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, webhookDeliveries, runtimeMetrics, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onUpdateWebhook, onTestWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -174,7 +175,7 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
                 </div>
               )) : <p className="audit-log-empty">No recorded administrative activity yet.</p>}
             </div>}
-            {isAdmin && <WebhookSettings webhooks={webhooks} deliveries={webhookDeliveries} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} onUpdate={onUpdateWebhook} />}
+            {isAdmin && <WebhookSettings webhooks={webhooks} deliveries={webhookDeliveries} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} onUpdate={onUpdateWebhook} onTest={onTestWebhook} />}
             {isAdmin && <UserManagement users={users} onCreate={onCreateUser} />}
             {currentUser && <PasswordManagement onChange={onChangePassword} />}
           </div>
@@ -273,12 +274,14 @@ function WebhookSettings({
   onCreate,
   onDelete,
   onUpdate,
+  onTest,
 }: {
   webhooks: WebhookSubscription[]
   deliveries: WebhookDelivery[]
   onCreate: AppModalProps['onCreateWebhook']
   onDelete: AppModalProps['onDeleteWebhook']
   onUpdate: AppModalProps['onUpdateWebhook']
+  onTest: AppModalProps['onTestWebhook']
 }) {
   const [name, setName] = useState('')
   const [url, setUrl] = useState('')
@@ -322,6 +325,7 @@ function WebhookSettings({
       {webhooks.length > 0 ? webhooks.map((webhook) => (
         <div className="webhook-row" key={webhook.id}>
           <div><strong>{webhook.name}</strong><span>{webhook.url}</span><small>{webhook.events.join(', ')} · {webhook.active ? 'Active' : 'Paused'}</small></div>
+          <button className="icon-button" onClick={() => void onTest(webhook.id)} aria-label={`Send test to ${webhook.name}`} title="Send test delivery"><Send size={14} /></button>
           <button className="icon-button" onClick={() => void onUpdate(webhook.id, !webhook.active)} aria-label={`${webhook.active ? 'Pause' : 'Activate'} ${webhook.name}`} title={webhook.active ? 'Pause webhook' : 'Activate webhook'}><Power size={14} /></button>
           <button className="danger-icon-button" onClick={() => { if (window.confirm(`Delete webhook "${webhook.name}"?`)) void onDelete(webhook.id) }} aria-label={`Delete ${webhook.name}`} title="Delete webhook"><Trash2 size={14} /></button>
         </div>

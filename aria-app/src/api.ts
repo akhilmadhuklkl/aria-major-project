@@ -98,6 +98,10 @@ export const api = {
     return request<{ updated: boolean; active: boolean }>(`/integrations/webhooks/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) })
   },
 
+  testWebhook(id: number) {
+    return request<{ delivered: boolean; event: string }>(`/integrations/webhooks/${id}/test`, { method: 'POST' })
+  },
+
   getGraphNodes() {
     return request<GraphNode[]>('/knowledge-graph/nodes')
   },

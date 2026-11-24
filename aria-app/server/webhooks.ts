@@ -72,6 +72,14 @@ export async function dispatchWebhookEvent(event: WebhookEvent, data: Record<str
   await Promise.allSettled(subscriptions.map((subscription) => deliverWebhook(subscription, event, payload)))
 }
 
+export async function testWebhookSubscription(id: number) {
+  const subscription = listWebhookSubscriptionsWithSecrets().find((item) => item.id === id)
+  if (!subscription) return false
+  const payload = JSON.stringify({ event: 'knowledge.indexed', data: { test: true, source: 'ARIA webhook settings' }, deliveredAt: new Date().toISOString() })
+  await deliverWebhook(subscription, 'knowledge.indexed', payload)
+  return true
+}
+
 async function deliverWebhook(subscription: WebhookSubscription, event: WebhookEvent, payload: string) {
   let responseStatus: number | null = null
   let lastError = ''
