@@ -114,6 +114,20 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.locator('tr').filter({ hasText: secondTitle })).toHaveCount(0)
   })
 
+  test('selects and clears all visible knowledge records from the header', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+
+    const selectAll = page.getByRole('checkbox', { name: 'Select all visible knowledge records' })
+    await selectAll.check()
+    await expect(selectAll).toBeChecked()
+    await expect(page.getByText(/^\d+ selected$/)).toBeVisible()
+
+    await selectAll.uncheck()
+    await expect(selectAll).not.toBeChecked()
+    await expect(page.getByText(/^\d+ selected$/)).toHaveCount(0)
+  })
+
   test('opens admin settings with user management controls', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Settings' }).click()
