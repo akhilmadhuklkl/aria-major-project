@@ -63,7 +63,9 @@ try {
     implementationStatus.readyForDemo === true
       && implementationStatus.completed.includes('Authentication, role-based access, and protected API routes')
       && implementationStatus.completed.includes('Containerized production build with CI and browser/API verification')
+      && implementationStatus.completed.includes('Persisted customer conversation memory with recent history in Agent Workspace')
       && implementationStatus.pendingForFinal.includes('PostgreSQL runtime database adapter cutover')
+      && !implementationStatus.pendingForFinal.includes('Long-term conversation memory')
       && !implementationStatus.pendingForFinal.some((item) => /authentication|deployment|extended testing/i.test(item)),
     `completed=${implementationStatus.completed.length}, pending=${implementationStatus.pendingForFinal.length}`,
   )

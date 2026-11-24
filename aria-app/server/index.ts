@@ -507,6 +507,7 @@ app.get('/api/interim-status', (_request, response) => {
       'Semantic vector retrieval with automatic keyword fallback',
       'Feedback capture from customer ratings and agent actions',
       'Analytics calculated from persisted database records',
+      'Persisted customer conversation memory with recent history in Agent Workspace',
       'Authentication, role-based access, and protected API routes',
       'Containerized production build with CI and browser/API verification',
       'Mastra-compatible remote agent endpoint configured through MASTRA_AGENT_URL',
@@ -514,7 +515,6 @@ app.get('/api/interim-status', (_request, response) => {
     ],
     pendingForFinal: [
       'PostgreSQL runtime database adapter cutover',
-      'Long-term conversation memory',
       'Optional external channel integrations and full Mastra Studio workflows',
     ],
   })
