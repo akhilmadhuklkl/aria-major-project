@@ -66,7 +66,8 @@ try {
       && typeof analytics.averageConfidence === 'number'
       && typeof analytics.escalationRate === 'number'
       && Array.isArray(analytics.providers)
-      && Array.isArray(analytics.qualityTrend),
+      && Array.isArray(analytics.qualityTrend)
+      && typeof (analytics.qualityReport as Record<string, unknown> | undefined)?.groundedResponseRate === 'number',
     `conversations=${String(analytics.conversations)}, feedback=${String(analytics.feedbackRecords)}`,
   )
 
@@ -79,6 +80,16 @@ try {
       && typeof conversations.queueCounts?.unassigned === 'number'
       && typeof conversations.queueCounts?.attention === 'number',
     `total=${conversations.total}, mine=${conversations.queueCounts?.mine}, unassigned=${conversations.queueCounts?.unassigned}`,
+  )
+
+  const firstConversation = conversations.items[0] as { id?: number } | undefined
+  const customerContext = firstConversation?.id
+    ? await request<{ customer: string; totalConversations: number; history: unknown[] }>(`/conversations/${firstConversation.id}/context`)
+    : undefined
+  addResult(
+    'Customer context endpoint',
+    Boolean(customerContext?.customer) && typeof customerContext?.totalConversations === 'number' && Array.isArray(customerContext?.history),
+    customerContext ? `customer=${customerContext.customer}, conversations=${customerContext.totalConversations}` : 'no conversation available',
   )
 
   const supportAgents = await request<unknown[]>('/support-agents')
@@ -100,6 +111,20 @@ try {
     'Knowledge Graph endpoint',
     Array.isArray(graph.nodes) && Array.isArray(graph.relationships),
     `nodes=${graph.nodes.length}, relationships=${graph.relationships.length}`,
+  )
+
+  const metrics = await request<{ requests: number; errors: number; averageLatencyMs: number; routes: unknown[] }>('/metrics')
+  addResult(
+    'Runtime metrics endpoint',
+    typeof metrics.requests === 'number' && typeof metrics.errors === 'number' && typeof metrics.averageLatencyMs === 'number' && Array.isArray(metrics.routes),
+    `requests=${metrics.requests}, errors=${metrics.errors}, averageLatency=${metrics.averageLatencyMs}ms`,
+  )
+
+  const deliveries = await request<unknown[]>('/integrations/webhooks/deliveries')
+  addResult(
+    'Webhook delivery history endpoint',
+    Array.isArray(deliveries),
+    `${deliveries.length} delivery records returned`,
   )
 } catch (error) {
   addResult('API smoke runner', false, error instanceof Error ? error.message : 'Unknown error')
