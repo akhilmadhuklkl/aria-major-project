@@ -204,4 +204,30 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(row).toHaveCount(0)
   })
 
+  test('archives and restores a knowledge record', async ({ page }) => {
+    const title = `Browser Smoke Archive ${Date.now()}`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('button', { name: 'Add knowledge' }).click()
+    await page.getByRole('textbox', { name: 'Knowledge title' }).fill(title)
+    await page.getByRole('textbox', { name: 'Knowledge answering note' }).fill('Temporary archive workflow record.')
+    await page.getByRole('button', { name: 'Save knowledge' }).click()
+
+    let row = page.locator('tr').filter({ hasText: title })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: `Archive ${title}` }).click()
+    await expect(row).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Archived documents' }).click()
+    row = page.locator('tr').filter({ hasText: title })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: `Restore ${title}` }).click()
+    await expect(row).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Active documents' }).click()
+    await expect(page.locator('tr').filter({ hasText: title })).toBeVisible()
+    await page.locator('tr').filter({ hasText: title }).getByRole('button', { name: `Delete ${title}` }).click()
+    await expect(page.locator('tr').filter({ hasText: title })).toHaveCount(0)
+  })
+
 })
