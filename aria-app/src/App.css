@@ -155,8 +155,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .customer-context-topics span { padding: 3px 6px; border-radius: 4px; background: var(--teal-soft); color: var(--teal-dark); font-size: 8px; }
 .customer-context-history { margin-top: 7px; border-top: 1px solid #edf1f0; padding-top: 6px; }
 .customer-context-history small { color: var(--muted); font-size: 8px; }
-.customer-context-history div { display: flex; justify-content: space-between; gap: 8px; padding-top: 4px; color: var(--ink); font-size: 8px; }
+.customer-context-history div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; padding-top: 4px; color: var(--ink); font-size: 8px; }
 .customer-context-history em { color: var(--muted); font-style: normal; }
+.customer-context-history p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: 8px; line-height: 1.35; }
 .app-body { min-width: 0; height: 100vh; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .topbar { height: 70px; flex: 0 0 70px; padding: 0 22px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
 .topbar h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 750; }

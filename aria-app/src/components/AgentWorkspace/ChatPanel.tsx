@@ -84,7 +84,7 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
       {customerContext && <div className="customer-context" aria-label="Customer context">
         <div className="customer-context-heading"><strong>Customer context</strong><span>{customerContext.totalConversations} conversations · {customerContext.openConversations} open</span></div>
         <div className="customer-context-topics">{customerContext.topics.map((item) => <span key={item.topic}>{item.topic} · {item.count}</span>)}</div>
-        {customerContext.history.length > 0 && <div className="customer-context-history"><small>Previous conversations</small>{customerContext.history.map((item) => <div key={item.id}><span>{item.subject}</span><em>{item.status} · {item.topic}</em></div>)}</div>}
+        {customerContext.history.length > 0 && <div className="customer-context-history"><small>Previous conversations</small>{customerContext.history.map((item) => <div key={item.id}><span>{item.subject}</span><em>{item.status} · {item.topic}</em>{item.lastMessage && <p>{item.lastMessage}</p>}</div>)}</div>}
       </div>}
       <div className="chat-history" ref={historyRef}>
         <div className="date-divider"><span>Today</span></div>

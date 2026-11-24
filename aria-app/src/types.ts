@@ -79,7 +79,7 @@ export interface CustomerContext {
   totalConversations: number
   openConversations: number
   topics: Array<{ topic: string; count: number }>
-  history: Array<{ id: number; subject: string; status: string; priority: string; topic: string; updatedAt: string }>
+  history: Array<{ id: number; subject: string; status: string; priority: string; topic: string; updatedAt: string; lastMessage?: string | null }>
 }
 
 export interface AgentThreadMessage {

@@ -737,7 +737,8 @@ app.get('/api/conversations/:id/context', roleGuard('admin', 'support_agent'), (
     GROUP BY topic ORDER BY count DESC, topic ASC LIMIT 5
   `).all(conversation.customer)
   const history = db.prepare(`
-    SELECT id, subject, status, priority, topic, updated_at AS updatedAt
+    SELECT id, subject, status, priority, topic, updated_at AS updatedAt,
+      (SELECT content FROM messages WHERE conversation_id = conversations.id ORDER BY created_at DESC LIMIT 1) AS lastMessage
     FROM conversations WHERE customer_name = ? AND id != ?
     ORDER BY updated_at DESC LIMIT 5
   `).all(conversation.customer, id)
