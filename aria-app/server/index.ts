@@ -702,6 +702,33 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
   response.json({ ...updated, tags: JSON.parse(String(updated.tags ?? '[]')), escalated: Boolean(updated.escalated) })
 })
 
+app.get('/api/conversations/:id/context', roleGuard('admin', 'support_agent'), (request, response) => {
+  const id = Number(request.params.id)
+  const conversation = db.prepare('SELECT id, customer_name AS customer FROM conversations WHERE id = ?').get(id) as { id: number; customer: string } | undefined
+  if (!conversation) {
+    response.status(404).json({ error: 'conversation was not found' })
+    return
+  }
+
+  const counts = db.prepare(`
+    SELECT COUNT(*) AS totalConversations,
+      COALESCE(SUM(CASE WHEN status IN ('open', 'pending') THEN 1 ELSE 0 END), 0) AS openConversations
+    FROM conversations WHERE customer_name = ?
+  `).get(conversation.customer) as { totalConversations: number; openConversations: number }
+  const topics = db.prepare(`
+    SELECT topic, COUNT(*) AS count
+    FROM conversations WHERE customer_name = ?
+    GROUP BY topic ORDER BY count DESC, topic ASC LIMIT 5
+  `).all(conversation.customer)
+  const history = db.prepare(`
+    SELECT id, subject, status, priority, topic, updated_at AS updatedAt
+    FROM conversations WHERE customer_name = ? AND id != ?
+    ORDER BY updated_at DESC LIMIT 5
+  `).all(conversation.customer, id)
+
+  response.json({ customer: conversation.customer, ...counts, topics, history })
+})
+
 app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (request, response) => {
   const id = Number(request.params.id)
   if (!Number.isInteger(id) || id <= 0) {

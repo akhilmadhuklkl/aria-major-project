@@ -62,6 +62,14 @@ export interface ConversationQueueCounts {
   attention: number
 }
 
+export interface CustomerContext {
+  customer: string
+  totalConversations: number
+  openConversations: number
+  topics: Array<{ topic: string; count: number }>
+  history: Array<{ id: number; subject: string; status: string; priority: string; topic: string; updatedAt: string }>
+}
+
 export interface AgentThreadMessage {
   from: 'customer' | 'agent' | 'system' | 'note'
   text: string

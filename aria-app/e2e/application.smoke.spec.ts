@@ -8,6 +8,7 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('button', { name: 'Customer chat' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Knowledge base' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Support analytics' })).toBeVisible()
+    await expect(page.getByText('Customer context', { exact: true })).toBeVisible()
 
     await page.getByRole('button', { name: 'Customer chat' }).click()
     await expect(page.getByRole('heading', { name: 'Customer chat' })).toBeVisible()

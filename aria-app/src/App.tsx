@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, ConversationQueueCounts, AnalyticsSummary, ChatMessage, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, ConversationQueueCounts, AnalyticsSummary, ChatMessage, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
@@ -22,6 +22,7 @@ export default function App() {
   const [conversationLoading, setConversationLoading] = useState(false)
   const [queueCounts, setQueueCounts] = useState<ConversationQueueCounts>({ mine: 0, unassigned: 0, attention: 0 })
   const [supportAgents, setSupportAgents] = useState<AuthUser[]>([])
+  const [customerContext, setCustomerContext] = useState<CustomerContext>()
   const [suggestions, setSuggestions] = useState<Record<number, string>>(assistantSuggestions)
   const [suggestionStatus, setSuggestionStatus] = useState('Ready for review')
   const [agentThreads, setAgentThreads] = useState<Record<number, AgentThreadMessage[]>>(conversationThreads)
@@ -153,6 +154,11 @@ export default function App() {
       .catch(() => {
         // Seeded thread data remains available if the API is temporarily unavailable.
       })
+  }, [authLoading, authRequired, authUser, selectedConversation.id])
+
+  useEffect(() => {
+    if (authLoading || (authRequired && !authUser)) return
+    void api.getCustomerContext(selectedConversation.id).then(setCustomerContext).catch(() => setCustomerContext(undefined))
   }, [authLoading, authRequired, authUser, selectedConversation.id])
 
   async function refreshGraph() {
@@ -508,6 +514,7 @@ export default function App() {
               conversationLoading={conversationLoading}
               queueCounts={queueCounts}
               supportAgents={supportAgents}
+              customerContext={customerContext}
             />
           )}
           {view === 'customer' && (

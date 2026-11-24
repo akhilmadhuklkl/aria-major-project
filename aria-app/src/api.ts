@@ -1,4 +1,4 @@
-import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, ConversationQueueCounts, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, ConversationQueueCounts, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookSubscription } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 const AUTH_TOKEN_KEY = 'aria.auth.token'
@@ -147,6 +147,10 @@ export const api = {
 
   getSupportAgents() {
     return request<AuthUser[]>('/support-agents')
+  },
+
+  getCustomerContext(id: number) {
+    return request<CustomerContext>(`/conversations/${id}/context`)
   },
 
   getUsers() {

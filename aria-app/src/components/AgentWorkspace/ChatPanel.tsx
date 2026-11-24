@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Clock3, Download, Edit3, MoreHorizontal, Send } from 'lucide-react'
-import type { AgentThreadMessage, AuthUser, Conversation } from '../../types'
+import type { AgentThreadMessage, AuthUser, Conversation, CustomerContext } from '../../types'
 import { Message } from '../Common/Message'
 
 export interface ChatPanelProps {
@@ -10,9 +10,10 @@ export interface ChatPanelProps {
   onUpdateConversation: (id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) => Promise<void>
   onExport: () => Promise<void>
   supportAgents: AuthUser[]
+  customerContext?: CustomerContext
 }
 
-export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation, onExport, supportAgents }: ChatPanelProps) {
+export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversation, onExport, supportAgents, customerContext }: ChatPanelProps) {
   const [status, setStatus] = useState<'Open' | 'Pending' | 'Resolved'>(selected.status ?? 'Open')
   const [showOptions, setShowOptions] = useState(false)
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
@@ -80,6 +81,11 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
           )}
         </div>
       </div>
+      {customerContext && <div className="customer-context" aria-label="Customer context">
+        <div className="customer-context-heading"><strong>Customer context</strong><span>{customerContext.totalConversations} conversations · {customerContext.openConversations} open</span></div>
+        <div className="customer-context-topics">{customerContext.topics.map((item) => <span key={item.topic}>{item.topic} · {item.count}</span>)}</div>
+        {customerContext.history.length > 0 && <div className="customer-context-history"><small>Previous conversations</small>{customerContext.history.map((item) => <div key={item.id}><span>{item.subject}</span><em>{item.status} · {item.topic}</em></div>)}</div>}
+      </div>}
       <div className="chat-history" ref={historyRef}>
         <div className="date-divider"><span>Today</span></div>
         {messages.map((message, index) => (

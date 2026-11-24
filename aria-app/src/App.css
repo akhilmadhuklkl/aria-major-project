@@ -123,6 +123,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .password-management-section { margin-top: 14px; border-top: 1px solid #e3eae8; padding-top: 12px; }
 .password-management-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; margin-top: 9px; }
 .password-management-form input { min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: white; font-size: 9px; }
+.customer-context { margin: 0 18px; padding: 9px 11px; border: 1px solid #dfe9e5; border-radius: 6px; background: #fbfdfc; }
+.customer-context-heading { display: flex; justify-content: space-between; gap: 8px; color: var(--ink); font-size: 9px; }
+.customer-context-heading span { color: var(--muted); font-size: 8px; }
+.customer-context-topics { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.customer-context-topics span { padding: 3px 6px; border-radius: 4px; background: var(--teal-soft); color: var(--teal-dark); font-size: 8px; }
+.customer-context-history { margin-top: 7px; border-top: 1px solid #edf1f0; padding-top: 6px; }
+.customer-context-history small { color: var(--muted); font-size: 8px; }
+.customer-context-history div { display: flex; justify-content: space-between; gap: 8px; padding-top: 4px; color: var(--ink); font-size: 8px; }
+.customer-context-history em { color: var(--muted); font-style: normal; }
 .app-body { min-width: 0; height: 100vh; flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .topbar { height: 70px; flex: 0 0 70px; padding: 0 22px; background: var(--surface); border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
 .topbar h1 { margin: 0; font-size: 17px; line-height: 1.3; font-weight: 750; }
