@@ -161,6 +161,26 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('button', { name: 'Create user' })).toBeVisible()
   })
 
+  test('creates and deletes a webhook integration from Settings', async ({ page }) => {
+    const name = `Browser Smoke Webhook ${Date.now()}`
+    const url = `https://example.com/aria-smoke-${Date.now()}`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Settings' }).click()
+
+    await page.getByRole('textbox', { name: 'Webhook integration name' }).fill(name)
+    await page.getByRole('textbox', { name: 'Webhook HTTPS URL' }).fill(url)
+    await page.getByRole('combobox', { name: 'Webhook event' }).selectOption('feedback.low_rating')
+    await page.getByRole('button', { name: 'Add webhook' }).click()
+
+    const row = page.locator('.webhook-row').filter({ hasText: name })
+    await expect(row).toBeVisible()
+    await expect(row).toContainText('feedback.low_rating')
+
+    page.once('dialog', (dialog) => void dialog.accept())
+    await row.getByRole('button', { name: `Delete ${name}` }).click()
+    await expect(row).toHaveCount(0)
+  })
+
   test('opens the notification center and supports read-all state', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Notifications' }).click()
