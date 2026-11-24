@@ -7,6 +7,16 @@
 3. Verify liveness at `http://localhost:8787/api/health` and readiness at `http://localhost:8787/api/ready`.
 4. Run the non-mutating API smoke check with `npm run check:api`.
 
+## SQLite backup
+
+Create a consistent, integrity-checked backup of the local SQLite database before upgrades or migration work:
+
+```bash
+npm run backup:sqlite
+```
+
+Backups are written to the ignored `backups/` directory. To choose a specific output path, set `SQLITE_BACKUP_PATH`; to choose a directory while retaining timestamped filenames, set `SQLITE_BACKUP_DIR`. The command refuses to overwrite an existing backup and runs SQLite integrity verification before reporting success.
+
 The default container uses SQLite with the `/app/data` volume. Do not commit `.env` or provider keys.
 
 ## PostgreSQL migration preparation
