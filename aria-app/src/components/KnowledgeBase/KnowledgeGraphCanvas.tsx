@@ -36,6 +36,7 @@ export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDel
   const [editedLabel, setEditedLabel] = useState('')
   const [editedRelationshipType, setEditedRelationshipType] = useState('')
   const [paths, setPaths] = useState<Array<{ nodes: string[]; relationships: string[] }>>([])
+  const [query, setQuery] = useState('')
   const selectNode = (node: GraphNode) => {
     setSelectedId(node.id)
     setEditedLabel(labelFor(node))
@@ -64,6 +65,7 @@ export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDel
   }, [nodes])
 
   const selected = nodes.find((node) => node.id === selectedId)
+  const matchingIds = new Set(nodes.filter((node) => `${labelFor(node)} ${node.type} ${node.id}`.toLowerCase().includes(query.trim().toLowerCase())).map((node) => node.id))
   const connectedIds = new Set(
     relationships.flatMap((relationship) => relationship.sourceId === selectedId || relationship.targetId === selectedId
       ? [relationship.sourceId, relationship.targetId]
@@ -100,8 +102,9 @@ export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDel
             if (!position) return null
             const colors = typeColors[node.type] ?? { fill: '#f3f6f5', stroke: '#71817d' }
             const active = !selectedId || selectedId === node.id || connectedIds.has(node.id)
+            const searchActive = !query.trim() || matchingIds.has(node.id)
             return (
-              <g key={node.id} className={`graph-node ${active ? 'active' : 'muted'}`} transform={`translate(${position.x - 78} ${position.y - 38})`} onClick={() => selectNode(node)} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') selectNode(node) }}>
+              <g key={node.id} className={`graph-node ${active && searchActive ? 'active' : 'muted'}`} transform={`translate(${position.x - 78} ${position.y - 38})`} onClick={() => selectNode(node)} role="button" aria-label={`Graph node ${labelFor(node)}`} tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') selectNode(node) }}>
                 <rect width="156" height="76" rx="10" fill={colors.fill} stroke={selectedId === node.id ? '#0d8176' : colors.stroke} strokeWidth={selectedId === node.id ? 3 : 1.5} />
                 <text className="graph-node-type" x="12" y="19">{node.type}</text>
                 <text className="graph-node-label" x="12" y="42">{shortLabel(labelFor(node))}</text>
@@ -113,6 +116,8 @@ export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDel
         <p className="graph-canvas-hint">Click a node to highlight its connected evidence path.</p>
       </div>
       <aside className="graph-node-detail">
+        <label className="graph-search"><span>Find ontology node</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, type, or id" aria-label="Search graph nodes" /></label>
+        {query.trim() && <small className="graph-match-count">{matchingIds.size} matching node{matchingIds.size === 1 ? '' : 's'}</small>}
         {selected ? (
           <>
             <span className="graph-detail-kicker">Selected node</span>

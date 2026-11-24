@@ -17,6 +17,8 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('heading', { name: 'Business knowledge' })).toBeVisible()
     await page.getByRole('tab', { name: 'Graph Explorer' }).click()
     await expect(page.getByText('Knowledge Graph', { exact: true })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Search graph nodes' }).fill('refund')
+    await expect(page.getByText(/matching node/)).toBeVisible()
     await page.locator('.graph-node').first().click()
     await expect(page.getByText('Reasoning paths', { exact: true })).toBeVisible()
 
