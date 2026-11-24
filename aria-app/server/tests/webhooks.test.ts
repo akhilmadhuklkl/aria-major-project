@@ -3,6 +3,12 @@ import { createServer } from 'node:http'
 import test from 'node:test'
 import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, signWebhookPayload, testWebhookSubscription, updateWebhookSubscription } from '../webhooks.js'
 
+function cleanupFilteredFixtures() {
+  for (const subscription of listWebhookSubscriptions()) {
+    if (subscription.name.startsWith('Filtered ')) deleteWebhookSubscription(subscription.id)
+  }
+}
+
 test('webhook signatures are deterministic HMAC SHA-256 values', () => {
   assert.equal(signWebhookPayload('secret', '{"ok":true}'), 'f6b4a2841c93f8bf2fb8f2c13d8fb0b6c8e8019f09ee405d248daa8385fad638')
 })
@@ -127,6 +133,7 @@ test('retries failed webhook delivery three times and records the failure', asyn
 })
 
 test('delivers only subscribed events and supports wildcard subscriptions', async () => {
+  cleanupFilteredFixtures()
   const receivedEvents: string[] = []
   const server = createServer((request, response) => {
     if (new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.has('hook')) {
@@ -156,6 +163,7 @@ test('delivers only subscribed events and supports wildcard subscriptions', asyn
     deleteWebhookSubscription(matching.id)
     deleteWebhookSubscription(unrelated.id)
     deleteWebhookSubscription(wildcard.id)
+    cleanupFilteredFixtures()
     server.closeAllConnections()
     await new Promise<void>((resolve) => server.close(() => resolve()))
   }
