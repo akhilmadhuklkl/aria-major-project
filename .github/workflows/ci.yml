@@ -24,6 +24,8 @@ jobs:
           cache-dependency-path: aria-app/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Audit production dependencies
+        run: npm run audit:production
       - name: Run lint
         run: npm run lint
       - name: Run unit tests

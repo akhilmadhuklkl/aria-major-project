@@ -10,6 +10,7 @@
     "test:e2e": "playwright test",
     "start:server": "node --disable-warning=ExperimentalWarning --import tsx server/index.ts",
     "check:api": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/check-api.ts",
+    "audit:production": "npm audit --omit=dev --audit-level=critical",
     "backup:sqlite": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/backup-sqlite.ts",
     "index:knowledge": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/index-knowledge.ts",
     "evaluate:retrieval": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/evaluate-retrieval.ts",
