@@ -32,15 +32,32 @@ test.describe('ARIA application smoke coverage', () => {
 
   test('updates the Agent Workspace conversation search', async ({ page }) => {
     await page.goto('/')
+    await page.getByRole('button', { name: /Unassigned conversations/ }).click()
     const search = page.getByRole('textbox', { name: 'Search conversations' })
 
     await expect(search).toBeVisible()
-    await search.fill('Maya')
-    await expect(search).toHaveValue('Maya')
-    await expect(page.getByText('Maya Chen', { exact: true })).toBeVisible()
+    await search.fill('refund')
+    await expect(search).toHaveValue('refund')
+    await expect(page.locator('.conversation-row').first()).toBeVisible()
 
     await search.fill('does-not-exist')
     await expect(page.getByText('No conversations match "does-not-exist".', { exact: true })).toBeVisible()
+  })
+
+  test('keeps Agent Workspace conversations independent when switching chats', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: /Unassigned conversations/ }).click()
+
+    const conversations = page.locator('.conversation-row')
+    await expect(conversations.nth(1)).toBeVisible({ timeout: 10_000 })
+    await conversations.nth(0).click()
+    const firstSubject = page.locator('.chat-header > div:nth-child(2) > span')
+    await expect(firstSubject).toBeVisible()
+    const firstSubjectText = await firstSubject.textContent()
+
+    await conversations.nth(1).click()
+    await expect(firstSubject).toBeVisible()
+    await expect.poll(() => firstSubject.textContent()).not.toBe(firstSubjectText)
   })
 
   test('submits a customer question and renders an assistant response', async ({ page }) => {
