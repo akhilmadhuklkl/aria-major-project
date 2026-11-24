@@ -128,6 +128,30 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByText(/^\d+ selected$/)).toHaveCount(0)
   })
 
+  test('filters Knowledge Base records by search, category, and status', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+
+    const rows = page.locator('tbody tr')
+    await page.getByRole('combobox', { name: 'Filter by category' }).selectOption('Policy')
+    await expect(rows.filter({ hasText: 'Refund and return policy' })).toBeVisible()
+    await expect(rows.filter({ hasText: 'Subscription terms' })).toBeVisible()
+    await expect(rows.filter({ hasText: 'Order delivery FAQ' })).toHaveCount(0)
+
+    await page.getByRole('combobox', { name: 'Filter by status' }).selectOption('Indexed')
+    await expect(rows.filter({ hasText: 'Subscription terms' })).toBeVisible()
+    await expect(rows.filter({ hasText: 'Refund and return policy' })).toBeVisible()
+
+    await page.getByRole('combobox', { name: 'Filter by status' }).selectOption('Review')
+    await expect(page.getByText('No knowledge records match the current search and filters.', { exact: true })).toBeVisible()
+
+    await page.getByRole('combobox', { name: 'Filter by category' }).selectOption('all')
+    await page.getByRole('combobox', { name: 'Filter by status' }).selectOption('all')
+    await page.getByRole('textbox', { name: 'Search knowledge' }).fill('password')
+    await expect(rows.filter({ hasText: 'Password reset procedure' })).toBeVisible()
+    await expect(rows.filter({ hasText: 'Refund and return policy' })).toHaveCount(0)
+  })
+
   test('opens admin settings with user management controls', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Settings' }).click()
