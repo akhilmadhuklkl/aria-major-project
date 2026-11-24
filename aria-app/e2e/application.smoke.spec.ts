@@ -227,6 +227,56 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(graphNode).toHaveCount(0)
   })
 
+  test('creates, edits, and deletes a graph relationship', async ({ page }) => {
+    const suffix = Date.now()
+    const sourceId = `browser:relationship-source-${suffix}`
+    const targetId = `browser:relationship-target-${suffix}`
+    const sourceLabel = `Relationship Source ${suffix}`
+    const targetLabel = `Relationship Target ${suffix}`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('tab', { name: 'Graph Explorer' }).click()
+
+    for (const node of [
+      { id: sourceId, label: sourceLabel, type: 'Customer' },
+      { id: targetId, label: targetLabel, type: 'SupportProcedure' },
+    ]) {
+      await page.getByRole('textbox', { name: 'Ontology node id' }).fill(node.id)
+      await page.getByRole('combobox', { name: 'Ontology node type' }).selectOption(node.type)
+      await page.getByRole('textbox', { name: 'Ontology node label' }).fill(node.label)
+      await page.getByRole('button', { name: 'Save node' }).click()
+      await expect(page.getByRole('button', { name: `Graph node ${node.label}` })).toBeVisible()
+    }
+
+    await page.getByRole('combobox', { name: 'Relationship source' }).selectOption(sourceId)
+    await page.getByPlaceholder('Relationship, e.g. REPORTS').fill('supports')
+    await page.getByRole('combobox', { name: 'Relationship target' }).selectOption(targetId)
+    await page.getByRole('button', { name: 'Save link' }).click()
+    await expect(page.locator('g.graph-edge').filter({ hasText: 'SUPPORTS' })).toBeVisible()
+
+    const relationshipEdge = page.locator('g.graph-edge').filter({ hasText: 'SUPPORTS' })
+    await relationshipEdge.locator('path').dispatchEvent('click')
+    await expect(page.getByText('Selected relationship', { exact: true })).toBeVisible()
+    await page.locator('.graph-selected-link input').fill('informs')
+    await page.getByRole('button', { name: 'Save link changes' }).click()
+    await expect(page.locator('g.graph-edge').filter({ hasText: 'INFORMS' })).toBeVisible()
+
+    const updatedEdge = page.locator('g.graph-edge').filter({ hasText: 'INFORMS' })
+    await updatedEdge.locator('path').dispatchEvent('click')
+    page.once('dialog', (dialog) => void dialog.accept())
+    await page.getByRole('button', { name: 'Delete link' }).click()
+    await expect(page.locator('g.graph-edge').filter({ hasText: 'INFORMS' })).toHaveCount(0)
+
+    for (const label of [sourceLabel, targetLabel]) {
+      const graphNode = page.getByRole('button', { name: `Graph node ${label}` })
+      await graphNode.focus()
+      await graphNode.press('Enter')
+      page.once('dialog', (dialog) => void dialog.accept())
+      await page.getByRole('button', { name: 'Delete node' }).click()
+      await expect(graphNode).toHaveCount(0)
+    }
+  })
+
   test('uploads and deletes a knowledge document', async ({ page }) => {
     const title = `Browser Smoke Upload ${Date.now()}`
     await page.goto('/')
