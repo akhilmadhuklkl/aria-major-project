@@ -96,4 +96,20 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('button', { name: 'Create user' })).toBeVisible()
   })
 
+  test('opens the notification center and supports read-all state', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Notifications' }).click()
+
+    const popover = page.locator('.notifications-popover')
+    await expect(popover).toBeVisible()
+    await expect(popover.getByText('Notifications', { exact: false })).toBeVisible()
+
+    const markAllRead = popover.getByRole('button', { name: 'Mark all read' })
+    await expect(markAllRead).toBeVisible()
+    if (await markAllRead.isEnabled()) {
+      await markAllRead.click()
+      await expect(markAllRead).toBeDisabled()
+    }
+  })
+
 })
