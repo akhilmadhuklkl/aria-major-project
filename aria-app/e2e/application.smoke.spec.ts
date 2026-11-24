@@ -146,6 +146,21 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('button', { name: 'Refresh analytics data' })).toBeEnabled()
   })
 
+  test('refreshes service status and shows system health in Settings', async ({ page }) => {
+    await page.goto('/')
+    const refreshStatus = page.getByRole('button', { name: 'Refresh service status' })
+    await refreshStatus.click()
+    await expect(refreshStatus).toBeEnabled()
+    await expect(page.getByText(/AI services (operational|degraded|checking)/i)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
+    await expect(page.getByText('Backend API', { exact: true })).toBeVisible()
+    await expect(page.getByText('Database', { exact: true })).toBeVisible()
+    await expect(page.getByText('Graph store', { exact: true })).toBeVisible()
+    await expect(page.getByText('Retrieval', { exact: true })).toBeVisible()
+  })
+
   test('updates the Agent Workspace conversation search', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /Unassigned conversations/ }).click()
