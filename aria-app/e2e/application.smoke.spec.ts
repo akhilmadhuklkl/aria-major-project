@@ -161,6 +161,20 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByText('Retrieval', { exact: true })).toBeVisible()
   })
 
+  test('shows connected reasoning paths when an ontology node is selected', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('tab', { name: 'Graph Explorer' }).click()
+
+    const customerNode = page.getByRole('button', { name: 'Graph node Demo customer' })
+    await customerNode.click()
+    await expect(page.getByText('Selected node', { exact: true })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Demo customer' })).toBeVisible()
+    await expect(page.getByText('Reasoning paths', { exact: true })).toBeVisible()
+    await expect(page.locator('.graph-path').first()).toContainText('Demo customer')
+    await expect(page.locator('.graph-path').first()).toContainText('order-20491')
+  })
+
   test('updates the Agent Workspace conversation search', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /Unassigned conversations/ }).click()
