@@ -197,6 +197,21 @@ test.describe('ARIA application smoke coverage', () => {
     }
   })
 
+  test('marks an individual notification as read', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Reject' }).click()
+    await expect(page.locator('.action-status')).toHaveText('Rejected - negative feedback recorded')
+    await page.reload()
+    await page.getByRole('button', { name: 'Notifications' }).click()
+
+    const notification = page.getByRole('button', { name: /AI response rejected/ }).first()
+    await expect(notification).toBeVisible()
+    await expect(notification).toHaveClass(/notification-item/)
+    await notification.click()
+    await expect(notification).toHaveClass(/read/)
+    await expect(notification).not.toContainText('Unread')
+  })
+
   test('records an ARIA assistant rejection as a learning action', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByText('Action meaning', { exact: true })).toBeVisible()
