@@ -58,6 +58,33 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
   })
 
+  test('changes the authenticated user password and ends the session', async ({ page }) => {
+    const user = { id: 4, email: 'password@example.com', displayName: 'Password Admin', role: 'admin' }
+    await page.route('**/api/health', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ authRequired: true, authSetupAvailable: false }) })
+    })
+    await page.route('**/api/auth/login', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user, token: 'browser-password-token', expiresAt: new Date(Date.now() + 60_000).toISOString() }) })
+    })
+    await page.route('**/api/auth/password', async (route) => {
+      await route.fulfill({ status: 204 })
+    })
+    await page.route('**/api/auth/logout', async (route) => {
+      await route.fulfill({ status: 204 })
+    })
+    await page.goto('/')
+    await page.getByRole('textbox', { name: 'Email address' }).fill('password@example.com')
+    await page.getByLabel('Password').fill('browser-password-123')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByRole('button', { name: 'Agent workspace' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('textbox', { name: 'Current password' }).fill('browser-password-123')
+    await page.getByRole('textbox', { name: 'New password' }).fill('browser-new-password-456')
+    await page.getByRole('button', { name: 'Update password' }).click()
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+  })
+
   test('navigates through the core modules and renders graph and analytics views', async ({ page }) => {
     await page.goto('/')
 
