@@ -554,6 +554,7 @@ export default function App() {
               archivedItems={archivedKnowledge}
               onRestore={restoreKnowledge}
               onRefreshGraph={refreshGraph}
+              onGetGraphPaths={api.getGraphPaths}
               graphNodes={graphNodes}
               graphRelationships={graphRelationships}
             />

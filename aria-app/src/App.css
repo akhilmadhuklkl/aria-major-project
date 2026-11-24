@@ -142,6 +142,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .quality-report-grid small { color: var(--muted); font-size: 8px; }
 .quality-report-grid strong { margin-top: 3px; color: var(--ink); font-size: 15px; }
 .quality-report-grid p { margin: 4px 0 0; color: var(--muted); font-size: 8px; line-height: 1.35; }
+.graph-paths { margin-top: 12px; border-top: 1px solid #edf1f0; padding-top: 10px; }
+.graph-paths > p { margin: 6px 0 0; color: var(--muted); font-size: 8px; }
+.graph-path { margin-top: 6px; padding: 6px; border: 1px solid #e3eae8; border-radius: 5px; background: #fbfcfc; color: var(--teal-dark); font-size: 8px; line-height: 1.5; overflow-wrap: anywhere; }
 .customer-context { margin: 0 18px; padding: 9px 11px; border: 1px solid #dfe9e5; border-radius: 6px; background: #fbfdfc; }
 .customer-context-heading { display: flex; justify-content: space-between; gap: 8px; color: var(--ink); font-size: 9px; }
 .customer-context-heading span { color: var(--muted); font-size: 8px; }

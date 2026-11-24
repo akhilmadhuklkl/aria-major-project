@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { GraphNode, GraphRelationship } from '../../types'
 
 interface KnowledgeGraphCanvasProps {
@@ -8,6 +8,7 @@ interface KnowledgeGraphCanvasProps {
   onDeleteRelationship: (relationship: GraphRelationship) => Promise<void>
   onUpdateNode: (node: GraphNode, label: string) => Promise<void>
   onUpdateRelationship: (relationship: GraphRelationship, type: string) => Promise<void>
+  onGetGraphPaths: (id: string) => Promise<{ node: GraphNode; paths: Array<{ nodes: string[]; relationships: string[] }> }>
 }
 
 const typeColors: Record<string, { fill: string; stroke: string }> = {
@@ -29,15 +30,25 @@ function shortLabel(value: string, max = 23) {
   return value.length > max ? `${value.slice(0, max - 1)}...` : value
 }
 
-export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDeleteRelationship, onUpdateNode, onUpdateRelationship }: KnowledgeGraphCanvasProps) {
+export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDeleteRelationship, onUpdateNode, onUpdateRelationship, onGetGraphPaths }: KnowledgeGraphCanvasProps) {
   const [selectedId, setSelectedId] = useState<string>()
   const [selectedRelationship, setSelectedRelationship] = useState<GraphRelationship>()
   const [editedLabel, setEditedLabel] = useState('')
   const [editedRelationshipType, setEditedRelationshipType] = useState('')
+  const [paths, setPaths] = useState<Array<{ nodes: string[]; relationships: string[] }>>([])
   const selectNode = (node: GraphNode) => {
     setSelectedId(node.id)
     setEditedLabel(labelFor(node))
+    setPaths([])
   }
+  useEffect(() => {
+    if (!selectedId) return
+    let active = true
+    void onGetGraphPaths(selectedId).then((result) => { if (active) setPaths(result.paths) }).catch(() => { if (active) setPaths([]) })
+    return () => { active = false }
+  }, [onGetGraphPaths, selectedId])
+
+  const labelById = new Map(nodes.map((node) => [node.id, labelFor(node)]))
   const positions = useMemo(() => {
     const byId = new Map<string, { x: number; y: number }>()
     const preferred: Record<string, { x: number; y: number }> = {
@@ -111,6 +122,7 @@ export function KnowledgeGraphCanvas({ nodes, relationships, onDeleteNode, onDel
             <dl>{Object.entries(selected.properties).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{String(value)}</dd></div>)}</dl>
             <button className="secondary-button graph-save-button" disabled={!editedLabel.trim()} onClick={() => void onUpdateNode(selected, editedLabel.trim())}>Save changes</button>
             <button className="danger-button graph-delete-button" onClick={() => { if (window.confirm(`Delete ${labelFor(selected)} and its connected relationships?`)) void onDeleteNode(selected).then(() => setSelectedId(undefined)) }}>Delete node</button>
+            <div className="graph-paths"><span className="graph-detail-kicker">Reasoning paths</span>{paths.length ? paths.slice(0, 6).map((path, index) => <div className="graph-path" key={`${path.nodes.join('-')}-${index}`}>{path.nodes.map((nodeId, nodeIndex) => <span key={nodeId}>{labelById.get(nodeId) ?? nodeId}{nodeIndex < path.relationships.length ? ` --${path.relationships[nodeIndex]}--> ` : ''}</span>)}</div>) : <p>No connected reasoning paths found.</p>}</div>
           </>
         ) : (
           <><span className="graph-detail-kicker">Ontology view</span><h3>Connected evidence</h3><p>Select any node to inspect its relationships and source metadata.</p></>

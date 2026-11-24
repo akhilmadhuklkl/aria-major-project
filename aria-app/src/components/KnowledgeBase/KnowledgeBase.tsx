@@ -23,11 +23,12 @@ export interface KnowledgeBaseProps {
   archivedItems: KnowledgeItem[]
   onRestore: (ids: number[]) => Promise<void>
   onRefreshGraph: () => Promise<void>
+  onGetGraphPaths: (id: string) => Promise<{ node: GraphNode; paths: Array<{ nodes: string[]; relationships: string[] }> }>
   graphNodes: GraphNode[]
   graphRelationships: GraphRelationship[]
 }
 
-export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, archivedItems, onRestore, onRefreshGraph, graphNodes, graphRelationships }: KnowledgeBaseProps) {
+export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelete, onArchive, onUpdate, onGetVersions, archivedItems, onRestore, onRefreshGraph, onGetGraphPaths, graphNodes, graphRelationships }: KnowledgeBaseProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [form, setForm] = useState<NewKnowledgeItem>({
@@ -269,7 +270,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
               <button className="secondary-button" disabled={graphSaving}>Save link</button>
             </form>
           </div>
-          {graphNodes.length ? <KnowledgeGraphCanvas nodes={graphNodes} relationships={graphRelationships} onDeleteNode={deleteGraphNode} onDeleteRelationship={deleteGraphRelationship} onUpdateNode={updateGraphNode} onUpdateRelationship={updateGraphRelationship} /> : <p className="table-empty">No ontology nodes are available yet.</p>}
+          {graphNodes.length ? <KnowledgeGraphCanvas nodes={graphNodes} relationships={graphRelationships} onDeleteNode={deleteGraphNode} onDeleteRelationship={deleteGraphRelationship} onUpdateNode={updateGraphNode} onUpdateRelationship={updateGraphRelationship} onGetGraphPaths={onGetGraphPaths} /> : <p className="table-empty">No ontology nodes are available yet.</p>}
         </div>
       )}
       {activeSection === 'documents' && <>
