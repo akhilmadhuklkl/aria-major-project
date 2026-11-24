@@ -48,6 +48,7 @@ try {
     events: row.events ? JSON.parse(String(row.events)) : ['*'],
     active: Boolean(row.active),
   }))
+  await copyTable('webhook_delivery_logs', ['id', 'webhook_id', 'event', 'status', 'response_status', 'attempts', 'error', 'created_at'])
   await copyTable('graph_nodes', ['id', 'type', 'properties', 'created_at', 'updated_at'], (row) => ({
     ...row,
     properties: row.properties ? JSON.parse(String(row.properties)) : {},
@@ -61,7 +62,7 @@ try {
     metadata: row.metadata ? JSON.parse(String(row.metadata)) : {},
   }))
 
-  for (const table of ['users', 'conversations', 'knowledge_documents', 'sessions', 'knowledge_document_versions', 'notifications', 'webhook_subscriptions', 'graph_relationships', 'audit_logs']) {
+  for (const table of ['users', 'conversations', 'knowledge_documents', 'sessions', 'knowledge_document_versions', 'notifications', 'webhook_subscriptions', 'webhook_delivery_logs', 'graph_relationships', 'audit_logs']) {
     await client.query(`SELECT setval(pg_get_serial_sequence($1, 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1), true)`, [table])
   }
   await client.query(`

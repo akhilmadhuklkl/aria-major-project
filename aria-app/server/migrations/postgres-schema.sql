@@ -117,6 +117,17 @@ CREATE TABLE IF NOT EXISTS webhook_subscriptions (
   updated_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS webhook_delivery_logs (
+  id BIGSERIAL PRIMARY KEY,
+  webhook_id BIGINT NOT NULL REFERENCES webhook_subscriptions(id) ON DELETE CASCADE,
+  event TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('delivered', 'failed')),
+  response_status INTEGER,
+  attempts INTEGER NOT NULL,
+  error TEXT,
+  created_at TIMESTAMPTZ NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS graph_nodes (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL,
@@ -156,6 +167,7 @@ CREATE INDEX IF NOT EXISTS idx_pg_conversations_assigned_status ON conversations
 CREATE INDEX IF NOT EXISTS idx_pg_knowledge_versions_document ON knowledge_document_versions(knowledge_document_id, version DESC);
 CREATE INDEX IF NOT EXISTS idx_pg_notifications_read_created ON notifications(read_at, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pg_webhook_subscriptions_active ON webhook_subscriptions(active);
+CREATE INDEX IF NOT EXISTS idx_pg_webhook_delivery_logs_webhook_created ON webhook_delivery_logs(webhook_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_relationships_source ON graph_relationships(source_id, type);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_relationships_target ON graph_relationships(target_id, type);
 CREATE INDEX IF NOT EXISTS idx_pg_audit_logs_created ON audit_logs(created_at DESC);
