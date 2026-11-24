@@ -257,6 +257,7 @@ export default function App() {
 
   function startNewCustomerConversation() {
     setCustomerMessages([{ from: 'bot', text: 'Hello! I am ARIA. How can I help with your order today?' }])
+    setCustomerInput('')
     setCustomerConversationId(undefined)
     setLastAssistantMessageId(undefined)
     setRating(0)

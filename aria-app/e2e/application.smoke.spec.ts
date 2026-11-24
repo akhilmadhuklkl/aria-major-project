@@ -306,4 +306,19 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByText('Thanks. Your feedback helps ARIA improve.', { exact: true })).toBeVisible()
   })
 
+  test('starts a fresh Customer Chat and downloads its transcript', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Customer chat' }).click()
+    const question = page.getByRole('textbox', { name: 'Customer support question' })
+    await question.fill('A question that should be cleared.')
+    await page.getByRole('button', { name: 'Start new conversation' }).click()
+    await expect(question).toHaveValue('')
+    await expect(page.getByText('Hello! I am ARIA. How can I help with your order today?', { exact: true })).toBeVisible()
+
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download conversation' }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toBe('aria-customer-conversation.txt')
+  })
+
 })
