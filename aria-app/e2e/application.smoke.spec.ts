@@ -272,6 +272,45 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.locator('tr').filter({ hasText: title })).toHaveCount(0)
   })
 
+  test('bulk archives and restores knowledge records', async ({ page }) => {
+    const firstTitle = `Browser bulk archive A ${Date.now()}`
+    const secondTitle = `${firstTitle} B`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+
+    for (const title of [firstTitle, secondTitle]) {
+      await page.getByRole('button', { name: 'Add knowledge' }).click()
+      await page.getByRole('textbox', { name: 'Knowledge title' }).fill(title)
+      await page.getByRole('textbox', { name: 'Knowledge answering note' }).fill('Temporary bulk archive browser smoke record.')
+      await page.getByRole('button', { name: 'Save knowledge' }).click()
+      await expect(page.locator('tr').filter({ hasText: title })).toBeVisible()
+    }
+
+    await page.getByRole('checkbox', { name: `Select ${firstTitle}`, exact: true }).check()
+    await page.getByRole('checkbox', { name: `Select ${secondTitle}`, exact: true }).check()
+    await page.getByRole('button', { name: 'Archive selected' }).click()
+    await expect(page.locator('tr').filter({ hasText: firstTitle })).toHaveCount(0)
+    await expect(page.locator('tr').filter({ hasText: secondTitle })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Archived documents' }).click()
+    await expect(page.locator('tr').filter({ has: page.getByRole('checkbox', { name: `Select ${firstTitle}`, exact: true }) })).toBeVisible()
+    await expect(page.locator('tr').filter({ has: page.getByRole('checkbox', { name: `Select ${secondTitle}`, exact: true }) })).toBeVisible()
+    await page.getByRole('checkbox', { name: `Select ${firstTitle}`, exact: true }).check()
+    await page.getByRole('checkbox', { name: `Select ${secondTitle}`, exact: true }).check()
+    await page.getByRole('button', { name: 'Restore selected' }).click()
+    await expect(page.locator('tr').filter({ hasText: firstTitle })).toHaveCount(0)
+    await expect(page.locator('tr').filter({ hasText: secondTitle })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Active documents' }).click()
+    await expect(page.locator('tr').filter({ has: page.getByRole('checkbox', { name: `Select ${firstTitle}`, exact: true }) })).toBeVisible()
+    await expect(page.locator('tr').filter({ has: page.getByRole('checkbox', { name: `Select ${secondTitle}`, exact: true }) })).toBeVisible()
+    await page.getByRole('checkbox', { name: `Select ${firstTitle}`, exact: true }).check()
+    await page.getByRole('checkbox', { name: `Select ${secondTitle}`, exact: true }).check()
+    await page.getByRole('button', { name: 'Delete selected' }).click()
+    await expect(page.locator('tr').filter({ hasText: firstTitle })).toHaveCount(0)
+    await expect(page.locator('tr').filter({ hasText: secondTitle })).toHaveCount(0)
+  })
+
   test('edits a knowledge record and shows version history', async ({ page }) => {
     const title = `Browser Smoke Version ${Date.now()}`
     const updatedTitle = `${title} Updated`
