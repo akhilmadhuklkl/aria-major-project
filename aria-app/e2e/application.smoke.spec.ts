@@ -336,6 +336,40 @@ test.describe('ARIA application smoke coverage', () => {
     expect(download.suggestedFilename()).toBe('aria-customer-conversation.txt')
   })
 
+  test('copies and retries the latest Customer Chat response', async ({ page }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: 'http://localhost:5173' })
+    await page.route('**/api/chat/stream', async (route) => {
+      const response = {
+        id: `browser-smoke-message-${Date.now()}`,
+        conversationId: 1,
+        answer: 'A browser-smoke response for retry testing.',
+        confidence: 0.9,
+        sources: ['Refund and return policy'],
+        sourceScores: [{ title: 'Refund and return policy', score: 0.9 }],
+        retrievalMethod: 'keyword',
+        generationProvider: 'local-knowledge',
+        latencyMs: 10,
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: `data: ${JSON.stringify({ type: 'chunk', text: response.answer })}\n\ndata: ${JSON.stringify({ type: 'complete', response })}\n\n`,
+      })
+    })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Customer chat' }).click()
+    await page.getByRole('textbox', { name: 'Customer support question' }).fill('How long does a refund take after approval?')
+    await page.getByRole('button', { name: 'Send message' }).click()
+    await expect(page.locator('.customer-bubble.bot')).toHaveCount(2, { timeout: 30_000 })
+
+    await page.getByRole('button', { name: 'Copy' }).click()
+    await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible()
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('A browser-smoke response for retry testing.')
+
+    await page.getByRole('button', { name: 'Retry' }).click()
+    await expect(page.locator('.customer-bubble.bot')).toHaveCount(3, { timeout: 30_000 })
+  })
+
   test('switches the interface language for navigation and Customer Chat', async ({ page }) => {
     await page.goto('/')
     const language = page.getByRole('combobox', { name: 'Language' })
