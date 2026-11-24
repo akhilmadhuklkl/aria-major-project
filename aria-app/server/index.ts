@@ -63,7 +63,7 @@ import {
   embeddingModel,
   LocalEmbeddingService,
 } from './embedding-service.js'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, testWebhookSubscription, updateWebhookSubscription } from './webhooks.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, normalizeWebhookEvents, testWebhookSubscription, updateWebhookSubscription, validateWebhookUrl, webhookEvents } from './webhooks.js'
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
@@ -357,8 +357,9 @@ app.get('/api/integrations/webhooks/deliveries', roleGuard('admin'), (request, r
 app.post('/api/integrations/webhooks', roleGuard('admin'), (request, response) => {
   const name = String(request.body?.name ?? '').trim()
   const url = String(request.body?.url ?? '').trim()
-  const events = Array.isArray(request.body?.events) ? request.body.events.map((event: unknown) => String(event)) : ['*']
-  if (!name || !/^https:\/\//i.test(url)) {
+  const requestedEvents = Array.isArray(request.body?.events) ? request.body.events.map((event: unknown) => String(event)) : ['*']
+  const events = normalizeWebhookEvents(requestedEvents)
+  if (!name || name.length > 120 || url.length > 2048 || !validateWebhookUrl(url) || requestedEvents.some((event: string) => event !== '*' && !webhookEvents.some((allowedEvent) => allowedEvent === event))) {
     response.status(400).json({ error: 'name and an HTTPS webhook URL are required' })
     return
   }

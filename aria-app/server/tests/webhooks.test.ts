@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import test from 'node:test'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, signWebhookPayload, testWebhookSubscription, updateWebhookSubscription } from '../webhooks.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, normalizeWebhookEvents, signWebhookPayload, testWebhookSubscription, updateWebhookSubscription, validateWebhookUrl } from '../webhooks.js'
 
 function cleanupFilteredFixtures() {
   for (const subscription of listWebhookSubscriptions()) {
@@ -11,6 +11,14 @@ function cleanupFilteredFixtures() {
 
 test('webhook signatures are deterministic HMAC SHA-256 values', () => {
   assert.equal(signWebhookPayload('secret', '{"ok":true}'), 'f6b4a2841c93f8bf2fb8f2c13d8fb0b6c8e8019f09ee405d248daa8385fad638')
+})
+
+test('webhook registration validates secure URLs and event names', () => {
+  assert.equal(validateWebhookUrl('https://example.com/aria'), true)
+  assert.equal(validateWebhookUrl('http://example.com/aria'), false)
+  assert.equal(validateWebhookUrl('https://user:password@example.com/aria'), false)
+  assert.deepEqual(normalizeWebhookEvents(['knowledge.indexed', 'unsupported']), ['knowledge.indexed'])
+  assert.deepEqual(normalizeWebhookEvents([]), ['*'])
 })
 
 test('webhook listing never exposes delivery secrets', () => {

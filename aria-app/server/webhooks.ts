@@ -2,8 +2,24 @@ import { createHmac, randomBytes } from 'node:crypto'
 import { db } from './database.js'
 
 export type WebhookEvent = 'feedback.low_rating' | 'agent_action.corrected' | 'knowledge.indexed'
+export const webhookEvents: WebhookEvent[] = ['feedback.low_rating', 'agent_action.corrected', 'knowledge.indexed']
 type WebhookSubscription = { id: number; name: string; url: string; secret: string; events: string[]; active: boolean; createdAt: string; updatedAt: string }
 export type PublicWebhookSubscription = Omit<WebhookSubscription, 'secret'>
+
+export function validateWebhookUrl(value: string) {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && !url.username && !url.password && Boolean(url.hostname)
+  } catch {
+    return false
+  }
+}
+
+export function normalizeWebhookEvents(events: string[]) {
+  const allowed = new Set(webhookEvents)
+  const normalized = [...new Set(events)].filter((event) => event === '*' || allowed.has(event as WebhookEvent))
+  return normalized.length > 0 ? normalized : ['*']
+}
 
 export function createWebhookSubscription(input: { name: string; url: string; events?: string[] }) {
   const now = new Date().toISOString()
@@ -11,8 +27,8 @@ export function createWebhookSubscription(input: { name: string; url: string; ev
   const result = db.prepare(`
     INSERT INTO webhook_subscriptions (name, url, secret, events, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(input.name, input.url, secret, JSON.stringify(input.events?.length ? input.events : ['*']), now, now)
-  return { id: Number(result.lastInsertRowid), name: input.name, url: input.url, events: input.events?.length ? input.events : ['*'], active: true, secret, createdAt: now }
+  `).run(input.name, input.url, secret, JSON.stringify(normalizeWebhookEvents(input.events ?? [])), now, now)
+  return { id: Number(result.lastInsertRowid), name: input.name, url: input.url, events: normalizeWebhookEvents(input.events ?? []), active: true, secret, createdAt: now }
 }
 
 function listWebhookSubscriptionsWithSecrets(): WebhookSubscription[] {
