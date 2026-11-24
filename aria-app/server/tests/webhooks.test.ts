@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import test from 'node:test'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, signWebhookPayload } from '../webhooks.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, signWebhookPayload, updateWebhookSubscription } from '../webhooks.js'
 
 test('webhook signatures are deterministic HMAC SHA-256 values', () => {
   assert.equal(signWebhookPayload('secret', '{"ok":true}'), 'f6b4a2841c93f8bf2fb8f2c13d8fb0b6c8e8019f09ee405d248daa8385fad638')
@@ -29,6 +29,22 @@ test('webhook delivery history is safe to expose', () => {
   try {
     assert.equal(listWebhookDeliveries().some((item) => Number((item as { webhookId: number }).webhookId) === subscription.id), false)
     assert.equal('secret' in (listWebhookDeliveries()[0] ?? {}), false)
+  } finally {
+    deleteWebhookSubscription(subscription.id)
+  }
+})
+
+test('webhook activation can be paused without deleting configuration', () => {
+  const subscription = createWebhookSubscription({
+    name: 'Activation toggle test',
+    url: `https://example.com/aria-toggle-${Date.now()}`,
+    events: ['knowledge.indexed'],
+  })
+  try {
+    assert.equal(updateWebhookSubscription(subscription.id, false), true)
+    assert.equal(listWebhookSubscriptions().find((item) => item.id === subscription.id)?.active, false)
+    assert.equal(updateWebhookSubscription(subscription.id, true), true)
+    assert.equal(listWebhookSubscriptions().find((item) => item.id === subscription.id)?.active, true)
   } finally {
     deleteWebhookSubscription(subscription.id)
   }

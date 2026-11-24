@@ -63,7 +63,7 @@ import {
   embeddingModel,
   LocalEmbeddingService,
 } from './embedding-service.js'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions } from './webhooks.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, updateWebhookSubscription } from './webhooks.js'
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 
@@ -373,6 +373,15 @@ app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), (request, respo
     return
   }
   response.json({ deleted: true })
+})
+
+app.patch('/api/integrations/webhooks/:id', roleGuard('admin'), (request, response) => {
+  const id = Number(request.params.id)
+  if (!Number.isInteger(id) || id <= 0 || typeof request.body?.active !== 'boolean' || !updateWebhookSubscription(id, request.body.active)) {
+    response.status(400).json({ error: 'a valid webhook id and boolean active value are required' })
+    return
+  }
+  response.json({ updated: true, active: request.body.active })
 })
 
 app.post('/api/auth/bootstrap', (request, response) => {

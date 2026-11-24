@@ -45,6 +45,11 @@ export function deleteWebhookSubscription(id: number) {
   return db.prepare('DELETE FROM webhook_subscriptions WHERE id = ?').run(id).changes > 0
 }
 
+export function updateWebhookSubscription(id: number, active: boolean) {
+  return db.prepare('UPDATE webhook_subscriptions SET active = ?, updated_at = ? WHERE id = ?')
+    .run(active ? 1 : 0, new Date().toISOString(), id).changes > 0
+}
+
 export function listWebhookDeliveries(limit = 30) {
   return db.prepare(`
     SELECT webhook_delivery_logs.id, webhook_delivery_logs.webhook_id AS webhookId,

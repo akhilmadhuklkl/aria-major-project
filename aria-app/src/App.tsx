@@ -476,6 +476,11 @@ export default function App() {
     setWebhooks((current) => current.filter((webhook) => webhook.id !== id))
   }
 
+  async function updateWebhook(id: number, active: boolean) {
+    await api.updateWebhook(id, active)
+    setWebhooks((current) => current.map((webhook) => webhook.id === id ? { ...webhook, active } : webhook))
+  }
+
   async function createUser(input: { email: string; displayName: string; password: string; role: 'support_agent' | 'customer' }) {
     const created = await api.createUser(input)
     setUsers((current) => [...current, created].sort((first, second) => first.displayName.localeCompare(second.displayName)))
@@ -605,6 +610,7 @@ export default function App() {
           isAdmin={!authUser || authUser.role === 'admin'}
           onCreateWebhook={createWebhook}
           onDeleteWebhook={deleteWebhook}
+          onUpdateWebhook={updateWebhook}
           onCreateUser={createUser}
           onChangePassword={changePassword}
           onClose={() => setActiveModal(undefined)}

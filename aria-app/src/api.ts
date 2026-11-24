@@ -94,6 +94,10 @@ export const api = {
     return request<{ deleted: boolean }>(`/integrations/webhooks/${id}`, { method: 'DELETE' })
   },
 
+  updateWebhook(id: number, active: boolean) {
+    return request<{ updated: boolean; active: boolean }>(`/integrations/webhooks/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) })
+  },
+
   getGraphNodes() {
     return request<GraphNode[]>('/knowledge-graph/nodes')
   },
