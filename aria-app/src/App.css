@@ -123,6 +123,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .password-management-section { margin-top: 14px; border-top: 1px solid #e3eae8; padding-top: 12px; }
 .password-management-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; margin-top: 9px; }
 .password-management-form input { min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: white; font-size: 9px; }
+.quality-report { margin-bottom: 14px; padding: 14px; border: 1px solid #dfe9e5; border-radius: 7px; background: white; }
+.quality-report-heading { display: flex; justify-content: space-between; gap: 12px; }
+.quality-report-heading h3 { margin: 0; color: var(--ink); font-size: 12px; }
+.quality-report-heading span, .quality-report-heading strong { color: var(--muted); font-size: 9px; }
+.quality-report-heading span { display: block; margin-top: 4px; }
+.quality-report-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.quality-report-grid article { min-width: 0; display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 9px; border: 1px solid #edf1f0; border-radius: 6px; background: #fbfdfc; }
+.quality-report-icon { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; background: var(--teal-soft); color: var(--teal-dark); }
+.quality-report-grid small, .quality-report-grid strong, .quality-report-grid p { display: block; }
+.quality-report-grid small { color: var(--muted); font-size: 8px; }
+.quality-report-grid strong { margin-top: 3px; color: var(--ink); font-size: 15px; }
+.quality-report-grid p { margin: 4px 0 0; color: var(--muted); font-size: 8px; line-height: 1.35; }
 .customer-context { margin: 0 18px; padding: 9px 11px; border: 1px solid #dfe9e5; border-radius: 6px; background: #fbfdfc; }
 .customer-context-heading { display: flex; justify-content: space-between; gap: 8px; color: var(--ink); font-size: 9px; }
 .customer-context-heading span { color: var(--muted); font-size: 8px; }
@@ -569,6 +581,7 @@ tbody tr:last-child td { border-bottom: 0; }
   .user-management-row small { grid-column: 1 / -1; }
   .password-management-form { grid-template-columns: 1fr 1fr; }
   .password-management-form button { grid-column: 1 / -1; }
+  .quality-report-grid { grid-template-columns: repeat(2, 1fr); }
   .modal-backdrop { padding: 10px; }
   .modal-header { padding: 14px; }
   .modal-section { padding: 12px; }

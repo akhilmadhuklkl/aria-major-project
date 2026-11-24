@@ -175,6 +175,14 @@ export interface AnalyticsSummary {
   averageLatencyMs?: number
   averageConfidence?: number
   qualityTrend?: QualityTrendData[]
+  qualityReport?: {
+    groundedResponses: number
+    groundedResponseRate: number
+    highConfidenceResponses: number
+    highConfidenceRate: number
+    lowConfidenceResponses: number
+    reviewSourceCount: number
+  }
 }
 
 export interface LearningSignals {

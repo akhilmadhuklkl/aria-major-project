@@ -6,6 +6,7 @@ import { InsightsSection } from './InsightsSection'
 import { LearningSources } from './LearningSources'
 import { RetrievalBreakdown } from './RetrievalBreakdown'
 import { ProviderBreakdown } from './ProviderBreakdown'
+import { QualityReport } from './QualityReport'
 import type { AnalyticsSummary } from '../../types'
 
 export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; onRefresh: (range?: string) => Promise<void> }) {
@@ -78,6 +79,7 @@ export function Analytics({ summary, onRefresh }: { summary?: AnalyticsSummary; 
         </button>
       </div>
       <MetricStrip summary={summary} />
+      <QualityReport summary={summary} />
       <div className="analytics-summary-line">
         <span><strong>{summary?.assistantResponses ?? 0}</strong> assistant responses</span>
         <span><strong>{summary?.escalations ?? 0}</strong> escalations ({summary?.escalationRate ?? 0}%)</span>

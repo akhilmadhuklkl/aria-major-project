@@ -20,6 +20,7 @@ test.describe('ARIA application smoke coverage', () => {
 
     await page.getByRole('button', { name: 'Support analytics' }).click()
     await expect(page.getByRole('heading', { name: 'Support performance' })).toBeVisible()
+    await expect(page.getByText('Answer quality report', { exact: true })).toBeVisible()
     await expect(page.getByRole('combobox', { name: 'Analytics date range' })).toBeVisible()
     await page.getByRole('button', { name: 'Refresh analytics data' }).click()
     await expect(page.getByRole('button', { name: 'Refresh analytics data' })).toBeEnabled()

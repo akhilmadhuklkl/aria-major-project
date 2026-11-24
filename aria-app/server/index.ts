@@ -1150,6 +1150,9 @@ app.get('/api/analytics/summary', (request, response) => {
   const responseMessageCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
   const latencyStats = db.prepare(`SELECT COALESCE(AVG(latency_ms), 0) AS averageLatencyMs FROM messages WHERE role = 'assistant'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageLatencyMs: number }
   const confidenceStats = db.prepare(`SELECT COALESCE(AVG(confidence), 0) AS averageConfidence FROM messages WHERE role = 'assistant' AND confidence IS NOT NULL${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { averageConfidence: number }
+  const groundedResponseCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant' AND sources IS NOT NULL AND sources != '[]'${since ? ' AND created_at >= ?' : ''}`).get(...dateArgs) as { count: number }
+  const highConfidenceCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant' AND confidence >= ?${since ? ' AND created_at >= ?' : ''}`).get(Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7), ...dateArgs) as { count: number }
+  const lowConfidenceCount = db.prepare(`SELECT COUNT(*) AS count FROM messages WHERE role = 'assistant' AND confidence IS NOT NULL AND confidence < ?${since ? ' AND created_at >= ?' : ''}`).get(Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7), ...dateArgs) as { count: number }
   const escalationRate = responseMessageCount.count ? Math.round((escalationCount.count / responseMessageCount.count) * 100) : 0
   const qualityTrend = db.prepare(`
     SELECT substr(created_at, 1, 10) AS day,
@@ -1177,6 +1180,14 @@ app.get('/api/analytics/summary', (request, response) => {
     assistantResponses: responseMessageCount.count,
     averageLatencyMs: Math.round(latencyStats.averageLatencyMs),
     averageConfidence: Number(confidenceStats.averageConfidence.toFixed(3)),
+    qualityReport: {
+      groundedResponses: groundedResponseCount.count,
+      groundedResponseRate: responseMessageCount.count ? Math.round((groundedResponseCount.count / responseMessageCount.count) * 100) : 0,
+      highConfidenceResponses: highConfidenceCount.count,
+      highConfidenceRate: responseMessageCount.count ? Math.round((highConfidenceCount.count / responseMessageCount.count) * 100) : 0,
+      lowConfidenceResponses: lowConfidenceCount.count,
+      reviewSourceCount: reviewSources.length,
+    },
     qualityTrend: qualityTrend.map((item) => ({
       day: item.day.slice(5),
       quality: Math.round(item.quality),
