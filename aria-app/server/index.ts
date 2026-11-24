@@ -1151,7 +1151,7 @@ app.get('/api/analytics/summary', (request, response) => {
   const agentActionCount = accepted.count + corrected.count + rejected.count
   const retrievalRows = db.prepare(`
     SELECT COALESCE(retrieval_method, 'none') AS method, COUNT(*) AS count
-    FROM messages${dateClause} GROUP BY retrieval_method ORDER BY count DESC
+     FROM messages${dateClause} GROUP BY COALESCE(retrieval_method, 'none') ORDER BY count DESC
   `).all(...dateArgs) as Array<{ method: string; count: number }>
   const providerRows = db.prepare(`
     SELECT COALESCE(generation_provider, 'unknown') AS provider, COUNT(*) AS count
