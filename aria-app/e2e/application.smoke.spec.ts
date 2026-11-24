@@ -236,6 +236,26 @@ test.describe('ARIA application smoke coverage', () => {
     await expect.poll(() => firstSubject.textContent()).not.toBe(firstSubjectText)
   })
 
+  test('shows persisted prior messages in customer context', async ({ page }) => {
+    const api = await page.context().request
+    const firstMessage = `Memory context first ${Date.now()}`
+    const secondMessage = `Memory context second ${Date.now()}`
+    const firstResponse = await api.post('http://localhost:8787/api/chat', { data: { message: firstMessage } })
+    const secondResponse = await api.post('http://localhost:8787/api/chat', { data: { message: secondMessage } })
+    expect(firstResponse.ok()).toBeTruthy()
+    expect(secondResponse.ok()).toBeTruthy()
+    const first = await firstResponse.json() as { conversationId: number }
+    const second = await secondResponse.json() as { conversationId: number }
+    const contextResponse = await api.get(`http://localhost:8787/api/conversations/${second.conversationId}/context`)
+    const context = await contextResponse.json() as { history: Array<{ id: number; lastMessage?: string | null }> }
+    expect(context.history.some((item) => item.id === first.conversationId && Boolean(item.lastMessage))).toBeTruthy()
+
+    await page.goto('/')
+    await page.getByRole('button', { name: /Unassigned conversations/ }).click()
+    await page.getByRole('button', { name: new RegExp(`Demo Customer, ${secondMessage}`) }).click()
+    await expect(page.getByLabel('Customer context')).toBeVisible()
+  })
+
   test('submits a customer question and renders an assistant response', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Customer chat' }).click()
