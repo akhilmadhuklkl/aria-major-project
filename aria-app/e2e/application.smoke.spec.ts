@@ -258,4 +258,19 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(row).toHaveCount(0)
   })
 
+  test('refreshes Analytics for a date range and exports CSV', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Support analytics' }).click()
+    const range = page.getByRole('combobox', { name: 'Analytics date range' })
+    await range.selectOption('30d')
+    await expect(range).toHaveValue('30d')
+    await page.getByRole('button', { name: 'Refresh analytics data' }).click()
+    await expect(page.getByRole('button', { name: 'Refresh analytics data' })).toBeEnabled()
+
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Export analytics CSV' }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toBe('aria-analytics-30d.csv')
+  })
+
 })
