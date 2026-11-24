@@ -50,4 +50,5 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByText('User management', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Create user' })).toBeVisible()
   })
+
 })
