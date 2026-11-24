@@ -551,6 +551,7 @@ app.get('/api/interim-status', (_request, response) => {
       'Containerized production build with CI and browser/API verification',
       'Mastra-compatible remote agent endpoint configured through MASTRA_AGENT_URL',
       'Local Mastra server can be enabled with ENABLE_MASTRA_SERVER=true',
+      'Signed webhook integrations with delivery retries, testing, audit logs, and pause/resume controls',
     ],
     pendingForFinal: [
       'PostgreSQL runtime database adapter cutover',
