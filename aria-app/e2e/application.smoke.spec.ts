@@ -189,6 +189,37 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByText('No conversations match "does-not-exist".', { exact: true })).toBeVisible()
   })
 
+  test('filters and sorts the Agent Workspace queue', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Agent workspace' }).click()
+    await page.getByRole('button', { name: /Unassigned conversations/ }).click()
+
+    await page.getByRole('button', { name: 'New conversation' }).click()
+    await expect(page.getByText('New support conversations are created from the Customer Chat workflow.', { exact: true })).toBeVisible()
+
+    const firstConversation = page.locator('.conversation-row').first()
+    await firstConversation.click()
+    const statusButton = page.getByRole('button', { name: /Conversation status:/ })
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      if ((await statusButton.getAttribute('aria-label')) === 'Conversation status: Open') break
+      await statusButton.click()
+    }
+    await page.getByRole('button', { name: 'Conversation options' }).click()
+    const priorityToggle = page.getByRole('button', { name: /priority \(toggle\)/ })
+    if ((await priorityToggle.textContent())?.startsWith('Normal')) await priorityToggle.click()
+
+    await page.getByRole('combobox', { name: 'Filter by status' }).selectOption('Open')
+    await page.getByRole('combobox', { name: 'Filter by priority' }).selectOption('High')
+    await expect(page.locator('.conversation-row')).not.toHaveCount(0)
+
+    await page.getByRole('combobox', { name: 'Sort conversations' }).selectOption('customer')
+    const customers = await page.locator('.conversation-row strong').allTextContents()
+    expect(customers).toEqual([...customers].sort((first, second) => first.localeCompare(second)))
+
+    await expect(page.getByRole('button', { name: /Unassigned conversations/ })).toHaveClass(/active/)
+    await expect(page.locator('.conversation-row')).not.toHaveCount(0)
+  })
+
   test('keeps Agent Workspace conversations independent when switching chats', async ({ page }) => {
     await page.goto('/')
     await page.getByRole('button', { name: /Unassigned conversations/ }).click()

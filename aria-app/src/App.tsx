@@ -336,6 +336,7 @@ export default function App() {
 
   async function updateConversation(id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) {
     await api.updateConversation(id, changes)
+    setConversations((current) => current.map((conversation) => conversation.id === id ? { ...conversation, ...changes } : conversation))
     setSelectedConversation((current) => current.id === id ? { ...current, ...changes } : current)
   }
 
