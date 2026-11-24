@@ -69,7 +69,7 @@ export function ChatPanel({ selected, messages, onSendMessage, onUpdateConversat
             <div className="chat-options-menu" role="status">
               <button onClick={() => { setShowOptions(false); void onExport() }}><Download size={14} /> Download conversation</button>
               <button onClick={() => void onUpdateConversation(selected.id, { priority: selected.priority === 'High' ? 'Normal' : 'High' })}>{selected.priority} priority (toggle)</button>
-              <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || undefined })}><option value="">Unassigned</option>{[...new Set([selected.assignedTo, ...supportAgents.map((agent) => agent.displayName), 'Support Team'].filter(Boolean))].map((agent) => <option key={agent} value={agent}>{agent}</option>)}</select></label>
+              <label>Assign to<select value={selected.assignedTo ?? ''} onChange={(event) => void onUpdateConversation(selected.id, { assignedTo: event.target.value || null })}><option value="">Unassigned</option>{[...new Set([selected.assignedTo, ...supportAgents.map((agent) => agent.displayName), 'Support Team'].filter((agent): agent is string => Boolean(agent)))].map((agent) => <option key={agent} value={agent}>{agent}</option>)}</select></label>
               <button onClick={() => void onUpdateConversation(selected.id, { escalated: !selected.escalated })}>{selected.escalated ? 'Remove escalation' : 'Escalate conversation'}</button>
               <div className="conversation-tags-editor">
                 <span>Tags</span>

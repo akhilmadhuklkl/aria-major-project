@@ -63,7 +63,7 @@ export interface Conversation {
   priority: 'High' | 'Normal'
   unread: boolean
   status?: 'Open' | 'Pending' | 'Resolved'
-  assignedTo?: string
+  assignedTo?: string | null
   tags?: string[]
   escalated?: boolean
 }

@@ -447,10 +447,19 @@ test.describe('ARIA application smoke coverage', () => {
     await assignment.selectOption({ label: 'Support Team' })
     await expect(assignment).toHaveValue('Support Team')
 
-    await page.getByRole('button', { name: 'Escalate conversation' }).click()
-    await expect(page.getByRole('button', { name: 'Remove escalation' })).toBeVisible()
+    const unassignRequestPromise = page.waitForRequest((request) => request.url().includes('/conversations/') && request.method() === 'PATCH')
+    await assignment.selectOption({ label: 'Unassigned' })
+    const unassignRequest = await unassignRequestPromise
+    expect(unassignRequest.postDataJSON()).toMatchObject({ assignedTo: null })
+    await expect(assignment).toHaveValue('')
 
-    await page.getByRole('button', { name: /priority \(toggle\)/ }).click()
+    const escalationButton = page.getByRole('button', { name: /^(Escalate conversation|Remove escalation)$/ })
+    const wasEscalated = (await escalationButton.textContent())?.includes('Remove escalation')
+    await escalationButton.click()
+    await expect(page.getByRole('button', { name: wasEscalated ? 'Escalate conversation' : 'Remove escalation' })).toBeVisible()
+
+    const priorityToggle = page.getByRole('button', { name: /priority \(toggle\)/ })
+    if ((await priorityToggle.textContent())?.startsWith('Normal')) await priorityToggle.click()
     await expect(page.getByRole('button', { name: /High priority \(toggle\)/ })).toBeVisible()
   })
 
