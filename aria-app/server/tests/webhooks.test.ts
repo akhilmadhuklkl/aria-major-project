@@ -105,3 +105,36 @@ test('retries failed webhook delivery three times and records the failure', asyn
     await new Promise<void>((resolve) => server?.close(() => resolve()))
   }
 })
+
+test('delivers only subscribed events and supports wildcard subscriptions', async () => {
+  const receivedEvents: string[] = []
+  const server = createServer((_request, response) => {
+    receivedEvents.push(String(_request.headers['x-aria-event']))
+    response.writeHead(204)
+    response.end()
+  })
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => resolve())
+  })
+
+  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`
+  const matching = createWebhookSubscription({ name: `Filtered match ${Date.now()}`, url: `${url}?hook=matching`, events: ['knowledge.indexed'] })
+  const unrelated = createWebhookSubscription({ name: `Filtered unrelated ${Date.now()}`, url: `${url}?hook=unrelated`, events: ['feedback.low_rating'] })
+  const wildcard = createWebhookSubscription({ name: `Filtered wildcard ${Date.now()}`, url: `${url}?hook=wildcard`, events: ['*'] })
+  try {
+    await dispatchWebhookEvent('knowledge.indexed', { title: 'Filtered policy' })
+    assert.equal(receivedEvents.length, 2)
+    assert.deepEqual(receivedEvents, ['knowledge.indexed', 'knowledge.indexed'])
+    const deliveries = listWebhookDeliveries()
+    assert.ok(deliveries.some((item) => Number((item as { webhookId: number }).webhookId) === matching.id))
+    assert.ok(deliveries.some((item) => Number((item as { webhookId: number }).webhookId) === wildcard.id))
+    assert.equal(deliveries.some((item) => Number((item as { webhookId: number }).webhookId) === unrelated.id), false)
+  } finally {
+    deleteWebhookSubscription(matching.id)
+    deleteWebhookSubscription(unrelated.id)
+    deleteWebhookSubscription(wildcard.id)
+    server.closeAllConnections()
+    await new Promise<void>((resolve) => server.close(() => resolve()))
+  }
+})
