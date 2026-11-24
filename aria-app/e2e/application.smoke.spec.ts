@@ -185,4 +185,23 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(graphNode).toHaveCount(0)
   })
 
+  test('uploads and deletes a knowledge document', async ({ page }) => {
+    const title = `Browser Smoke Upload ${Date.now()}`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('button', { name: 'Upload document' }).click()
+    await page.getByLabel('Knowledge document file').setInputFiles({
+      name: 'browser-smoke.txt',
+      mimeType: 'text/plain',
+      buffer: Buffer.from('Browser smoke upload content for ARIA knowledge retrieval.'),
+    })
+    await page.getByRole('textbox', { name: 'Title (optional)' }).fill(title)
+    await page.getByRole('button', { name: 'Upload and index' }).click()
+
+    const row = page.locator('tr').filter({ hasText: title })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: `Delete ${title}` }).click()
+    await expect(row).toHaveCount(0)
+  })
+
 })

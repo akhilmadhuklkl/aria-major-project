@@ -227,7 +227,7 @@ export function KnowledgeBase({ query, setQuery, items, onAdd, onUpload, onDelet
         <form className="knowledge-form upload-form" onSubmit={submitUpload}>
           <label>
             <span>Document file</span>
-            <input type="file" accept=".pdf,.docx,.txt,.csv,application/pdf,text/plain,text/csv" required onChange={(event) => setUploadFile(event.target.files?.[0])} />
+            <input aria-label="Knowledge document file" type="file" accept=".pdf,.docx,.txt,.csv,application/pdf,text/plain,text/csv" required onChange={(event) => setUploadFile(event.target.files?.[0])} />
           </label>
           <label>
             <span>Title (optional)</span>
