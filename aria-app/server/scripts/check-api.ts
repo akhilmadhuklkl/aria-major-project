@@ -57,6 +57,17 @@ try {
     `provider=${String(ai?.agentProvider ?? 'unknown')}`,
   )
 
+  const implementationStatus = await request<{ readyForDemo: boolean; completed: string[]; pendingForFinal: string[] }>('/interim-status')
+  addResult(
+    'Implementation status endpoint',
+    implementationStatus.readyForDemo === true
+      && implementationStatus.completed.includes('Authentication, role-based access, and protected API routes')
+      && implementationStatus.completed.includes('Containerized production build with CI and browser/API verification')
+      && implementationStatus.pendingForFinal.includes('PostgreSQL runtime database adapter cutover')
+      && !implementationStatus.pendingForFinal.some((item) => /authentication|deployment|extended testing/i.test(item)),
+    `completed=${implementationStatus.completed.length}, pending=${implementationStatus.pendingForFinal.length}`,
+  )
+
   const analytics = await request<Record<string, unknown>>('/analytics/summary')
   addResult(
     'Analytics endpoint',
