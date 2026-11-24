@@ -18,6 +18,7 @@ const pool = new Pool({
 })
 
 const client = await pool.connect()
+const migratedCounts: Record<string, number> = {}
 try {
   await client.query('BEGIN')
   await client.query(readFileSync(resolve('server', 'migrations', 'postgres-schema.sql'), 'utf8'))
@@ -62,6 +63,14 @@ try {
     metadata: row.metadata ? JSON.parse(String(row.metadata)) : {},
   }))
 
+  for (const [table, sourceCount] of Object.entries(migratedCounts)) {
+    const result = await client.query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM ${table}`)
+    const targetCount = Number(result.rows[0]?.count ?? 0)
+    if (targetCount < sourceCount) {
+      throw new Error(`PostgreSQL migration integrity check failed for ${table}: source=${sourceCount}, target=${targetCount}`)
+    }
+  }
+
   for (const table of ['users', 'conversations', 'knowledge_documents', 'sessions', 'knowledge_document_versions', 'notifications', 'webhook_subscriptions', 'webhook_delivery_logs', 'graph_relationships', 'audit_logs']) {
     await client.query(`SELECT setval(pg_get_serial_sequence($1, 'id'), COALESCE((SELECT MAX(id) FROM ${table}), 1), true)`, [table])
   }
@@ -72,6 +81,7 @@ try {
   `)
   await client.query('COMMIT')
   console.log('SQLite data migrated to PostgreSQL successfully.')
+  console.log(`Verified row counts: ${Object.entries(migratedCounts).map(([table, count]) => `${table}=${count}`).join(', ')}`)
 } catch (error) {
   await client.query('ROLLBACK')
   throw error
@@ -87,6 +97,7 @@ async function copyTable(
   transform: (row: Record<string, unknown>) => Record<string, unknown> = (row) => row,
 ) {
   const rows = db.prepare(`SELECT ${columns.join(', ')} FROM ${table}`).all() as Record<string, unknown>[]
+  migratedCounts[table] = rows.length
   if (rows.length === 0) return
 
   const placeholders = columns.map((_, index) => `$${index + 1}`).join(', ')
