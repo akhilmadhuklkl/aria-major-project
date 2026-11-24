@@ -62,3 +62,41 @@ jobs:
             sleep 1
           done
           exit 1
+
+  postgres-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: aria
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: aria
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aria -d aria"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    defaults:
+      run:
+        working-directory: aria-app
+    env:
+      DATABASE_URL: postgresql://aria:ci-password@localhost:5432/aria
+      DB_SSL: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: aria-app/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Migrate SQLite data to PostgreSQL
+        run: npm run migrate:postgres
+      - name: Verify PostgreSQL schema and indexes
+        run: npm run verify:postgres

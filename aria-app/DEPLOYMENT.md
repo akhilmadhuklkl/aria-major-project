@@ -27,6 +27,7 @@ DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run 
 ```
 
 The verification checks required tables, columns, and production indexes for authentication, conversations, retrieval, notifications, webhooks, and Knowledge Graph storage.
+GitHub Actions also provisions PostgreSQL in a dedicated CI job and runs both commands against a clean database on every push and pull request.
 
 ## Production checklist
 
