@@ -1,6 +1,26 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('ARIA application smoke coverage', () => {
+  test('completes first-time admin setup from the authentication screen', async ({ page }) => {
+    const user = { id: 1, email: 'admin@example.com', displayName: 'Browser Admin', role: 'admin' }
+    await page.route('**/api/health', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ authRequired: true, authSetupAvailable: true }) })
+    })
+    await page.route('**/api/auth/bootstrap', async (route) => {
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ user, token: 'browser-smoke-token', expiresAt: new Date(Date.now() + 60_000).toISOString() }) })
+    })
+    await page.goto('/')
+    await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+    await page.getByRole('button', { name: 'First-time setup' }).click()
+    await expect(page.getByRole('heading', { name: 'Set up your admin account' })).toBeVisible()
+
+    await page.getByRole('textbox', { name: 'Display name' }).fill('Browser Admin')
+    await page.getByRole('textbox', { name: 'Email address' }).fill('admin@example.com')
+    await page.getByLabel('Password').fill('browser-password-123')
+    await page.getByRole('button', { name: 'Create admin account' }).click()
+    await expect(page.getByRole('button', { name: 'Agent workspace' })).toBeVisible()
+  })
+
   test('navigates through the core modules and renders graph and analytics views', async ({ page }) => {
     await page.goto('/')
 
