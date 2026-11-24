@@ -14,6 +14,7 @@ ARIA demonstrates a full-stack customer support workflow:
 - feedback learning through customer ratings and agent actions
 - analytics dashboard for response quality, source quality, acceptance rate, and support topics
 - Mastra and Gemini integration for live AI response generation
+- optional Neo4j graph storage for Graph Explorer and graph-aware retrieval
 - local fallback behavior for stable demos
 
 ## Technology Stack
@@ -22,7 +23,7 @@ ARIA demonstrates a full-stack customer support workflow:
 |---|---|
 | Frontend | React, TypeScript, Vite |
 | Backend | Node.js, Express, TypeScript |
-| Database | SQLite |
+| Database | SQLite, with optional Neo4j graph store |
 | Semantic Retrieval | Hugging Face Transformers.js embeddings |
 | AI Orchestration | Mastra |
 | LLM Provider | Google Gemini |

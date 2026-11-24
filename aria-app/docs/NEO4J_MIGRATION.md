@@ -1,6 +1,6 @@
 # Neo4j Migration Preparation
 
-ARIA currently uses SQLite for its graph tables because it keeps the local demo simple and self-contained. Neo4j is prepared as an optional backend for larger graph workloads, but it is not enabled by default and the application does not send graph data to Neo4j yet.
+ARIA uses SQLite by default because it keeps the local demo simple and self-contained. Neo4j is available as an optional backend for larger graph workloads. When `GRAPH_STORE=neo4j` is enabled, the Graph Explorer API, graph path queries, graph CRUD operations, and graph-aware hybrid retrieval use Neo4j. SQLite remains the default when the variable is not set.
 
 ## Start Neo4j locally
 
@@ -67,15 +67,15 @@ npm run restore:neo4j -- backups/neo4j-graph.json
 
 Both operations are explicit and require a configured Neo4j password. Restore is additive and repeatable; it does not delete records that are not present in the backup. Keep generated backups outside Git and protect them as project data.
 
-## Planned cutover
+## Runtime status and cutover checklist
 
-The future adapter should write the current ontology model to Neo4j using:
+The Neo4j adapter is implemented and writes the current ontology model using:
 
 - `graph_nodes` -> labeled Neo4j nodes with stable IDs
 - `graph_relationships` -> typed directed relationships
 - `properties` -> sanitized node and relationship properties
 
-The graph API now supports the `GRAPH_STORE=sqlite|neo4j` setting. SQLite remains the default. Before switching a deployment to Neo4j, migrate the existing nodes and relationships, verify path-query parity, validate graph-aware retrieval, and test backup/restore procedures.
+The graph API and hybrid retrieval support the `GRAPH_STORE=sqlite|neo4j` setting. SQLite remains the default. Before switching a deployment to Neo4j, migrate the existing nodes and relationships, verify path-query parity, validate graph-aware retrieval, and test backup/restore procedures. The conversations, messages, knowledge documents, embeddings, feedback, authentication, notifications, webhooks, and analytics tables still use SQLite; PostgreSQL runtime cutover is a separate pending enhancement.
 
 ## Security rules
 
