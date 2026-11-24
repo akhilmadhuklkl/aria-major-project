@@ -85,6 +85,38 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
   })
 
+  test('creates a support user from administrator Settings', async ({ page }) => {
+    const admin = { id: 5, email: 'owner@example.com', displayName: 'Owner Admin', role: 'admin' }
+    const createdUser = { id: 6, email: 'support@example.com', displayName: 'Support Teammate', role: 'support_agent' }
+    await page.route('**/api/health', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ authRequired: true, authSetupAvailable: false }) })
+    })
+    await page.route('**/api/auth/login', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ user: admin, token: 'browser-user-token', expiresAt: new Date(Date.now() + 60_000).toISOString() }) })
+    })
+    await page.route('**/api/users', async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(createdUser) })
+        return
+      }
+      await route.continue()
+    })
+    await page.goto('/')
+    await page.getByRole('textbox', { name: 'Email address' }).fill('owner@example.com')
+    await page.getByLabel('Password').fill('browser-password-123')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByRole('button', { name: 'Agent workspace' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Settings' }).click()
+    await page.getByRole('textbox', { name: 'New user display name' }).fill('Support Teammate')
+    await page.getByRole('textbox', { name: 'New user email' }).fill('support@example.com')
+    await page.getByRole('textbox', { name: 'New user password' }).fill('support-password-123')
+    await page.getByRole('combobox', { name: 'New user role' }).selectOption('support_agent')
+    await page.getByRole('button', { name: 'Create user' }).click()
+    await expect(page.locator('.user-management-row').filter({ hasText: 'Support Teammate' })).toContainText('support@example.com')
+    await expect(page.locator('.user-management-row').filter({ hasText: 'Support Teammate' })).toContainText('support agent')
+  })
+
   test('navigates through the core modules and renders graph and analytics views', async ({ page }) => {
     await page.goto('/')
 
