@@ -444,14 +444,26 @@ test.describe('ARIA application smoke coverage', () => {
     await page.getByRole('button', { name: 'Conversation options' }).click()
 
     const assignment = page.getByLabel('Assign to')
+    const count = async (label: RegExp) => Number(await page.getByRole('button', { name: label }).locator('b').textContent())
+    if (await assignment.inputValue()) {
+      const clearAssignment = page.waitForRequest((request) => request.url().includes('/conversations/') && request.method() === 'PATCH')
+      await assignment.selectOption({ label: 'Unassigned' })
+      await clearAssignment
+    }
+    const baseMine = await count(/Mine conversations/)
+    const baseUnassigned = await count(/Unassigned conversations/)
     await assignment.selectOption({ label: 'Support Team' })
     await expect(assignment).toHaveValue('Support Team')
+    await expect.poll(() => count(/Mine conversations/)).toBe(baseMine + 1)
+    await expect.poll(() => count(/Unassigned conversations/)).toBe(baseUnassigned - 1)
 
     const unassignRequestPromise = page.waitForRequest((request) => request.url().includes('/conversations/') && request.method() === 'PATCH')
     await assignment.selectOption({ label: 'Unassigned' })
     const unassignRequest = await unassignRequestPromise
     expect(unassignRequest.postDataJSON()).toMatchObject({ assignedTo: null })
     await expect(assignment).toHaveValue('')
+    await expect.poll(() => count(/Mine conversations/)).toBe(baseMine)
+    await expect.poll(() => count(/Unassigned conversations/)).toBe(baseUnassigned)
 
     const escalationButton = page.getByRole('button', { name: /^(Escalate conversation|Remove escalation)$/ })
     const wasEscalated = (await escalationButton.textContent())?.includes('Remove escalation')

@@ -336,6 +336,19 @@ export default function App() {
 
   async function updateConversation(id: number, changes: Partial<Pick<Conversation, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated'>>) {
     await api.updateConversation(id, changes)
+    const previous = conversations.find((conversation) => conversation.id === id)
+    const next = previous ? { ...previous, ...changes } : undefined
+    if (previous && next) {
+      const wasMine = Boolean(previous.assignedTo)
+      const isMine = Boolean(next.assignedTo)
+      const wasAttention = previous.status === 'Open' || previous.status === 'Pending' || Boolean(previous.escalated)
+      const isAttention = next.status === 'Open' || next.status === 'Pending' || Boolean(next.escalated)
+      setQueueCounts((current) => ({
+        mine: current.mine + Number(isMine) - Number(wasMine),
+        unassigned: current.unassigned + Number(!isMine) - Number(!wasMine),
+        attention: current.attention + Number(isAttention) - Number(wasAttention),
+      }))
+    }
     setConversations((current) => current.map((conversation) => conversation.id === id ? { ...conversation, ...changes } : conversation))
     setSelectedConversation((current) => current.id === id ? { ...current, ...changes } : current)
   }
