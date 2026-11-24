@@ -131,4 +131,11 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.locator('.action-status')).toHaveText('Saved as an agent correction')
   })
 
+  test('regenerates the ARIA assistant draft', async ({ page }) => {
+    await page.goto('/')
+
+    await page.getByRole('button', { name: 'Regenerate' }).click()
+    await expect(page.locator('.action-status')).toHaveText('Regenerated just now')
+  })
+
 })
