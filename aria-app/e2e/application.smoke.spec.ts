@@ -163,6 +163,21 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.getByTitle('Remove browser-smoke')).toBeVisible()
   })
 
+  test('assigns and escalates a conversation from Agent Workspace', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Conversation options' }).click()
+
+    const assignment = page.getByLabel('Assign to')
+    await assignment.selectOption({ label: 'Support Team' })
+    await expect(assignment).toHaveValue('Support Team')
+
+    await page.getByRole('button', { name: 'Escalate conversation' }).click()
+    await expect(page.getByRole('button', { name: 'Remove escalation' })).toBeVisible()
+
+    await page.getByRole('button', { name: /priority \(toggle\)/ }).click()
+    await expect(page.getByRole('button', { name: /High priority \(toggle\)/ })).toBeVisible()
+  })
+
   test('creates and deletes an ontology node from Graph Explorer', async ({ page }) => {
     const nodeId = `browser:smoke-${Date.now()}`
     const nodeLabel = `Browser Smoke Node ${Date.now()}`
