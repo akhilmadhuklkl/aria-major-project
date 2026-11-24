@@ -497,7 +497,7 @@ app.get('/api/metrics', roleGuard('admin'), (_request, response) => {
 
 app.get('/api/interim-status', (_request, response) => {
   response.json({
-    milestone: 'Interim report and demo',
+    milestone: 'Current implementation status',
     readyForDemo: true,
     completed: [
       'React frontend with agent, customer, knowledge, and analytics views',
@@ -507,13 +507,15 @@ app.get('/api/interim-status', (_request, response) => {
       'Semantic vector retrieval with automatic keyword fallback',
       'Feedback capture from customer ratings and agent actions',
       'Analytics calculated from persisted database records',
+      'Authentication, role-based access, and protected API routes',
+      'Containerized production build with CI and browser/API verification',
       'Mastra-compatible remote agent endpoint configured through MASTRA_AGENT_URL',
       'Local Mastra server can be enabled with ENABLE_MASTRA_SERVER=true',
     ],
     pendingForFinal: [
-      'Live provider API key and full Mastra Studio setup',
+      'PostgreSQL runtime database adapter cutover',
       'Long-term conversation memory',
-      'Authentication, deployment, and extended testing',
+      'Optional external channel integrations and full Mastra Studio workflows',
     ],
   })
 })
