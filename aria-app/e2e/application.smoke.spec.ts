@@ -230,4 +230,32 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.locator('tr').filter({ hasText: title })).toHaveCount(0)
   })
 
+  test('edits a knowledge record and shows version history', async ({ page }) => {
+    const title = `Browser Smoke Version ${Date.now()}`
+    const updatedTitle = `${title} Updated`
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Knowledge base' }).click()
+    await page.getByRole('button', { name: 'Add knowledge' }).click()
+    await page.getByRole('textbox', { name: 'Knowledge title' }).fill(title)
+    await page.getByRole('textbox', { name: 'Knowledge answering note' }).fill('Initial version for browser smoke testing.')
+    await page.getByRole('button', { name: 'Save knowledge' }).click()
+
+    let row = page.locator('tr').filter({ hasText: title })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: `Actions for ${title}` }).click()
+    await page.getByRole('button', { name: 'Edit document' }).click()
+    await page.getByRole('textbox', { name: 'Edit document title' }).fill(updatedTitle)
+    await page.getByRole('textbox', { name: 'Edit document content' }).fill('Updated version for browser smoke testing.')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+
+    row = page.locator('tr').filter({ hasText: updatedTitle })
+    await expect(row).toBeVisible()
+    await row.getByRole('button', { name: `Actions for ${updatedTitle}` }).click()
+    await page.getByRole('button', { name: 'Version history' }).click()
+    await expect(page.getByText('Version 1', { exact: true })).toBeVisible()
+
+    await row.getByRole('button', { name: `Delete ${updatedTitle}` }).click()
+    await expect(row).toHaveCount(0)
+  })
+
 })
