@@ -1,4 +1,4 @@
-import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, ConversationQueueCounts, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AnalyticsSummary, AuditLog, AuthUser, Conversation, ConversationQueueCounts, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, Notification, SourceScore, SystemStatus, WebhookDelivery, WebhookSubscription } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8787/api'
 const AUTH_TOKEN_KEY = 'aria.auth.token'
@@ -76,6 +76,10 @@ export const api = {
 
   getWebhooks() {
     return request<WebhookSubscription[]>('/integrations/webhooks')
+  },
+
+  getWebhookDeliveries(limit = 30) {
+    return request<WebhookDelivery[]>(`/integrations/webhooks/deliveries?limit=${limit}`)
   },
 
   createWebhook(input: { name: string; url: string; events: string[] }) {

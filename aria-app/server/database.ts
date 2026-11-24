@@ -129,6 +129,10 @@ function runMigrations() {
       version: '007_audit_logs',
       file: resolve('server', 'migrations', '007_audit_logs.sql'),
     },
+    {
+      version: '008_webhook_delivery_logs',
+      file: resolve('server', 'migrations', '008_webhook_delivery_logs.sql'),
+    },
   ]
 
   for (const migration of migrations) {

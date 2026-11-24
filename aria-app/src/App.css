@@ -123,6 +123,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .password-management-section { margin-top: 14px; border-top: 1px solid #e3eae8; padding-top: 12px; }
 .password-management-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; margin-top: 9px; }
 .password-management-form input { min-width: 0; height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink); background: white; font-size: 9px; }
+.webhook-delivery-history { margin-top: 12px; border-top: 1px solid #edf1f0; padding-top: 10px; }
+.webhook-delivery-row { display: grid; grid-template-columns: 1fr 1.4fr auto; gap: 8px; padding: 7px 0; border-bottom: 1px solid #edf1f0; font-size: 8px; }
+.webhook-delivery-row strong { color: var(--ink); }
+.webhook-delivery-row span { color: var(--muted); }
+.webhook-delivery-row small { text-align: right; }
+.delivery-success { color: var(--success); }
+.delivery-failure { color: var(--danger); }
 .quality-report { margin-bottom: 14px; padding: 14px; border: 1px solid #dfe9e5; border-radius: 7px; background: white; }
 .quality-report-heading { display: flex; justify-content: space-between; gap: 12px; }
 .quality-report-heading h3 { margin: 0; color: var(--ink); font-size: 12px; }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, ConversationQueueCounts, AnalyticsSummary, ChatMessage, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookSubscription } from './types'
+import type { AgentThreadMessage, AuditLog, AuthUser, View, Conversation, ConversationQueueCounts, AnalyticsSummary, ChatMessage, CustomerContext, GraphNode, GraphRelationship, KnowledgeItem, NewKnowledgeItem, SystemStatus, WebhookDelivery, WebhookSubscription } from './types'
 import type { Language } from './i18n'
 import { assistantSuggestions, conversations as conversationsData, conversationThreads, knowledgeItems } from './constants'
 import { api } from './api'
@@ -49,6 +49,7 @@ export default function App() {
   const [healthUnavailable, setHealthUnavailable] = useState(false)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [webhooks, setWebhooks] = useState<WebhookSubscription[]>([])
+  const [webhookDeliveries, setWebhookDeliveries] = useState<WebhookDelivery[]>([])
   const [users, setUsers] = useState<AuthUser[]>([])
   const [authUser, setAuthUser] = useState<AuthUser>()
   const [authRequired, setAuthRequired] = useState(false)
@@ -171,8 +172,8 @@ export default function App() {
     if (activeModal !== 'settings') return
 
     const isAdmin = !authUser || authUser.role === 'admin'
-    void Promise.allSettled([api.getSystemStatus(), isAdmin ? api.getAuditLogs() : Promise.resolve([]), isAdmin ? api.getWebhooks() : Promise.resolve([]), isAdmin ? api.getUsers() : Promise.resolve([])])
-      .then(([statusResult, auditResult, webhookResult, usersResult]) => {
+    void Promise.allSettled([api.getSystemStatus(), isAdmin ? api.getAuditLogs() : Promise.resolve([]), isAdmin ? api.getWebhooks() : Promise.resolve([]), isAdmin ? api.getUsers() : Promise.resolve([]), isAdmin ? api.getWebhookDeliveries() : Promise.resolve([])])
+      .then(([statusResult, auditResult, webhookResult, usersResult, deliveryResult]) => {
         if (statusResult.status === 'fulfilled') {
           setSystemStatus(statusResult.value)
           setHealthUnavailable(false)
@@ -182,6 +183,7 @@ export default function App() {
         if (auditResult.status === 'fulfilled') setAuditLogs(auditResult.value)
         if (webhookResult.status === 'fulfilled') setWebhooks(webhookResult.value)
         if (usersResult.status === 'fulfilled') setUsers(usersResult.value)
+        if (deliveryResult.status === 'fulfilled') setWebhookDeliveries(deliveryResult.value)
       })
       .catch(() => {
         // Existing settings values remain visible if the API is temporarily unavailable.
@@ -567,6 +569,7 @@ export default function App() {
           systemStatus={systemStatus}
           auditLogs={auditLogs}
           webhooks={webhooks}
+          webhookDeliveries={webhookDeliveries}
           users={users}
           currentUser={authUser}
           isAdmin={!authUser || authUser.role === 'admin'}

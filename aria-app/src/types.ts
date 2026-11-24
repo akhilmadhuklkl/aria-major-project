@@ -40,6 +40,18 @@ export interface WebhookSubscription {
   secret?: string
 }
 
+export interface WebhookDelivery {
+  id: number
+  webhookId: number
+  name: string
+  event: string
+  status: 'delivered' | 'failed'
+  responseStatus: number | null
+  attempts: number
+  error?: string | null
+  createdAt: string
+}
+
 export interface Conversation {
   id: number
   customer: string

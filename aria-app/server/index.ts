@@ -61,7 +61,7 @@ import {
   embeddingModel,
   LocalEmbeddingService,
 } from './embedding-service.js'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookSubscriptions } from './webhooks.js'
+import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions } from './webhooks.js'
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
@@ -340,6 +340,10 @@ app.delete('/api/knowledge-graph/nodes/:id', roleGuard('admin', 'support_agent')
 
 app.get('/api/integrations/webhooks', roleGuard('admin'), (_request, response) => {
   response.json(listWebhookSubscriptions())
+})
+
+app.get('/api/integrations/webhooks/deliveries', roleGuard('admin'), (request, response) => {
+  response.json(listWebhookDeliveries(Number(request.query.limit ?? 30)))
 })
 
 app.post('/api/integrations/webhooks', roleGuard('admin'), (request, response) => {

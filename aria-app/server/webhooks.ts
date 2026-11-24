@@ -45,6 +45,18 @@ export function deleteWebhookSubscription(id: number) {
   return db.prepare('DELETE FROM webhook_subscriptions WHERE id = ?').run(id).changes > 0
 }
 
+export function listWebhookDeliveries(limit = 30) {
+  return db.prepare(`
+    SELECT webhook_delivery_logs.id, webhook_delivery_logs.webhook_id AS webhookId,
+      webhook_subscriptions.name, webhook_delivery_logs.event, webhook_delivery_logs.status,
+      webhook_delivery_logs.response_status AS responseStatus, webhook_delivery_logs.attempts,
+      webhook_delivery_logs.error, webhook_delivery_logs.created_at AS createdAt
+    FROM webhook_delivery_logs
+    JOIN webhook_subscriptions ON webhook_subscriptions.id = webhook_delivery_logs.webhook_id
+    ORDER BY webhook_delivery_logs.created_at DESC LIMIT ?
+  `).all(Math.max(1, Math.min(limit, 100)))
+}
+
 export function signWebhookPayload(secret: string, payload: string) {
   return createHmac('sha256', secret).update(payload).digest('hex')
 }
@@ -52,18 +64,37 @@ export function signWebhookPayload(secret: string, payload: string) {
 export async function dispatchWebhookEvent(event: WebhookEvent, data: Record<string, unknown>) {
   const subscriptions = listWebhookSubscriptionsWithSecrets().filter((item) => item.active && (item.events.includes('*') || item.events.includes(event)))
   const payload = JSON.stringify({ event, data, deliveredAt: new Date().toISOString() })
-  await Promise.allSettled(subscriptions.map(async (subscription) => {
+  await Promise.allSettled(subscriptions.map((subscription) => deliverWebhook(subscription, event, payload)))
+}
+
+async function deliverWebhook(subscription: WebhookSubscription, event: WebhookEvent, payload: string) {
+  let responseStatus: number | null = null
+  let lastError = ''
+  let attempts = 0
+  for (attempts = 1; attempts <= 3; attempts += 1) {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)
     try {
-      await fetch(String(subscription.url), {
+      const response = await fetch(String(subscription.url), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-ARIA-Event': event, 'X-ARIA-Signature': `sha256=${signWebhookPayload(String(subscription.secret), payload)}` },
         body: payload,
         signal: controller.signal,
       })
+      responseStatus = response.status
+      if (response.ok) {
+        db.prepare(`INSERT INTO webhook_delivery_logs (webhook_id, event, status, response_status, attempts, created_at) VALUES (?, ?, 'delivered', ?, ?, ?)`)
+          .run(subscription.id, event, responseStatus, attempts, new Date().toISOString())
+        return
+      }
+      lastError = `HTTP ${response.status}`
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : 'delivery failed'
     } finally {
       clearTimeout(timeout)
     }
-  }))
+    if (attempts < 3) await new Promise((resolve) => setTimeout(resolve, attempts * 250))
+  }
+  db.prepare(`INSERT INTO webhook_delivery_logs (webhook_id, event, status, response_status, attempts, error, created_at) VALUES (?, ?, 'failed', ?, ?, ?, ?)`)
+    .run(subscription.id, event, responseStatus, attempts - 1, lastError.slice(0, 500), new Date().toISOString())
 }

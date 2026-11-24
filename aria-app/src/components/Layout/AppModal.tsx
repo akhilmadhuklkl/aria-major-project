@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { BookOpenCheck, Bot, BrainCircuit, ChartColumn, CheckCircle2, Database, GitBranch, PlugZap, Plus, Server, Settings, Trash2, UserPlus, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import type { AnalyticsSummary, AuditLog, AuthUser, KnowledgeItem, SystemStatus, WebhookSubscription } from '../../types'
+import type { AnalyticsSummary, AuditLog, AuthUser, KnowledgeItem, SystemStatus, WebhookDelivery, WebhookSubscription } from '../../types'
 
 type ModalType = 'help' | 'settings'
 
@@ -12,6 +12,7 @@ interface AppModalProps {
   systemStatus?: SystemStatus
   auditLogs: AuditLog[]
   webhooks: WebhookSubscription[]
+  webhookDeliveries: WebhookDelivery[]
   users: AuthUser[]
   currentUser?: AuthUser
   isAdmin: boolean
@@ -45,7 +46,7 @@ const demoSteps = [
   },
 ]
 
-export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
+export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditLogs, webhooks, webhookDeliveries, users, currentUser, isAdmin, onCreateWebhook, onDeleteWebhook, onCreateUser, onChangePassword, onClose }: AppModalProps) {
   const indexedSources = knowledgeItems.filter((item) => item.status === 'Indexed').length
   const totalSources = knowledgeItems.length
   const backendStatus = systemStatus?.backend.status === 'operational' ? 'Operational' : 'Checking'
@@ -165,7 +166,7 @@ export function AppModal({ type, knowledgeItems, analytics, systemStatus, auditL
                 </div>
               )) : <p className="audit-log-empty">No recorded administrative activity yet.</p>}
             </div>}
-            {isAdmin && <WebhookSettings webhooks={webhooks} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />}
+            {isAdmin && <WebhookSettings webhooks={webhooks} deliveries={webhookDeliveries} onCreate={onCreateWebhook} onDelete={onDeleteWebhook} />}
             {isAdmin && <UserManagement users={users} onCreate={onCreateUser} />}
             {currentUser && <PasswordManagement onChange={onChangePassword} />}
           </div>
@@ -260,10 +261,12 @@ function UserManagement({ users, onCreate }: { users: AuthUser[]; onCreate: AppM
 
 function WebhookSettings({
   webhooks,
+  deliveries,
   onCreate,
   onDelete,
 }: {
   webhooks: WebhookSubscription[]
+  deliveries: WebhookDelivery[]
   onCreate: AppModalProps['onCreateWebhook']
   onDelete: AppModalProps['onDeleteWebhook']
 }) {
@@ -312,6 +315,10 @@ function WebhookSettings({
           <button className="danger-icon-button" onClick={() => { if (window.confirm(`Delete webhook "${webhook.name}"?`)) void onDelete(webhook.id) }} aria-label={`Delete ${webhook.name}`} title="Delete webhook"><Trash2 size={14} /></button>
         </div>
       )) : <p className="audit-log-empty">No webhook integrations configured.</p>}
+      <div className="webhook-delivery-history">
+        <div className="audit-log-heading"><strong>Recent deliveries</strong><span>{deliveries.length} recorded</span></div>
+        {deliveries.length > 0 ? deliveries.slice(0, 8).map((delivery) => <div className="webhook-delivery-row" key={delivery.id}><strong>{delivery.name}</strong><span>{delivery.event} · {delivery.attempts} attempt{delivery.attempts === 1 ? '' : 's'}</span><small className={delivery.status === 'delivered' ? 'delivery-success' : 'delivery-failure'}>{delivery.status}{delivery.responseStatus ? ` · HTTP ${delivery.responseStatus}` : delivery.error ? ` · ${delivery.error}` : ''}</small></div>) : <p className="audit-log-empty">Delivery results will appear after a webhook event is emitted.</p>}
+      </div>
     </div>
   )
 }
