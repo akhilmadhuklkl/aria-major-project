@@ -362,7 +362,9 @@ app.post('/api/integrations/webhooks', roleGuard('admin'), (request, response) =
     return
   }
   try {
-    response.status(201).json(createWebhookSubscription({ name, url, events }))
+    const created = createWebhookSubscription({ name, url, events })
+    recordAudit(request, { action: 'webhook.created', entityType: 'webhook', entityId: created.id, metadata: { name, events } })
+    response.status(201).json(created)
   } catch {
     response.status(409).json({ error: 'a webhook with this URL already exists' })
   }
@@ -374,6 +376,7 @@ app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), (request, respo
     response.status(404).json({ error: 'webhook was not found' })
     return
   }
+  recordAudit(request, { action: 'webhook.deleted', entityType: 'webhook', entityId: id })
   response.json({ deleted: true })
 })
 
@@ -383,6 +386,7 @@ app.patch('/api/integrations/webhooks/:id', roleGuard('admin'), (request, respon
     response.status(400).json({ error: 'a valid webhook id and boolean active value are required' })
     return
   }
+  recordAudit(request, { action: request.body.active ? 'webhook.activated' : 'webhook.paused', entityType: 'webhook', entityId: id, metadata: { active: request.body.active } })
   response.json({ updated: true, active: request.body.active })
 })
 
@@ -398,9 +402,11 @@ app.post('/api/integrations/webhooks/:id/test', roleGuard('admin'), async (reque
     return
   }
   if (!delivered) {
+    recordAudit(request, { action: 'webhook.test_failed', entityType: 'webhook', entityId: id, metadata: { event: 'knowledge.indexed' } })
     response.status(502).json({ delivered: false, error: 'webhook test delivery failed; check delivery history' })
     return
   }
+  recordAudit(request, { action: 'webhook.test_delivered', entityType: 'webhook', entityId: id, metadata: { event: 'knowledge.indexed' } })
   response.json({ delivered: true, event: 'knowledge.indexed' })
 })
 
