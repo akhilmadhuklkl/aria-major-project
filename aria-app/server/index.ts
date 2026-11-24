@@ -546,10 +546,11 @@ async function processChatRequest(query: string, requestedConversationId: number
       id, conversation_id, role, content, confidence, sources, source_scores,
       retrieval_method, generation_provider, latency_ms, should_escalate, created_at
     )
-    VALUES (?, ?, 'assistant', ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     assistantMessageId,
     conversationId,
+    'assistant',
     result.answer,
     result.confidence,
     JSON.stringify(result.sources),

@@ -45,8 +45,8 @@ try {
 
   const retrieval = health.retrieval as Record<string, unknown> | undefined
   addResult(
-    'Semantic retrieval metadata',
-    retrieval?.primary === 'semantic' && Number(retrieval.storedEmbeddings ?? 0) > 0,
+    'Hybrid retrieval metadata',
+    retrieval?.primary === 'hybrid' && Number(retrieval.storedEmbeddings ?? 0) > 0,
     `primary=${String(retrieval?.primary)}, storedEmbeddings=${String(retrieval?.storedEmbeddings)}`,
   )
 
@@ -66,8 +66,8 @@ try {
     `source=${chat.sources[0] ?? 'none'}, confidence=${chat.confidence}`,
   )
   addResult(
-    'Semantic source evidence',
-    chat.retrievalMethod === 'semantic' && chat.sourceScores.some((item) => item.semanticScore !== undefined),
+    'Retrieval source evidence',
+    ['hybrid', 'semantic'].includes(chat.retrievalMethod) && chat.sourceScores.some((item) => item.semanticScore !== undefined),
     `method=${chat.retrievalMethod}, scoreCount=${chat.sourceScores.length}`,
   )
 
