@@ -138,4 +138,15 @@ test.describe('ARIA application smoke coverage', () => {
     await expect(page.locator('.action-status')).toHaveText('Regenerated just now')
   })
 
+  test('exports the selected Agent Workspace conversation', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Conversation options' }).click()
+    await expect(page.getByRole('button', { name: 'Download conversation' })).toBeVisible()
+
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download conversation' }).click()
+    const download = await downloadPromise
+    expect(download.suggestedFilename()).toMatch(/^aria-conversation-\d+\.txt$/)
+  })
+
 })
