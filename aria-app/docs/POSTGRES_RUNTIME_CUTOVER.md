@@ -40,6 +40,8 @@ Authentication is now the first feature boundary using the same runtime selectio
 
 Conversation persistence is now the second feature boundary. Chat message writes, conversation listing and paging, metadata updates, customer context, exports, message history, and agent-action lookups use the runtime-selected async conversation repository while preserving the existing API response shapes.
 
+Feedback persistence is now the third feature boundary. Customer ratings and agent accept, edit, and reject actions use the runtime-selected async feedback repository; existing notification, webhook, and audit side effects remain part of the route workflow.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.

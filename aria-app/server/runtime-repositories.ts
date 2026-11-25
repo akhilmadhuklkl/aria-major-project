@@ -7,6 +7,7 @@ import { sqliteAuthRepository } from './repositories/auth-repository.js'
 import type { AsyncConversationRepository } from './repositories/conversation-repository.js'
 import { sqliteConversationRepository } from './repositories/sqlite-conversation-repository.js'
 import type { AsyncFeedbackRepository } from './repositories/feedback-repository.js'
+import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-repository.js'
 import type { AsyncGraphRepository } from './repositories/graph-repository.js'
 import type { AsyncKnowledgeRepository } from './repositories/knowledge-repository.js'
 import type { AsyncNotificationRepository } from './repositories/notification-repository.js'
@@ -41,8 +42,8 @@ export type PostgresRepositorySet = {
 export type RuntimePool = Pick<Pool, 'query' | 'connect' | 'end'>
 
 export type RuntimeRepositories =
-  | { engine: 'sqlite'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
-  | { engine: 'postgres'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
+  | { engine: 'sqlite'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; feedback: AsyncFeedbackRepository; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
+  | { engine: 'postgres'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; feedback: AsyncFeedbackRepository; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
 
 type RuntimeRepositoryOptions = {
   databaseUrl?: string
@@ -153,8 +154,16 @@ function createAsyncSqliteConversationRepository(): AsyncConversationRepository 
   }
 }
 
+function createAsyncSqliteFeedbackRepository(): AsyncFeedbackRepository {
+  return {
+    async insertFeedback(entry) {
+      sqliteFeedbackRepository.insertFeedback(entry)
+    },
+  }
+}
+
 export function createRuntimeRepositories(engine: DatabaseEngine, options: RuntimeRepositoryOptions = {}): RuntimeRepositories {
-  if (engine === 'sqlite') return { engine, auth: createAsyncSqliteAuthRepository(), conversations: createAsyncSqliteConversationRepository(), system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
+  if (engine === 'sqlite') return { engine, auth: createAsyncSqliteAuthRepository(), conversations: createAsyncSqliteConversationRepository(), feedback: createAsyncSqliteFeedbackRepository(), system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
 
   const databaseUrl = options.databaseUrl?.trim() || process.env.DATABASE_URL?.trim()
   if (!databaseUrl) throw new Error('DATABASE_URL is required when DATABASE_ENGINE=postgres')
@@ -167,5 +176,5 @@ export function createRuntimeRepositories(engine: DatabaseEngine, options: Runti
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   })
   const postgres = createPostgresRepositorySet(pool)
-  return { engine, auth: postgres.auth, conversations: postgres.conversations, system: postgres.system, pool, postgres, close: () => pool.end() }
+  return { engine, auth: postgres.auth, conversations: postgres.conversations, feedback: postgres.feedback, system: postgres.system, pool, postgres, close: () => pool.end() }
 }

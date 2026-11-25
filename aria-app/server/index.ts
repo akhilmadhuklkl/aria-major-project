@@ -51,7 +51,6 @@ import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEv
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
-import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-repository.js'
 import { sqliteNotificationRepository } from './repositories/sqlite-notification-repository.js'
 import { sqliteAuditRepository } from './repositories/sqlite-audit-repository.js'
 import { createSqliteAnalyticsRepository } from './repositories/sqlite-analytics-repository.js'
@@ -65,6 +64,7 @@ const analyticsRepository = createSqliteAnalyticsRepository(db)
 const runtimeRepositories = createRuntimeRepositories(databaseEngine)
 const systemRepository = runtimeRepositories.system
 const conversationRepository = runtimeRepositories.conversations
+const feedbackRepository = runtimeRepositories.feedback
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
 
@@ -751,7 +751,7 @@ app.get('/api/conversations/:id/messages', async (request, response) => {
   response.json(await conversationRepository.listMessages(Number(request.params.id)))
 })
 
-app.post('/api/feedback', (request, response) => {
+app.post('/api/feedback', async (request, response) => {
   const messageId = String(request.body?.messageId ?? '')
   const conversationId = Number(request.body?.conversationId)
   const rating = request.body?.rating ? Number(request.body.rating) : undefined
@@ -774,7 +774,7 @@ app.post('/api/feedback', (request, response) => {
     createdAt: new Date().toISOString(),
   }
 
-  sqliteFeedbackRepository.insertFeedback(entry)
+  await feedbackRepository.insertFeedback(entry)
   if (rating !== undefined && rating <= 2) {
     createNotification({ kind: 'feedback', title: 'Low customer rating', message: `A response received a ${rating}/5 rating and may need review.` })
     notifyWebhook('feedback.low_rating', { rating, conversationId, messageId })
@@ -812,7 +812,7 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), async (reque
     qualityScore: calculateQualityScore(undefined, action),
     createdAt: new Date().toISOString(),
   }
-  sqliteFeedbackRepository.insertFeedback(entry)
+  await feedbackRepository.insertFeedback(entry)
   if (action === 'rejected' || action === 'edited') {
     createNotification({ kind: 'agent-action', title: action === 'rejected' ? 'AI response rejected' : 'AI response edited', message: 'An agent correction was recorded for future review.' })
     notifyWebhook('agent_action.corrected', { action, conversationId })
