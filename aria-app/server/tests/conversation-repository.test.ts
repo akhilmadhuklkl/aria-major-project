@@ -107,3 +107,30 @@ test('conversation pages search metadata, paginate, and retain global queue coun
     db.exec('ROLLBACK')
   }
 })
+
+test('latest assistant lookup is conversation-scoped and ignores newer customer messages', () => {
+  db.exec('BEGIN')
+  try {
+    const now = new Date().toISOString()
+    const create = () => sqliteConversationRepository.createConversation({
+      customerName: 'Assistant Lookup Test', subject: 'Latest assistant', status: 'open',
+      priority: 'normal', topic: 'General', tags: [], escalated: false, createdAt: now, updatedAt: now,
+    })
+    const first = create()
+    const other = create()
+    assert.equal(sqliteConversationRepository.getLatestAssistantMessageId(first.id), undefined)
+    const latestId = crypto.randomUUID()
+    for (const [conversationId, role, id, createdAt] of [
+      [first.id, 'assistant', crypto.randomUUID(), '2026-01-01T00:00:00.000Z'],
+      [first.id, 'assistant', latestId, '2026-01-02T00:00:00.000Z'],
+      [first.id, 'customer', crypto.randomUUID(), '2026-01-03T00:00:00.000Z'],
+      [other.id, 'assistant', crypto.randomUUID(), '2026-01-04T00:00:00.000Z'],
+    ] as const) {
+      sqliteConversationRepository.appendMessage({ id, conversationId, role, content: 'Test', shouldEscalate: false, createdAt })
+    }
+    assert.equal(sqliteConversationRepository.getLatestAssistantMessageId(first.id), latestId)
+    assert.equal(sqliteConversationRepository.getLatestAssistantMessageId(-1), undefined)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})

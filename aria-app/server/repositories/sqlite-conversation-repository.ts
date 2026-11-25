@@ -99,6 +99,12 @@ export const sqliteConversationRepository: ConversationRepository = {
     return db.prepare('SELECT id, conversation_id AS conversationId, role, content, confidence, sources, source_scores AS sourceScores, retrieval_method AS retrievalMethod, generation_provider AS generationProvider, latency_ms AS latencyMs, should_escalate AS shouldEscalate, created_at AS createdAt FROM messages WHERE conversation_id = ? ORDER BY created_at ASC').all(conversationId).map((row) => mapMessage(row as Record<string, unknown>))
   },
 
+  getLatestAssistantMessageId(conversationId) {
+    const row = db.prepare("SELECT id FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1")
+      .get(conversationId) as { id: string } | undefined
+    return row?.id
+  },
+
   getCustomerContext(conversationId) {
     const conversation = this.getConversation(conversationId)
     if (!conversation) return undefined

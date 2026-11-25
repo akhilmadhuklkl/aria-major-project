@@ -807,22 +807,20 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), (request, re
     return
   }
 
-  let message = db.prepare(`
-    SELECT id FROM messages WHERE conversation_id = ? AND role = 'assistant' ORDER BY created_at DESC LIMIT 1
-  `).get(conversationId) as { id: string } | undefined
+  let messageId = sqliteConversationRepository.getLatestAssistantMessageId(conversationId)
 
-  if (!message) {
-    const id = crypto.randomUUID()
-    db.prepare(`
-      INSERT INTO messages (id, conversation_id, role, content, confidence, sources, created_at)
-      VALUES (?, ?, 'assistant', ?, 0.92, '[]', ?)
-    `).run(id, conversationId, editedResponse ?? 'ARIA agent-assist suggestion', new Date().toISOString())
-    message = { id }
+  if (!messageId) {
+    messageId = crypto.randomUUID()
+    sqliteConversationRepository.appendMessage({
+      id: messageId, conversationId, role: 'assistant',
+      content: editedResponse ?? 'ARIA agent-assist suggestion', confidence: 0.92,
+      sources: [], shouldEscalate: false, createdAt: new Date().toISOString(),
+    })
   }
 
   const entry = {
     id: crypto.randomUUID(),
-    messageId: message.id,
+    messageId,
     conversationId,
     feedbackType: action,
     editedResponse,

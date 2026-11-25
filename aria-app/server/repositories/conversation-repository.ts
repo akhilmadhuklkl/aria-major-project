@@ -40,6 +40,7 @@ export interface ConversationRepository {
   getConversation(id: number): ConversationRecord | undefined
   updateConversation(id: number, changes: Partial<Pick<ConversationRecord, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated' | 'topic'>>): ConversationRecord | undefined
   appendMessage(message: MessageRecord): MessageRecord
+  getLatestAssistantMessageId(conversationId: number): string | undefined
   listMessages(conversationId: number): MessageRecord[]
   getCustomerContext(conversationId: number): { customer: string; totalConversations: number; openConversations: number; topics: Array<{ topic: string; count: number }>; history: Array<ConversationRecord & { lastMessage?: string | null }> } | undefined
 }
