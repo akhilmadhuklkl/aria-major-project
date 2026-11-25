@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { db } from '../database.js'
+import { ensureAuthSchema } from '../auth.js'
 import { sqliteAuditRepository } from '../repositories/sqlite-audit-repository.js'
 
 const { createAuditLog, listAuditLogs } = sqliteAuditRepository
+
+// Audit records reference users even when the actor is anonymous.
+ensureAuthSchema()
 
 test('audit logs persist action metadata without sensitive content', () => {
   const entry = createAuditLog({
