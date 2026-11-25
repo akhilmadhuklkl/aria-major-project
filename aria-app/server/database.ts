@@ -2,8 +2,8 @@ import { mkdirSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { createSqliteKnowledgeRepository } from './repositories/sqlite-knowledge-repository.js'
-import type { KnowledgeDocument } from './repositories/knowledge-repository.js'
 export type { KnowledgeDocument } from './repositories/knowledge-repository.js'
+export type { KnowledgeEmbeddingRecord, EmbeddedKnowledgeDocument } from './repositories/knowledge-repository.js'
 import { databaseEngine } from './database-runtime.js'
 
 void databaseEngine
@@ -392,109 +392,9 @@ export function calculateQualityScore(rating?: number, feedbackType = 'customer_
 export const {
   listKnowledge, listArchivedKnowledge, createKnowledgeDocument, updateKnowledgeDocument,
   archiveKnowledgeDocuments, restoreKnowledgeDocuments, deleteKnowledgeDocuments, getKnowledgeDocumentVersions,
+  listKnowledgeEmbeddingCandidates, upsertKnowledgeEmbedding, getKnowledgeEmbeddingStats, listEmbeddedKnowledge,
 } = createSqliteKnowledgeRepository(db)
 
-export type KnowledgeEmbeddingRecord = {
-  knowledgeDocumentId: number
-  model: string
-  dimensions: number
-  vector: number[]
-  contentHash: string
-  updatedAt: string
-}
-
-export function listKnowledgeEmbeddingCandidates() {
-  return db.prepare(`
-    SELECT
-      knowledge_documents.id,
-      knowledge_documents.title,
-      knowledge_documents.category,
-      knowledge_documents.content,
-      knowledge_documents.status,
-      knowledge_embeddings.content_hash AS contentHash
-    FROM knowledge_documents
-    LEFT JOIN knowledge_embeddings
-      ON knowledge_embeddings.knowledge_document_id = knowledge_documents.id
-    WHERE knowledge_documents.status = 'indexed'
-    ORDER BY knowledge_documents.id
-  `).all() as Array<KnowledgeDocument & { contentHash?: string }>
-}
-
-export function upsertKnowledgeEmbedding(input: {
-  knowledgeDocumentId: number
-  model: string
-  vector: number[]
-  contentHash: string
-}) {
-  const now = new Date().toISOString()
-  db.prepare(`
-    INSERT INTO knowledge_embeddings (
-      knowledge_document_id, model, dimensions, vector, content_hash, updated_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?)
-    ON CONFLICT(knowledge_document_id) DO UPDATE SET
-      model = excluded.model,
-      dimensions = excluded.dimensions,
-      vector = excluded.vector,
-      content_hash = excluded.content_hash,
-      updated_at = excluded.updated_at
-  `).run(
-    input.knowledgeDocumentId,
-    input.model,
-    input.vector.length,
-    JSON.stringify(input.vector),
-    input.contentHash,
-    now,
-  )
-}
-
-export function getKnowledgeEmbeddingStats() {
-  return db.prepare(`
-    SELECT
-      COUNT(*) AS count,
-      COALESCE(MIN(dimensions), 0) AS minimumDimensions,
-      COALESCE(MAX(dimensions), 0) AS maximumDimensions,
-      COUNT(DISTINCT model) AS modelCount
-    FROM knowledge_embeddings
-  `).get() as {
-    count: number
-    minimumDimensions: number
-    maximumDimensions: number
-    modelCount: number
-  }
-}
-
-export type EmbeddedKnowledgeDocument = KnowledgeDocument & {
-  model: string
-  dimensions: number
-  vector: number[]
-}
-
-export function listEmbeddedKnowledge() {
-  const rows = db.prepare(`
-    SELECT
-      knowledge_documents.id,
-      knowledge_documents.title,
-      knowledge_documents.category,
-      knowledge_documents.content,
-      knowledge_documents.status,
-      knowledge_documents.uses,
-      knowledge_documents.updated_at AS updatedAt,
-      knowledge_embeddings.model,
-      knowledge_embeddings.dimensions,
-      knowledge_embeddings.vector
-    FROM knowledge_embeddings
-    JOIN knowledge_documents
-      ON knowledge_documents.id = knowledge_embeddings.knowledge_document_id
-    WHERE knowledge_documents.status = 'indexed'
-    ORDER BY knowledge_documents.id
-  `).all() as Array<Omit<EmbeddedKnowledgeDocument, 'vector'> & { vector: string }>
-
-  return rows.map((row) => ({
-    ...row,
-    vector: JSON.parse(row.vector) as number[],
-  }))
-}
 
 export type KnowledgeSourceFeedbackStats = {
   title: string

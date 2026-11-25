@@ -17,6 +17,17 @@ export type KnowledgeDocumentInput = {
   sourceFilename?: string
 }
 
+export type KnowledgeEmbeddingInput = {
+  knowledgeDocumentId: number
+  model: string
+  vector: number[]
+  contentHash: string
+}
+
+export type KnowledgeEmbeddingRecord = KnowledgeEmbeddingInput & { dimensions: number; updatedAt: string }
+export type EmbeddedKnowledgeDocument = KnowledgeDocument & { model: string; dimensions: number; vector: number[] }
+export type KnowledgeEmbeddingStats = { count: number; minimumDimensions: number; maximumDimensions: number; modelCount: number }
+
 export type KnowledgeDocumentVersion = {
   id: number
   knowledgeDocumentId: number
@@ -30,6 +41,10 @@ export type KnowledgeDocumentVersion = {
 }
 
 export interface KnowledgeRepository {
+  listKnowledgeEmbeddingCandidates(): Array<KnowledgeDocument & { contentHash: string | null }>
+  upsertKnowledgeEmbedding(input: KnowledgeEmbeddingInput): void
+  getKnowledgeEmbeddingStats(): KnowledgeEmbeddingStats
+  listEmbeddedKnowledge(): EmbeddedKnowledgeDocument[]
   listKnowledge(): KnowledgeDocument[]
   listArchivedKnowledge(): KnowledgeDocument[]
   createKnowledgeDocument(input: KnowledgeDocumentInput): KnowledgeDocument

@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { KnowledgeDocument, KnowledgeDocumentVersion, KnowledgeRepository } from './knowledge-repository.js'
+import type { EmbeddedKnowledgeDocument, KnowledgeDocument, KnowledgeDocumentVersion, KnowledgeEmbeddingStats, KnowledgeRepository } from './knowledge-repository.js'
 
 const documentColumns = 'id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt'
 const validIds = (ids: number[]) => [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
@@ -7,6 +7,45 @@ const validIds = (ids: number[]) => [...new Set(ids.filter((id) => Number.isInte
 export function createSqliteKnowledgeRepository(db: DatabaseSync): KnowledgeRepository {
   const getDocument = (id: number) => db.prepare(`SELECT ${documentColumns} FROM knowledge_documents WHERE id = ?`).get(id) as KnowledgeDocument
   return {
+    listKnowledgeEmbeddingCandidates() {
+      return db.prepare(`
+        SELECT documents.id, documents.title, documents.category, documents.content, documents.status,
+          documents.uses, documents.updated_at AS updatedAt, documents.archived_at AS archivedAt,
+          embeddings.content_hash AS contentHash
+        FROM knowledge_documents AS documents
+        LEFT JOIN knowledge_embeddings AS embeddings ON embeddings.knowledge_document_id = documents.id
+        WHERE documents.status = 'indexed' AND documents.archived_at IS NULL
+        ORDER BY documents.id
+      `).all() as Array<KnowledgeDocument & { contentHash: string | null }>
+    },
+    upsertKnowledgeEmbedding(input) {
+      db.prepare(`
+        INSERT INTO knowledge_embeddings (knowledge_document_id, model, dimensions, vector, content_hash, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(knowledge_document_id) DO UPDATE SET
+          model = excluded.model, dimensions = excluded.dimensions, vector = excluded.vector,
+          content_hash = excluded.content_hash, updated_at = excluded.updated_at
+      `).run(input.knowledgeDocumentId, input.model, input.vector.length, JSON.stringify(input.vector), input.contentHash, new Date().toISOString())
+    },
+    getKnowledgeEmbeddingStats() {
+      return db.prepare(`
+        SELECT COUNT(*) AS count, COALESCE(MIN(dimensions), 0) AS minimumDimensions,
+          COALESCE(MAX(dimensions), 0) AS maximumDimensions, COUNT(DISTINCT model) AS modelCount
+        FROM knowledge_embeddings
+      `).get() as KnowledgeEmbeddingStats
+    },
+    listEmbeddedKnowledge() {
+      const rows = db.prepare(`
+        SELECT documents.id, documents.title, documents.category, documents.content, documents.status,
+          documents.uses, documents.updated_at AS updatedAt, documents.archived_at AS archivedAt,
+          embeddings.model, embeddings.dimensions, embeddings.vector
+        FROM knowledge_embeddings AS embeddings
+        JOIN knowledge_documents AS documents ON documents.id = embeddings.knowledge_document_id
+        WHERE documents.status = 'indexed' AND documents.archived_at IS NULL
+        ORDER BY documents.id
+      `).all() as Array<Omit<EmbeddedKnowledgeDocument, 'vector'> & { vector: string }>
+      return rows.map((row) => ({ ...row, vector: JSON.parse(row.vector) as number[] }))
+    },
     listKnowledge() {
       return db.prepare(`SELECT ${documentColumns} FROM knowledge_documents WHERE archived_at IS NULL ORDER BY uses DESC, updated_at DESC`).all() as KnowledgeDocument[]
     },

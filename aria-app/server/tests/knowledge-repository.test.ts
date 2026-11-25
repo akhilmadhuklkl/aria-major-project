@@ -75,3 +75,53 @@ test('knowledge repository handles empty selections, missing documents, and dupl
     db.close()
   }
 })
+
+test('embedding repository round-trips vectors, upserts hashes, and reports stored dimensions', () => {
+  const { db, repository } = fixture()
+  try {
+    assert.deepEqual({ ...repository.getKnowledgeEmbeddingStats() }, { count: 0, minimumDimensions: 0, maximumDimensions: 0, modelCount: 0 })
+    const document = repository.createKnowledgeDocument({ title: 'Embedded policy', category: 'Policy', content: 'Verified answer' })
+    assert.equal(repository.listKnowledgeEmbeddingCandidates()[0].contentHash, null)
+    assert.deepEqual(repository.listEmbeddedKnowledge(), [])
+    repository.upsertKnowledgeEmbedding({ knowledgeDocumentId: document.id, model: 'test-model', vector: [0.25, -0.5], contentHash: 'initial' })
+    const embedded = repository.listEmbeddedKnowledge()[0]
+    assert.equal(embedded.id, document.id)
+    assert.equal(embedded.content, 'Verified answer')
+    assert.deepEqual(embedded.vector, [0.25, -0.5])
+    assert.equal(embedded.dimensions, 2)
+    assert.equal(repository.listKnowledgeEmbeddingCandidates()[0].contentHash, 'initial')
+    repository.upsertKnowledgeEmbedding({ knowledgeDocumentId: document.id, model: 'replacement-model', vector: [1, 0, 0], contentHash: 'replacement' })
+    assert.equal(repository.listEmbeddedKnowledge().length, 1)
+    assert.deepEqual(repository.listEmbeddedKnowledge()[0].vector, [1, 0, 0])
+    assert.equal(repository.listEmbeddedKnowledge()[0].model, 'replacement-model')
+    assert.equal(repository.listKnowledgeEmbeddingCandidates()[0].contentHash, 'replacement')
+    assert.deepEqual({ ...repository.getKnowledgeEmbeddingStats() }, { count: 1, minimumDimensions: 3, maximumDimensions: 3, modelCount: 1 })
+  } finally {
+    db.close()
+  }
+})
+
+test('archived and review documents cannot enter semantic retrieval or indexing candidates', () => {
+  const { db, repository } = fixture()
+  try {
+    const active = repository.createKnowledgeDocument({ title: 'Active policy', category: 'Policy', content: 'Active answer' })
+    const archived = repository.createKnowledgeDocument({ title: 'Archived policy', category: 'Policy', content: 'Archived answer' })
+    const review = repository.createKnowledgeDocument({ title: 'Review policy', category: 'Policy', content: 'Unverified answer', status: 'review' })
+    for (const document of [active, archived, review]) {
+      repository.upsertKnowledgeEmbedding({ knowledgeDocumentId: document.id, model: 'test-model', vector: [1, 0], contentHash: 'hash' })
+    }
+    repository.archiveKnowledgeDocuments([archived.id])
+    assert.deepEqual(repository.listKnowledgeEmbeddingCandidates().map((item) => item.id), [active.id])
+    assert.deepEqual(repository.listEmbeddedKnowledge().map((item) => item.id), [active.id])
+    // Archiving retains the vector for restoration, but never makes it eligible for retrieval.
+    assert.equal(repository.getKnowledgeEmbeddingStats().count, 3)
+    repository.restoreKnowledgeDocuments([archived.id])
+    assert.deepEqual(repository.listEmbeddedKnowledge().map((item) => item.id), [active.id, archived.id])
+    assert.deepEqual(repository.listKnowledgeEmbeddingCandidates().map((item) => item.id), [active.id, archived.id])
+    repository.updateKnowledgeDocument(active.id, { title: active.title, category: active.category, content: 'Changed answer' })
+    assert.equal(repository.listKnowledgeEmbeddingCandidates().find((item) => item.id === active.id)?.contentHash, null)
+    assert.deepEqual(repository.listEmbeddedKnowledge().map((item) => item.id), [archived.id])
+  } finally {
+    db.close()
+  }
+})
