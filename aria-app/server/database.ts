@@ -391,41 +391,6 @@ export function inferTopic(message: string) {
   return 'General'
 }
 
-export function createAuditLog(input: {
-  actorUserId?: number
-  actorEmail?: string
-  action: string
-  entityType: string
-  entityId?: string | number
-  metadata?: Record<string, unknown>
-}) {
-  const createdAt = new Date().toISOString()
-  const result = db.prepare(`
-    INSERT INTO audit_logs (actor_user_id, actor_email, action, entity_type, entity_id, metadata, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    input.actorUserId ?? null,
-    input.actorEmail ?? 'local-demo',
-    input.action,
-    input.entityType,
-    input.entityId === undefined ? null : String(input.entityId),
-    JSON.stringify(input.metadata ?? {}),
-    createdAt,
-  )
-  return { id: Number(result.lastInsertRowid), ...input, createdAt }
-}
-
-export function listAuditLogs(limit = 50) {
-  return db.prepare(`
-    SELECT id, actor_user_id AS actorUserId, actor_email AS actorEmail,
-      action, entity_type AS entityType, entity_id AS entityId, metadata, created_at AS createdAt
-    FROM audit_logs ORDER BY created_at DESC LIMIT ?
-  `).all(Math.max(1, Math.min(limit, 100))).map((row) => {
-    const item = row as Record<string, unknown>
-    return { ...item, metadata: JSON.parse(String(item.metadata ?? '{}')) }
-  })
-}
-
 export function calculateQualityScore(rating?: number, feedbackType = 'customer_rating') {
   const ratingScore = rating ? rating * 20 : 60
   const actionAdjustment = feedbackType === 'accepted' ? 15 : feedbackType === 'rejected' ? -20 : 0
