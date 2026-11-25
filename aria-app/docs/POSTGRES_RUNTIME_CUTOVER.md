@@ -38,6 +38,8 @@ The first controlled runtime integration now routes `/api/ready` and `/api/syste
 
 Authentication is now the first feature boundary using the same runtime selection. Bootstrap, login, session validation, logout, password changes, user listings, and support-agent listings use the async auth service; the active SQLite runtime remains behaviorally unchanged while the PostgreSQL adapter is prepared for the later engine switch.
 
+Conversation persistence is now the second feature boundary. Chat message writes, conversation listing and paging, metadata updates, customer context, exports, message history, and agent-action lookups use the runtime-selected async conversation repository while preserving the existing API response shapes.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.

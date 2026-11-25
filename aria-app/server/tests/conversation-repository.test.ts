@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { db } from '../database.js'
 import { sqliteConversationRepository } from '../repositories/sqlite-conversation-repository.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
 
 test('conversation repository preserves conversation and message fields', () => {
   db.exec('BEGIN')
@@ -132,5 +133,29 @@ test('latest assistant lookup is conversation-scoped and ignores newer customer 
     assert.equal(sqliteConversationRepository.getLatestAssistantMessageId(-1), undefined)
   } finally {
     db.exec('ROLLBACK')
+  }
+})
+
+test('async runtime conversation adapter preserves SQLite conversation behavior', async () => {
+  const runtime = createRuntimeRepositories('sqlite')
+  const repository = runtime.conversations
+  db.exec('BEGIN')
+  try {
+    const now = new Date().toISOString()
+    const conversation = await repository.createConversation({
+      customerName: 'Async Conversation Test', subject: 'Runtime adapter', status: 'open',
+      priority: 'normal', topic: 'General', assignedTo: null, tags: [], escalated: false,
+      createdAt: now, updatedAt: now,
+    })
+    await repository.appendMessage({
+      id: `async-conversation-${Date.now()}`, conversationId: conversation.id,
+      role: 'customer', content: 'Runtime adapter message', shouldEscalate: false, createdAt: now,
+    })
+    assert.equal((await repository.getConversation(conversation.id))?.subject, 'Runtime adapter')
+    assert.equal((await repository.listMessages(conversation.id)).length, 1)
+    assert.equal((await repository.updateConversation(conversation.id, { status: 'pending' }))?.status, 'pending')
+  } finally {
+    db.exec('ROLLBACK')
+    await runtime.close()
   }
 })

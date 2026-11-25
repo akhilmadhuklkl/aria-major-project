@@ -51,7 +51,6 @@ import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEv
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
-import { sqliteConversationRepository } from './repositories/sqlite-conversation-repository.js'
 import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-repository.js'
 import { sqliteNotificationRepository } from './repositories/sqlite-notification-repository.js'
 import { sqliteAuditRepository } from './repositories/sqlite-audit-repository.js'
@@ -65,6 +64,7 @@ const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 const analyticsRepository = createSqliteAnalyticsRepository(db)
 const runtimeRepositories = createRuntimeRepositories(databaseEngine)
 const systemRepository = runtimeRepositories.system
+const conversationRepository = runtimeRepositories.conversations
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
 
@@ -560,7 +560,7 @@ async function processChatRequest(query: string, requestedConversationId: number
 
   if (!conversationId) {
     const subject = query.length > 48 ? `${query.slice(0, 45)}...` : query
-    const created = sqliteConversationRepository.createConversation({
+    const created = await conversationRepository.createConversation({
       customerName: 'Demo Customer', subject, status: 'open', priority: 'normal', topic: inferTopic(query),
       assignedTo: null, tags: [], escalated: false, createdAt: now, updatedAt: now,
     })
@@ -568,20 +568,20 @@ async function processChatRequest(query: string, requestedConversationId: number
   }
 
   const customerMessageId = crypto.randomUUID()
-  sqliteConversationRepository.appendMessage({ id: customerMessageId, conversationId, role: 'customer', content: query, createdAt: now, shouldEscalate: false })
+  await conversationRepository.appendMessage({ id: customerMessageId, conversationId, role: 'customer', content: query, createdAt: now, shouldEscalate: false })
 
   const result = await agent.generateResponse(query, language)
   const latencyMs = Math.max(0, Date.now() - startedAt)
   const assistantMessageId = crypto.randomUUID()
   const assistantCreatedAt = new Date().toISOString()
 
-  sqliteConversationRepository.appendMessage({
+  await conversationRepository.appendMessage({
     id: assistantMessageId, conversationId, role: 'assistant', content: result.answer,
     confidence: result.confidence, sources: result.sources, sourceScores: result.sourceScores,
     retrievalMethod: result.retrievalMethod, generationProvider: result.generationProvider,
     latencyMs, shouldEscalate: result.shouldEscalate, createdAt: assistantCreatedAt,
   })
-  sqliteConversationRepository.updateConversation(conversationId, { topic: inferTopic(query) })
+  await conversationRepository.updateConversation(conversationId, { topic: inferTopic(query) })
   for (const source of result.sources) {
     incrementKnowledgeUses(source)
   }
@@ -642,8 +642,8 @@ app.post('/api/chat/stream', chatLimiter, async (request, response) => {
   response.end()
 })
 
-app.get('/api/conversations', (_request, response) => {
-  const rows = sqliteConversationRepository.listConversations().map(({ customerName, ...item }) => ({ ...item, customer: customerName }))
+app.get('/api/conversations', async (_request, response) => {
+  const rows = (await conversationRepository.listConversations()).map(({ customerName, ...item }) => ({ ...item, customer: customerName }))
   response.json(rows)
 })
 
@@ -651,16 +651,16 @@ app.get('/api/support-agents', roleGuard('admin', 'support_agent'), async (_requ
   response.json(await authService.listSupportAgents())
 })
 
-app.get('/api/conversations/page', (request, response) => {
+app.get('/api/conversations/page', async (request, response) => {
   const limit = Math.min(Math.max(Number(request.query.limit ?? 50) || 50, 1), 100)
   const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0)
   const search = String(request.query.q ?? '').trim()
-  const { items, total, queueCounts } = sqliteConversationRepository.listConversationPage(limit, offset, search)
+  const { items, total, queueCounts } = await conversationRepository.listConversationPage(limit, offset, search)
   const rows = items.map(({ customerName, ...item }) => ({ ...item, customer: customerName }))
   response.json({ items: rows, total, limit, offset, search, hasMore: offset + rows.length < total, queueCounts })
 })
 
-app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (request, response) => {
+app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = Number(request.params.id)
   const status = request.body?.status ? String(request.body.status).toLowerCase() : undefined
   const priority = request.body?.priority ? String(request.body.priority).toLowerCase() : undefined
@@ -673,12 +673,12 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
     return
   }
 
-  const current = sqliteConversationRepository.getConversation(id)
+  const current = await conversationRepository.getConversation(id)
   if (!current) {
     response.status(404).json({ error: 'conversation was not found' })
     return
   }
-  const updated = sqliteConversationRepository.updateConversation(id, { status: status as ConversationStatus | undefined, priority: priority as ConversationPriority | undefined, assignedTo, tags, escalated })
+  const updated = await conversationRepository.updateConversation(id, { status: status as ConversationStatus | undefined, priority: priority as ConversationPriority | undefined, assignedTo, tags, escalated })
   if (!updated) {
     response.status(404).json({ error: 'conversation was not found' })
     return
@@ -697,9 +697,9 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
   response.json({ ...updated, customer: updated.customerName })
 })
 
-app.get('/api/conversations/:id/context', roleGuard('admin', 'support_agent'), (request, response) => {
+app.get('/api/conversations/:id/context', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = Number(request.params.id)
-  const context = sqliteConversationRepository.getCustomerContext(id)
+  const context = await conversationRepository.getCustomerContext(id)
   if (!context) {
     response.status(404).json({ error: 'conversation was not found' })
     return
@@ -710,20 +710,20 @@ app.get('/api/conversations/:id/context', roleGuard('admin', 'support_agent'), (
   })
 })
 
-app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (request, response) => {
+app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = Number(request.params.id)
   if (!Number.isInteger(id) || id <= 0) {
     response.status(400).json({ error: 'a valid conversation id is required' })
     return
   }
 
-  const conversation = sqliteConversationRepository.getConversation(id)
+  const conversation = await conversationRepository.getConversation(id)
   if (!conversation) {
     response.status(404).json({ error: 'conversation was not found' })
     return
   }
 
-  const messages = sqliteConversationRepository.listMessages(id)
+  const messages = await conversationRepository.listMessages(id)
 
   const lines = [
     'ARIA Conversation Export',
@@ -747,8 +747,8 @@ app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (r
   response.send(lines.join('\n'))
 })
 
-app.get('/api/conversations/:id/messages', (request, response) => {
-  response.json(sqliteConversationRepository.listMessages(Number(request.params.id)))
+app.get('/api/conversations/:id/messages', async (request, response) => {
+  response.json(await conversationRepository.listMessages(Number(request.params.id)))
 })
 
 app.post('/api/feedback', (request, response) => {
@@ -782,7 +782,7 @@ app.post('/api/feedback', (request, response) => {
   response.status(201).json(entry)
 })
 
-app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), (request, response) => {
+app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), async (request, response) => {
   const conversationId = Number(request.body?.conversationId)
   const action = String(request.body?.action ?? '')
   const editedResponse = request.body?.editedResponse ? String(request.body.editedResponse) : null
@@ -792,11 +792,11 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), (request, re
     return
   }
 
-  let messageId = sqliteConversationRepository.getLatestAssistantMessageId(conversationId)
+  let messageId = await conversationRepository.getLatestAssistantMessageId(conversationId)
 
   if (!messageId) {
     messageId = crypto.randomUUID()
-    sqliteConversationRepository.appendMessage({
+    await conversationRepository.appendMessage({
       id: messageId, conversationId, role: 'assistant',
       content: editedResponse ?? 'ARIA agent-assist suggestion', confidence: 0.92,
       sources: [], shouldEscalate: false, createdAt: new Date().toISOString(),

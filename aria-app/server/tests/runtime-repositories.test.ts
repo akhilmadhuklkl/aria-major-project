@@ -16,6 +16,8 @@ function fakePool() {
 test('runtime repository factory keeps SQLite explicit and does not create a PostgreSQL pool', async () => {
   const runtime = createRuntimeRepositories('sqlite')
   assert.deepEqual({ engine: runtime.engine, postgres: runtime.postgres }, { engine: 'sqlite', postgres: null })
+  assert.equal(typeof runtime.auth.findUserByEmail, 'function')
+  assert.equal(typeof runtime.conversations.listConversationPage, 'function')
   assert.equal(typeof runtime.system.verifyConnection, 'function')
   assert.equal(typeof runtime.system.getRecordCounts, 'function')
   await runtime.system.verifyConnection()
@@ -30,6 +32,8 @@ test('runtime repository factory assembles every PostgreSQL adapter and owns poo
   const { pool, ended } = fakePool()
   const runtime = createRuntimeRepositories('postgres', { databaseUrl: 'postgresql://test.invalid/aria', pool })
   assert.equal(runtime.engine, 'postgres')
+  assert.equal(runtime.auth, runtime.postgres.auth)
+  assert.equal(runtime.conversations, runtime.postgres.conversations)
   assert.equal(runtime.system, runtime.postgres.system)
   assert.equal(runtime.pool, pool)
   assert.deepEqual(Object.keys(runtime.postgres).sort(), ['analytics', 'audit', 'auth', 'conversations', 'feedback', 'graph', 'knowledge', 'notifications', 'system', 'webhooks'])
