@@ -3,7 +3,7 @@ import type { KnowledgeRetriever, KnowledgeSnippet } from './agent-service.js'
 import { SemanticKnowledgeRetriever, type SemanticKnowledgeMatch } from './semantic-retrieval.js'
 import { FeedbackAdaptationRanker } from './feedback-adaptation.js'
 
-type KeywordRetriever = (query: string, limit?: number) => Array<KnowledgeDocument & { score?: number }>
+type KeywordRetriever = (query: string, limit?: number) => Array<KnowledgeDocument & { score?: number }> | Promise<Array<KnowledgeDocument & { score?: number }>>
 type GraphRetriever = (query: string) => string[] | Promise<string[]>
 type SemanticRetriever = {
   search(query: string, options?: { limit?: number; threshold?: number }): Promise<SemanticKnowledgeMatch[]>
@@ -34,7 +34,7 @@ export class HybridKnowledgeRetriever {
         limit: Number(process.env.RETRIEVAL_CANDIDATE_LIMIT ?? 8),
         threshold: Number(process.env.RETRIEVAL_SEMANTIC_THRESHOLD ?? 0.2),
       })
-      const keywordMatches = this.keywordRetriever(query, Number(process.env.RETRIEVAL_CANDIDATE_LIMIT ?? 8))
+      const keywordMatches = await this.keywordRetriever(query, Number(process.env.RETRIEVAL_CANDIDATE_LIMIT ?? 8))
       const graphTitles = await this.graphRetriever(query)
       const hybridMatches = mergeCandidates(semanticMatches, keywordMatches, graphTitles)
         .filter((item) => item.hybridScore >= Number(process.env.RETRIEVAL_HYBRID_THRESHOLD ?? 0.28))
@@ -44,7 +44,7 @@ export class HybridKnowledgeRetriever {
           ...item,
           similarity: item.hybridScore,
         }))
-      const adaptedMatches = this.feedbackRanker.rank(hybridMatches) as Array<SemanticKnowledgeMatch & {
+      const adaptedMatches = await this.feedbackRanker.rank(hybridMatches) as Array<SemanticKnowledgeMatch & {
         semanticSimilarity: number
         feedbackAdjustment: number
         adjustedScore: number
@@ -67,7 +67,7 @@ export class HybridKnowledgeRetriever {
       }))
     } catch (error) {
       console.warn('Semantic retrieval unavailable; using keyword fallback.', getErrorMessage(error))
-      return this.keywordRetriever(query).map(toKeywordSnippet)
+      return (await this.keywordRetriever(query)).map(toKeywordSnippet)
     }
   }
 

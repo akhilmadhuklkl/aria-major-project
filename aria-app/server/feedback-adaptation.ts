@@ -15,9 +15,17 @@ export type AdaptedKnowledgeMatch = SemanticKnowledgeMatch & {
   averageQuality: number
 }
 
+type FeedbackStatsLoader = () => KnowledgeSourceFeedbackStats[] | Promise<KnowledgeSourceFeedbackStats[]>
+
 export class FeedbackAdaptationRanker {
-  rank(matches: SemanticKnowledgeMatch[]) {
-    return rankWithFeedback(matches, getKnowledgeSourceFeedbackStats())
+  private readonly loadFeedbackStats: FeedbackStatsLoader
+
+  constructor(loadFeedbackStats: FeedbackStatsLoader = getKnowledgeSourceFeedbackStats) {
+    this.loadFeedbackStats = loadFeedbackStats
+  }
+
+  async rank(matches: SemanticKnowledgeMatch[]) {
+    return rankWithFeedback(matches, await this.loadFeedbackStats())
   }
 }
 

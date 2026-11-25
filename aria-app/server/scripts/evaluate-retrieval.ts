@@ -1,8 +1,10 @@
-import { searchKnowledge } from '../database.js'
 import {
   defaultSemanticThreshold,
   SemanticKnowledgeRetriever,
 } from '../semantic-retrieval.js'
+import { searchKnowledge } from '../keyword-retrieval.js'
+import { databaseEngine } from '../database-runtime.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
 
 const supportCases = [
   {
@@ -45,14 +47,15 @@ const unrelatedQueries = [
   'Who won the football match last night?',
 ]
 
-const semanticRetriever = new SemanticKnowledgeRetriever()
+const runtime = createRuntimeRepositories(databaseEngine)
+const semanticRetriever = new SemanticKnowledgeRetriever(undefined, () => runtime.knowledge.listEmbeddedKnowledge())
 
 try {
   const supportResults = []
 
   for (const testCase of supportCases) {
     const semanticMatches = await semanticRetriever.search(testCase.query)
-    const keywordMatches = searchKnowledge(testCase.query)
+    const keywordMatches = await searchKnowledge(runtime.knowledge, testCase.query)
     supportResults.push({
       ...testCase,
       semanticTop: semanticMatches[0]?.title ?? null,
@@ -86,4 +89,5 @@ try {
   }, null, 2))
 } finally {
   await semanticRetriever.dispose()
+  await runtime.close()
 }

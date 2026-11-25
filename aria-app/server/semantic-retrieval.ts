@@ -1,5 +1,6 @@
-import { listEmbeddedKnowledge, type KnowledgeDocument } from './database.js'
+import { listEmbeddedKnowledge as listSqliteEmbeddedKnowledge, type KnowledgeDocument } from './database.js'
 import { LocalEmbeddingService } from './embedding-service.js'
+import type { EmbeddedKnowledgeDocument } from './repositories/knowledge-repository.js'
 
 export const defaultSemanticThreshold = 0.3
 
@@ -7,12 +8,20 @@ export type SemanticKnowledgeMatch = KnowledgeDocument & {
   similarity: number
 }
 
+type EmbeddedKnowledgeLoader = () => EmbeddedKnowledgeDocument[] | Promise<EmbeddedKnowledgeDocument[]>
+
 export class SemanticKnowledgeRetriever {
   private readonly embeddingService: LocalEmbeddingService
 
-  constructor(embeddingService = new LocalEmbeddingService()) {
+  constructor(
+    embeddingService = new LocalEmbeddingService(),
+    loadEmbeddedKnowledge: EmbeddedKnowledgeLoader = listSqliteEmbeddedKnowledge,
+  ) {
     this.embeddingService = embeddingService
+    this.loadEmbeddedKnowledge = loadEmbeddedKnowledge
   }
+
+  private readonly loadEmbeddedKnowledge: EmbeddedKnowledgeLoader
 
   async search(
     query: string,
@@ -25,7 +34,7 @@ export class SemanticKnowledgeRetriever {
     const limit = options.limit ?? 3
     const threshold = options.threshold ?? defaultSemanticThreshold
 
-    return listEmbeddedKnowledge()
+    return (await this.loadEmbeddedKnowledge())
       .filter((item) => item.dimensions === queryVector.length)
       .map((item) => ({
         id: item.id,

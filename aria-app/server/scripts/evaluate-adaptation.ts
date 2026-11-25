@@ -3,7 +3,8 @@ import {
   maximumFeedbackAdjustment,
   rankWithFeedback,
 } from '../feedback-adaptation.js'
-import { getKnowledgeSourceFeedbackStats } from '../database.js'
+import { databaseEngine } from '../database-runtime.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
 import type { SemanticKnowledgeMatch } from '../semantic-retrieval.js'
 
 const closeMatches = [
@@ -39,18 +40,23 @@ const checks = {
   ].every((stats) => Math.abs(calculateFeedbackAdjustment(stats)) <= maximumFeedbackAdjustment),
 }
 
-console.log(JSON.stringify({
-  checks,
-  passed: Object.values(checks).filter(Boolean).length,
-  total: Object.keys(checks).length,
-  maximumFeedbackAdjustment,
-  examples: {
-    closeRanking: closeRanking.map(projectResult),
-    distantRanking: distantRanking.map(projectResult),
-    onePositiveAdjustment: calculateFeedbackAdjustment(onePositive),
-  },
-  currentDatabaseStats: getKnowledgeSourceFeedbackStats(),
-}, null, 2))
+const runtime = createRuntimeRepositories(databaseEngine)
+try {
+  console.log(JSON.stringify({
+    checks,
+    passed: Object.values(checks).filter(Boolean).length,
+    total: Object.keys(checks).length,
+    maximumFeedbackAdjustment,
+    examples: {
+      closeRanking: closeRanking.map(projectResult),
+      distantRanking: distantRanking.map(projectResult),
+      onePositiveAdjustment: calculateFeedbackAdjustment(onePositive),
+    },
+    currentDatabaseStats: await runtime.knowledge.getKnowledgeSourceFeedbackStats(),
+  }, null, 2))
+} finally {
+  await runtime.close()
+}
 
 function createMatch(title: string, similarity: number): SemanticKnowledgeMatch {
   return {

@@ -9,18 +9,9 @@ import multer from 'multer'
 import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
-  archiveKnowledgeDocuments,
-  restoreKnowledgeDocuments,
-  createKnowledgeDocument,
   db,
-  deleteKnowledgeDocuments,
-  getKnowledgeDocumentVersions,
-  getKnowledgeSourceFeedbackStats,
-  incrementKnowledgeUses,
   getGraphNode,
   inferTopic,
-  listKnowledge,
-  listArchivedKnowledge,
   listGraphNodes,
   listGraphRelationships,
   queryGraphPaths,
@@ -28,13 +19,11 @@ import {
   deleteGraphNode,
   deleteGraphRelationship,
   upsertGraphNode,
-  searchKnowledge,
-  updateKnowledgeDocument,
-  upsertKnowledgeEmbedding,
 } from './database.js'
-import { getKnowledgeEmbeddingStats } from './database.js'
-import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-adaptation.js'
+import { calculateFeedbackAdjustment, FeedbackAdaptationRanker, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
+import { searchKnowledge } from './keyword-retrieval.js'
+import { SemanticKnowledgeRetriever } from './semantic-retrieval.js'
 import {
   createAuthService,
   getBearerToken,
@@ -55,6 +44,7 @@ import { createSqliteAnalyticsRepository } from './repositories/sqlite-analytics
 import { checkDatabaseReadiness } from './readiness.js'
 import { createRuntimeRepositories } from './runtime-repositories.js'
 import type { NewAuditLog } from './repositories/audit-repository.js'
+import type { AsyncKnowledgeRepository } from './repositories/knowledge-repository.js'
 import type { AsyncNotificationRepository } from './repositories/notification-repository.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
@@ -65,6 +55,7 @@ const conversationRepository = runtimeRepositories.conversations
 const feedbackRepository = runtimeRepositories.feedback
 const notificationRepository = runtimeRepositories.notifications
 const auditRepository = runtimeRepositories.audit
+const knowledgeRepository: AsyncKnowledgeRepository = runtimeRepositories.knowledge
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
 
@@ -99,9 +90,9 @@ const hasRemoteMastraAgent = Boolean(process.env.MASTRA_AGENT_URL?.trim())
 const mastraServerEnabled = process.env.ENABLE_MASTRA_SERVER === 'true' && !hasRemoteMastraAgent
 const neo4jGraphStore = process.env.GRAPH_STORE === 'neo4j' ? new Neo4jGraphStore() : undefined
 const hybridRetriever = new HybridKnowledgeRetriever(
-  searchKnowledge,
-  undefined,
-  undefined,
+  (query, limit) => searchKnowledge(knowledgeRepository, query, limit),
+  new SemanticKnowledgeRetriever(undefined, () => knowledgeRepository.listEmbeddedKnowledge()),
+  new FeedbackAdaptationRanker(() => knowledgeRepository.getKnowledgeSourceFeedbackStats()),
   neo4jGraphStore ? (query) => neo4jGraphStore.findKnowledgeTitles(query) : undefined,
 )
 const agent = createAgentService(hybridRetriever.retrieve)
@@ -133,7 +124,7 @@ function getLlmProviderConfigured() {
 }
 
 async function getHealthSnapshot() {
-  const embeddingStats = getKnowledgeEmbeddingStats()
+  const embeddingStats = await knowledgeRepository.getKnowledgeEmbeddingStats()
 
   return {
     service: 'ARIA API',
@@ -488,10 +479,10 @@ app.post('/api/auth/logout', authService.requireAuth, async (request, response) 
 
 app.get('/api/system-status', async (_request, response) => {
   const health = await getHealthSnapshot()
-  const knowledge = listKnowledge()
+  const knowledge = await knowledgeRepository.listKnowledge()
   const indexedKnowledge = knowledge.filter((item) => item.status === 'indexed').length
   const recordCounts = await systemRepository.getRecordCounts()
-  const sourceStats = getKnowledgeSourceFeedbackStats()
+  const sourceStats = await knowledgeRepository.getKnowledgeSourceFeedbackStats()
 
   response.json({
     generatedAt: new Date().toISOString(),
@@ -587,7 +578,7 @@ async function processChatRequest(query: string, requestedConversationId: number
   })
   await conversationRepository.updateConversation(conversationId, { topic: inferTopic(query) })
   for (const source of result.sources) {
-    incrementKnowledgeUses(source)
+    await knowledgeRepository.incrementKnowledgeUses(source)
   }
   if (result.shouldEscalate) {
     await createNotification({ kind: 'escalation', title: 'Conversation needs human review', message: 'ARIA flagged this conversation for support-agent follow-up.' })
@@ -827,12 +818,12 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), async (reque
   response.status(201).json(entry)
 })
 
-app.get('/api/knowledge', (_request, response) => {
-  response.json(listKnowledge())
+app.get('/api/knowledge', async (_request, response) => {
+  response.json(await knowledgeRepository.listKnowledge())
 })
 
-app.get('/api/knowledge/archived', roleGuard('admin', 'support_agent'), (_request, response) => {
-  response.json(listArchivedKnowledge())
+app.get('/api/knowledge/archived', roleGuard('admin', 'support_agent'), async (_request, response) => {
+  response.json(await knowledgeRepository.listArchivedKnowledge())
 })
 
 app.post('/api/knowledge', roleGuard('admin', 'support_agent'), async (request, response) => {
@@ -852,7 +843,7 @@ app.post('/api/knowledge', roleGuard('admin', 'support_agent'), async (request, 
   }
 
   try {
-    const document = createKnowledgeDocument({ title, category, content, status })
+    const document = await knowledgeRepository.createKnowledgeDocument({ title, category, content, status })
     await createNotification({ kind: 'knowledge', title: 'Knowledge document created', message: `${document.title} was added to the knowledge base.` })
     await recordAudit(request, { action: 'knowledge.created', entityType: 'knowledge_document', entityId: document.id, metadata: { category, status } })
     response.status(201).json(document)
@@ -887,7 +878,7 @@ app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.si
       return
     }
 
-    const document = createKnowledgeDocument({
+    const document = await knowledgeRepository.createKnowledgeDocument({
       title,
       category,
       content,
@@ -898,7 +889,7 @@ app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.si
     try {
       const embeddingText = createKnowledgeEmbeddingText(document)
       const vector = await embeddingService.embed(embeddingText)
-      upsertKnowledgeEmbedding({
+      await knowledgeRepository.upsertKnowledgeEmbedding({
         knowledgeDocumentId: document.id,
         model: embeddingModel,
         vector,
@@ -936,7 +927,7 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (reques
     return
   }
   try {
-    const updated = updateKnowledgeDocument(id, { title, category, content, status })
+    const updated = await knowledgeRepository.updateKnowledgeDocument(id, { title, category, content, status })
     if (!updated) {
       response.status(404).json({ error: 'knowledge document was not found' })
       return
@@ -946,7 +937,7 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (reques
       try {
         const embeddingText = createKnowledgeEmbeddingText(updated)
         const vector = await embeddingService.embed(embeddingText)
-        upsertKnowledgeEmbedding({
+        await knowledgeRepository.upsertKnowledgeEmbedding({
           knowledgeDocumentId: updated.id,
           model: embeddingModel,
           vector,
@@ -964,13 +955,13 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (reques
   }
 })
 
-app.get('/api/knowledge/:id/versions', roleGuard('admin', 'support_agent'), (request, response) => {
+app.get('/api/knowledge/:id/versions', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = Number(request.params.id)
   if (!Number.isInteger(id) || id <= 0) {
     response.status(400).json({ error: 'valid knowledge id is required' })
     return
   }
-  response.json(getKnowledgeDocumentVersions(id))
+  response.json(await knowledgeRepository.getKnowledgeDocumentVersions(id))
 })
 
 app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), async (request, response) => {
@@ -979,7 +970,7 @@ app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), async (r
     response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
     return
   }
-  const result = archiveKnowledgeDocuments(ids)
+  const result = await knowledgeRepository.archiveKnowledgeDocuments(ids)
   if (result.archived > 0) {
     await createNotification({ kind: 'knowledge', title: 'Knowledge documents archived', message: `${result.archived} knowledge document${result.archived === 1 ? '' : 's'} moved to the archive.` })
     await recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
@@ -993,7 +984,7 @@ app.post('/api/knowledge/restore', roleGuard('admin', 'support_agent'), async (r
     response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
     return
   }
-  const result = restoreKnowledgeDocuments(ids)
+  const result = await knowledgeRepository.restoreKnowledgeDocuments(ids)
   if (result.restored > 0) {
     await createNotification({ kind: 'knowledge', title: 'Knowledge documents restored', message: `${result.restored} archived knowledge document${result.restored === 1 ? '' : 's'} restored.` })
     await recordAudit(request, { action: 'knowledge.restored', entityType: 'knowledge_document', metadata: { ids } })
@@ -1009,7 +1000,7 @@ app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (req
     return
   }
 
-  const result = deleteKnowledgeDocuments([id])
+  const result = await knowledgeRepository.deleteKnowledgeDocuments([id])
   if (result.deleted === 0) {
     response.status(404).json({ error: 'knowledge document was not found' })
     return
@@ -1029,7 +1020,7 @@ app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), async (request
     return
   }
 
-  const result = deleteKnowledgeDocuments(ids)
+  const result = await knowledgeRepository.deleteKnowledgeDocuments(ids)
   if (result.deleted > 0) {
     await createNotification({ kind: 'knowledge', title: 'Knowledge documents deleted', message: `${result.deleted} knowledge document${result.deleted === 1 ? '' : 's'} permanently deleted.` })
     await recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', metadata: { ids } })
@@ -1037,11 +1028,11 @@ app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), async (request
   response.json(result)
 })
 
-app.get('/api/analytics/summary', (request, response) => {
+app.get('/api/analytics/summary', async (request, response) => {
   const range = String(request.query.range ?? '7d')
   const since = range === 'all' ? undefined : new Date(Date.now() - (range === '30d' ? 30 : 7) * 24 * 60 * 60 * 1000).toISOString()
   const { conversationCount, feedbackStats, accepted, corrected, topicRows, rejected, retrievalRows, providerRows, escalationCount, responseMessageCount, latencyStats, confidenceStats, groundedResponseCount, highConfidenceCount, lowConfidenceCount, qualityTrend } = analyticsRepository.getAnalyticsMetrics(since, Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7))
-  const sourceStats = getKnowledgeSourceFeedbackStats()
+  const sourceStats = await knowledgeRepository.getKnowledgeSourceFeedbackStats()
   const adaptedSources = sourceStats.map((source) => ({
     title: source.title,
     feedbackCount: source.feedbackCount,

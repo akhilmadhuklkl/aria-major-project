@@ -44,6 +44,8 @@ Feedback persistence is now the third feature boundary. Customer ratings and age
 
 Notifications and audit logging are now the fourth feature boundary. Notification listing, read-state updates, creation, audit listing, and audit writes use the runtime-selected async repositories, including side effects from knowledge, conversation, feedback, graph, webhook, and authentication routes.
 
+Knowledge persistence and retrieval are now the fifth feature boundary. Knowledge CRUD, archive and restore, version history, embedding reads and writes, usage counters, source-feedback statistics, chat keyword search, semantic retrieval, feedback adaptation, and the indexing/evaluation scripts use the runtime-selected knowledge repository.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
