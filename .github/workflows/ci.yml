@@ -99,9 +99,13 @@ jobs:
           cache-dependency-path: aria-app/package-lock.json
       - name: Install dependencies
         run: npm ci
+      - name: Initialize SQLite migration source
+        run: node --disable-warning=ExperimentalWarning --import tsx -e "import { db } from './server/database.ts'; import { ensureAuthSchema } from './server/auth.ts'; ensureAuthSchema(); db.close()"
       - name: Run PostgreSQL migration preflight
         run: npm run preflight:postgres
       - name: Migrate SQLite data to PostgreSQL
         run: npm run migrate:postgres
       - name: Verify PostgreSQL schema and indexes
         run: npm run verify:postgres
+      - name: Run PostgreSQL repository integration tests
+        run: npm run test:postgres

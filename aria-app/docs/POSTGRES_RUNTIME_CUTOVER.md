@@ -6,6 +6,14 @@ ARIA currently runs on SQLite through Node's synchronous `DatabaseSync` API. Pos
 
 `DATABASE_ENGINE=sqlite` is therefore the only supported runtime setting. The server fails fast for other values so a deployment cannot appear to use PostgreSQL while silently writing to SQLite.
 
+## Adapter Progress
+
+SQLite storage boundaries now cover authentication, conversations/messages, feedback, notifications, audit logs, webhooks, knowledge/embeddings, analytics, system probes, and graph operations.
+
+The first asynchronous PostgreSQL implementation is the notification repository. It is not yet selected by live request handlers. Its unit tests run with `npm test`; its real PostgreSQL lifecycle test runs with `npm run test:postgres` when `DATABASE_URL` is set. GitHub Actions runs that integration test in the PostgreSQL job after schema verification. Tests use a connection-local temporary notification table and roll back, leaving imported notification records unchanged.
+
+Other PostgreSQL adapters, asynchronous caller conversion, shared cross-engine contract tests, transactional writes, and production cutover remain pending. Existing synchronous SQLite contracts must still be reconciled with the async adapters before runtime selection can be enabled.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.

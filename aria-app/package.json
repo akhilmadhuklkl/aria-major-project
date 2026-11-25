@@ -8,6 +8,7 @@
     "dev:client": "vite",
     "dev:server": "node --disable-warning=ExperimentalWarning --import tsx --watch server/index.ts",
     "test:e2e": "playwright test",
+    "test:postgres": "node --disable-warning=ExperimentalWarning --import tsx --test --test-concurrency=1 server/tests/postgres/*.test.ts",
     "start:server": "node --disable-warning=ExperimentalWarning --import tsx server/index.ts",
     "check:api": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/check-api.ts",
     "audit:production": "npm audit --omit=dev --audit-level=critical",

@@ -13,3 +13,10 @@ export interface NotificationRepository {
   markNotificationRead(id: number): boolean
   markAllNotificationsRead(): number | bigint
 }
+
+export interface AsyncNotificationRepository {
+  createNotification(input: Pick<NotificationRecord, 'kind' | 'title' | 'message'>): Promise<NotificationRecord>
+  listNotifications(limit?: number): Promise<NotificationRecord[]>
+  markNotificationRead(id: number): Promise<boolean>
+  markAllNotificationsRead(): Promise<number>
+}
