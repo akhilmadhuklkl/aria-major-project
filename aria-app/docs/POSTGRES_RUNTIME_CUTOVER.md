@@ -32,6 +32,8 @@ The asynchronous PostgreSQL system repository now supports connectivity probes a
 
 The asynchronous PostgreSQL graph repository now supports typed node upserts, JSONB properties, directed relationship upserts, bounded path queries, one-hop knowledge-title lookup, and foreign-key cascade deletion. Its behavior is covered against real PostgreSQL temporary tables, and the adapter is not yet connected to live routes.
 
+The runtime repository factory now assembles all asynchronous PostgreSQL adapters behind one explicit `createRuntimeRepositories('postgres', ...)` boundary and owns pool shutdown. SQLite remains the active server runtime; the factory is intentionally not wired into request handlers until their synchronous calls are converted to async repository calls and cross-engine contract tests pass.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
