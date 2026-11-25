@@ -1,4 +1,5 @@
 import { Pool, type PoolConfig } from 'pg'
+import { db } from './database.js'
 import type { AsyncAnalyticsRepository } from './repositories/analytics-repository.js'
 import type { AsyncAuditRepository } from './repositories/audit-repository.js'
 import type { AsyncAuthRepository } from './repositories/auth-repository.js'
@@ -19,6 +20,7 @@ import { createPostgresKnowledgeRepository } from './repositories/postgres-knowl
 import { createPostgresNotificationRepository } from './repositories/postgres-notification-repository.js'
 import { createPostgresSystemRepository } from './repositories/postgres-system-repository.js'
 import { createPostgresWebhookRepository } from './repositories/postgres-webhook-repository.js'
+import { createSqliteSystemRepository } from './repositories/sqlite-system-repository.js'
 import type { DatabaseEngine } from './database-runtime.js'
 
 export type PostgresRepositorySet = {
@@ -37,8 +39,8 @@ export type PostgresRepositorySet = {
 export type RuntimePool = Pick<Pool, 'query' | 'connect' | 'end'>
 
 export type RuntimeRepositories =
-  | { engine: 'sqlite'; postgres: null; close(): Promise<void> }
-  | { engine: 'postgres'; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
+  | { engine: 'sqlite'; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
+  | { engine: 'postgres'; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
 
 type RuntimeRepositoryOptions = {
   databaseUrl?: string
@@ -61,8 +63,20 @@ export function createPostgresRepositorySet(pool: Pick<Pool, 'query' | 'connect'
   }
 }
 
+function createAsyncSqliteSystemRepository(): AsyncSystemRepository {
+  const repository = createSqliteSystemRepository(db)
+  return {
+    async verifyConnection() {
+      repository.verifyConnection()
+    },
+    async getRecordCounts() {
+      return repository.getRecordCounts()
+    },
+  }
+}
+
 export function createRuntimeRepositories(engine: DatabaseEngine, options: RuntimeRepositoryOptions = {}): RuntimeRepositories {
-  if (engine === 'sqlite') return { engine, postgres: null, close: async () => {} }
+  if (engine === 'sqlite') return { engine, system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
 
   const databaseUrl = options.databaseUrl?.trim() || process.env.DATABASE_URL?.trim()
   if (!databaseUrl) throw new Error('DATABASE_URL is required when DATABASE_ENGINE=postgres')
@@ -74,5 +88,6 @@ export function createRuntimeRepositories(engine: DatabaseEngine, options: Runti
     connectionTimeoutMillis: 10_000,
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   })
-  return { engine, pool, postgres: createPostgresRepositorySet(pool), close: () => pool.end() }
+  const postgres = createPostgresRepositorySet(pool)
+  return { engine, system: postgres.system, pool, postgres, close: () => pool.end() }
 }

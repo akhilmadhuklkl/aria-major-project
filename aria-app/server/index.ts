@@ -67,14 +67,15 @@ import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-reposit
 import { sqliteNotificationRepository } from './repositories/sqlite-notification-repository.js'
 import { sqliteAuditRepository } from './repositories/sqlite-audit-repository.js'
 import { createSqliteAnalyticsRepository } from './repositories/sqlite-analytics-repository.js'
-import { createSqliteSystemRepository } from './repositories/sqlite-system-repository.js'
 import { checkDatabaseReadiness } from './readiness.js'
+import { createRuntimeRepositories } from './runtime-repositories.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
 const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = sqliteNotificationRepository
 const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 const analyticsRepository = createSqliteAnalyticsRepository(db)
-const systemRepository = createSqliteSystemRepository(db)
+const runtimeRepositories = createRuntimeRepositories(databaseEngine)
+const systemRepository = runtimeRepositories.system
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
@@ -487,11 +488,11 @@ app.post('/api/auth/logout', requireAuth, (request, response) => {
   response.status(204).send()
 })
 
-app.get('/api/system-status', (_request, response) => {
+app.get('/api/system-status', async (_request, response) => {
   const health = getHealthSnapshot()
   const knowledge = listKnowledge()
   const indexedKnowledge = knowledge.filter((item) => item.status === 'indexed').length
-  const recordCounts = systemRepository.getRecordCounts()
+  const recordCounts = await systemRepository.getRecordCounts()
   const sourceStats = getKnowledgeSourceFeedbackStats()
 
   response.json({
