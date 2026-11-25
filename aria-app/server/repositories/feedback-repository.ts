@@ -13,3 +13,7 @@ export type FeedbackRecord = {
 export interface FeedbackRepository {
   insertFeedback(entry: FeedbackRecord): void
 }
+
+export interface AsyncFeedbackRepository {
+  insertFeedback(entry: FeedbackRecord): Promise<void>
+}

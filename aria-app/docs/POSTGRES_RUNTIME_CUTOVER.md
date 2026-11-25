@@ -12,6 +12,8 @@ SQLite storage boundaries now cover authentication, conversations/messages, feed
 
 The first asynchronous PostgreSQL implementation is the notification repository. It is not yet selected by live request handlers. Its unit tests run with `npm test`; its real PostgreSQL lifecycle test runs with `npm run test:postgres` when `DATABASE_URL` is set. GitHub Actions runs that integration test in the PostgreSQL job after schema verification. Tests use a connection-local temporary notification table and roll back, leaving imported notification records unchanged.
 
+The asynchronous PostgreSQL feedback repository now supports customer ratings and agent feedback writes, with parameterized values and nullable fields. Unit tests run with `npm test`; `npm run test:postgres` also covers real PostgreSQL round-trips, duplicate IDs, and foreign-key failures using temporary tables and rollback. This adapter is not yet connected to live routes.
+
 Other PostgreSQL adapters, asynchronous caller conversion, shared cross-engine contract tests, transactional writes, and production cutover remain pending. Existing synchronous SQLite contracts must still be reconciled with the async adapters before runtime selection can be enabled.
 
 ## Cutover Stages
