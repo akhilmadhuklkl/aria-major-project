@@ -44,3 +44,7 @@ export interface ConversationRepository {
   listMessages(conversationId: number): MessageRecord[]
   getCustomerContext(conversationId: number): { customer: string; totalConversations: number; openConversations: number; topics: Array<{ topic: string; count: number }>; history: Array<ConversationRecord & { lastMessage?: string | null }> } | undefined
 }
+
+export type AsyncConversationRepository = {
+  [Method in keyof ConversationRepository]: (...args: Parameters<ConversationRepository[Method]>) => Promise<ReturnType<ConversationRepository[Method]>>
+}

@@ -20,6 +20,8 @@ Other PostgreSQL adapters, asynchronous caller conversion, shared cross-engine c
 
 The asynchronous PostgreSQL authentication repository now provides user and session persistence, case-insensitive email lookup, public user projections, credential updates, and session revocation. Schema setup remains migration-owned; the adapter checks the migrated tables rather than creating them on a login request. A unique index on `lower(email)` preserves SQLite's email uniqueness behavior. Password hashing, expiry enforcement, authorization, and atomic password-change/session-revocation orchestration remain service responsibilities; live authentication still uses SQLite.
 
+The asynchronous PostgreSQL conversation repository now covers conversation/message writes and reads, case-insensitive search, pagination, global queue counts, partial metadata updates, latest-assistant lookup, and customer context. JSON array fields are explicitly serialized for JSONB parameters. Metadata updates are a single SQL statement that preserves omitted fields while allowing explicit unassignment and clearing tags/escalation. Real-database tests use temporary tables and rollback. Live chat and Agent Workspace routes still use SQLite.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
