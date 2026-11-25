@@ -24,6 +24,8 @@ The asynchronous PostgreSQL conversation repository now covers conversation/mess
 
 The PostgreSQL knowledge repository covers document lifecycle, version history, embeddings, usage counts, and feedback attribution. Document creation and updates use transactions so version history stays in sync with content and stale embeddings are invalidated atomically. Archived documents remain excluded from indexing and semantic retrieval. The adapter is exercised by `npm run test:postgres` but is not yet connected to live routes.
 
+The asynchronous PostgreSQL webhook repository now covers subscription creation, activation changes, deletion, delivery logging, and bounded delivery history. Event lists are serialized as JSONB parameters, delivery history never exposes subscription secrets, and foreign-key cascade behavior is tested against PostgreSQL. The adapter is not yet connected to live routes.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
