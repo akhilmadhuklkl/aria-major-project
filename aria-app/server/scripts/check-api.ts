@@ -25,7 +25,7 @@ try {
   const readiness = await request<Record<string, unknown>>('/ready')
   addResult(
     'Readiness endpoint',
-    readiness.ready === true,
+    readiness.ready === true && readiness.database === health.database && readiness.graphStore === health.graphStore,
     `ready=${String(readiness.ready)}, database=${String(readiness.database)}`,
   )
 

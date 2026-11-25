@@ -67,11 +67,14 @@ import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-reposit
 import { sqliteNotificationRepository } from './repositories/sqlite-notification-repository.js'
 import { sqliteAuditRepository } from './repositories/sqlite-audit-repository.js'
 import { createSqliteAnalyticsRepository } from './repositories/sqlite-analytics-repository.js'
+import { createSqliteSystemRepository } from './repositories/sqlite-system-repository.js'
+import { checkDatabaseReadiness } from './readiness.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
 const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = sqliteNotificationRepository
 const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 const analyticsRepository = createSqliteAnalyticsRepository(db)
+const systemRepository = createSqliteSystemRepository(db)
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
@@ -204,17 +207,8 @@ app.get('/api/health', (_request, response) => {
 })
 
 app.get('/api/ready', async (_request, response) => {
-  try {
-    if (neo4jGraphStore) {
-      await neo4jGraphStore.verifyConnection()
-      response.json({ ready: true, database: 'neo4j' })
-      return
-    }
-    db.prepare('SELECT 1').get()
-    response.json({ ready: true, database: 'sqlite' })
-  } catch {
-    response.status(503).json({ ready: false, database: neo4jGraphStore ? 'neo4j' : 'sqlite' })
-  }
+  const readiness = await checkDatabaseReadiness(databaseEngine, systemRepository, neo4jGraphStore)
+  response.status(readiness.ready ? 200 : 503).json(readiness)
 })
 
 app.get('/api/notifications', (_request, response) => {
@@ -497,8 +491,7 @@ app.get('/api/system-status', (_request, response) => {
   const health = getHealthSnapshot()
   const knowledge = listKnowledge()
   const indexedKnowledge = knowledge.filter((item) => item.status === 'indexed').length
-  const conversationCount = db.prepare('SELECT COUNT(*) AS count FROM conversations').get() as { count: number }
-  const feedbackCount = db.prepare('SELECT COUNT(*) AS count FROM feedback').get() as { count: number }
+  const recordCounts = systemRepository.getRecordCounts()
   const sourceStats = getKnowledgeSourceFeedbackStats()
 
   response.json({
@@ -511,8 +504,8 @@ app.get('/api/system-status', (_request, response) => {
     database: {
       engine: health.database,
       status: 'active',
-      conversations: conversationCount.count,
-      feedbackRecords: feedbackCount.count,
+      conversations: recordCounts.conversations,
+      feedbackRecords: recordCounts.feedbackRecords,
       knowledgeRecords: knowledge.length,
       indexedKnowledgeRecords: indexedKnowledge,
     },

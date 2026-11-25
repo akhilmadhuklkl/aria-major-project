@@ -58,5 +58,5 @@ GitHub Actions also provisions PostgreSQL in a dedicated CI job and runs the pre
 - Set restrictive CORS origins before public exposure.
 - Persist the database volume and configure backups.
 - Confirm `/api/health` is monitored and never expose `.env` files.
-- Configure deployment monitoring to use `/api/ready` for traffic readiness; it returns HTTP 503 when the SQLite database cannot be queried.
+- Configure deployment monitoring to use `/api/ready` for traffic readiness. It probes the primary database and, when configured, Neo4j; either failure returns HTTP 503. The response reports the primary engine as `database` and the graph engine as `graphStore`.
 - Use `SMOKE_API_TOKEN` with `npm run check:api` when `AUTH_REQUIRED=true` so protected read-only endpoints can be checked without performing writes.
