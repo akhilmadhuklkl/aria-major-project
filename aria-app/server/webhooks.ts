@@ -1,9 +1,10 @@
 import { createHmac, randomBytes } from 'node:crypto'
-import { db } from './database.js'
+import { sqliteWebhookRepository } from './repositories/sqlite-webhook-repository.js'
+import type { StoredWebhookSubscription } from './repositories/webhook-repository.js'
 
 export type WebhookEvent = 'feedback.low_rating' | 'agent_action.corrected' | 'knowledge.indexed'
 export const webhookEvents: WebhookEvent[] = ['feedback.low_rating', 'agent_action.corrected', 'knowledge.indexed']
-type WebhookSubscription = { id: number; name: string; url: string; secret: string; events: string[]; active: boolean; createdAt: string; updatedAt: string }
+type WebhookSubscription = StoredWebhookSubscription
 export type PublicWebhookSubscription = Omit<WebhookSubscription, 'secret'>
 
 export function validateWebhookUrl(value: string) {
@@ -24,25 +25,13 @@ export function normalizeWebhookEvents(events: string[]) {
 export function createWebhookSubscription(input: { name: string; url: string; events?: string[] }) {
   const now = new Date().toISOString()
   const secret = randomBytes(24).toString('hex')
-  const result = db.prepare(`
-    INSERT INTO webhook_subscriptions (name, url, secret, events, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(input.name, input.url, secret, JSON.stringify(normalizeWebhookEvents(input.events ?? [])), now, now)
-  return { id: Number(result.lastInsertRowid), name: input.name, url: input.url, events: normalizeWebhookEvents(input.events ?? []), active: true, secret, createdAt: now }
+  const events = normalizeWebhookEvents(input.events ?? [])
+  const id = sqliteWebhookRepository.insertSubscription({ name: input.name, url: input.url, secret, events, createdAt: now, updatedAt: now })
+  return { id, name: input.name, url: input.url, events, active: true, secret, createdAt: now }
 }
 
 function listWebhookSubscriptionsWithSecrets(): WebhookSubscription[] {
-  return db.prepare(`
-    SELECT id, name, url, secret, events, active, created_at AS createdAt, updated_at AS updatedAt
-    FROM webhook_subscriptions ORDER BY created_at DESC
-  `).all().map((row) => {
-    const item = row as Record<string, unknown>
-    return {
-      id: Number(item.id), name: String(item.name), url: String(item.url), secret: String(item.secret),
-      events: JSON.parse(String(item.events)) as string[], active: Boolean(item.active),
-      createdAt: String(item.createdAt), updatedAt: String(item.updatedAt),
-    }
-  })
+  return sqliteWebhookRepository.listSubscriptionsWithSecrets()
 }
 
 export function listWebhookSubscriptions(): PublicWebhookSubscription[] {
@@ -58,24 +47,15 @@ export function listWebhookSubscriptions(): PublicWebhookSubscription[] {
 }
 
 export function deleteWebhookSubscription(id: number) {
-  return db.prepare('DELETE FROM webhook_subscriptions WHERE id = ?').run(id).changes > 0
+  return sqliteWebhookRepository.deleteSubscription(id)
 }
 
 export function updateWebhookSubscription(id: number, active: boolean) {
-  return db.prepare('UPDATE webhook_subscriptions SET active = ?, updated_at = ? WHERE id = ?')
-    .run(active ? 1 : 0, new Date().toISOString(), id).changes > 0
+  return sqliteWebhookRepository.updateSubscription(id, active, new Date().toISOString())
 }
 
 export function listWebhookDeliveries(limit = 30) {
-  return db.prepare(`
-    SELECT webhook_delivery_logs.id, webhook_delivery_logs.webhook_id AS webhookId,
-      webhook_subscriptions.name, webhook_delivery_logs.event, webhook_delivery_logs.status,
-      webhook_delivery_logs.response_status AS responseStatus, webhook_delivery_logs.attempts,
-      webhook_delivery_logs.error, webhook_delivery_logs.created_at AS createdAt
-    FROM webhook_delivery_logs
-    JOIN webhook_subscriptions ON webhook_subscriptions.id = webhook_delivery_logs.webhook_id
-    ORDER BY webhook_delivery_logs.created_at DESC LIMIT ?
-  `).all(Math.max(1, Math.min(limit, 100)))
+  return sqliteWebhookRepository.listDeliveries(limit)
 }
 
 export function signWebhookPayload(secret: string, payload: string) {
@@ -111,8 +91,7 @@ async function deliverWebhook(subscription: WebhookSubscription, event: WebhookE
       })
       responseStatus = response.status
       if (response.ok) {
-        db.prepare(`INSERT INTO webhook_delivery_logs (webhook_id, event, status, response_status, attempts, created_at) VALUES (?, ?, 'delivered', ?, ?, ?)`)
-          .run(subscription.id, event, responseStatus, attempts, new Date().toISOString())
+        sqliteWebhookRepository.insertDelivery({ webhookId: subscription.id, event, status: 'delivered', responseStatus, attempts, createdAt: new Date().toISOString() })
         return true
       }
       lastError = `HTTP ${response.status}`
@@ -123,7 +102,6 @@ async function deliverWebhook(subscription: WebhookSubscription, event: WebhookE
     }
     if (attempts < 3) await new Promise((resolve) => setTimeout(resolve, attempts * 250))
   }
-  db.prepare(`INSERT INTO webhook_delivery_logs (webhook_id, event, status, response_status, attempts, error, created_at) VALUES (?, ?, 'failed', ?, ?, ?, ?)`)
-    .run(subscription.id, event, responseStatus, attempts - 1, lastError.slice(0, 500), new Date().toISOString())
+  sqliteWebhookRepository.insertDelivery({ webhookId: subscription.id, event, status: 'failed', responseStatus, attempts: attempts - 1, error: lastError.slice(0, 500), createdAt: new Date().toISOString() })
   return false
 }
