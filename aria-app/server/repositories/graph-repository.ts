@@ -17,3 +17,15 @@ export interface GraphRepository {
   queryGraphPaths(startId: string, maxHops?: number): GraphPath[]
   findGraphKnowledgeTitles(query: string): string[]
 }
+
+export interface AsyncGraphRepository {
+  upsertGraphNode(input: { id: string; type: GraphNodeType; properties?: GraphProperties }): Promise<GraphNodeRecord | null>
+  getGraphNode(id: string): Promise<GraphNodeRecord | null>
+  listGraphNodes(limit?: number): Promise<GraphNodeRecord[]>
+  createGraphRelationship(input: GraphRelationshipInput): Promise<GraphRelationshipInput & { properties: GraphProperties }>
+  listGraphRelationships(limit?: number): Promise<GraphRelationshipRecord[]>
+  deleteGraphRelationship(input: Pick<GraphRelationshipInput, 'sourceId' | 'type' | 'targetId'>): Promise<boolean>
+  deleteGraphNode(id: string): Promise<boolean>
+  queryGraphPaths(startId: string, maxHops?: number): Promise<GraphPath[]>
+  findGraphKnowledgeTitles(query: string): Promise<string[]>
+}

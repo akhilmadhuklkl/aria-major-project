@@ -30,6 +30,8 @@ The asynchronous PostgreSQL analytics repository now mirrors the SQLite metrics 
 
 The asynchronous PostgreSQL system repository now supports connectivity probes and conversation/feedback record counts for readiness and operational status checks. PostgreSQL count results are normalized to application numbers, and the adapter is not yet connected to live routes.
 
+The asynchronous PostgreSQL graph repository now supports typed node upserts, JSONB properties, directed relationship upserts, bounded path queries, one-hop knowledge-title lookup, and foreign-key cascade deletion. Its behavior is covered against real PostgreSQL temporary tables, and the adapter is not yet connected to live routes.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
