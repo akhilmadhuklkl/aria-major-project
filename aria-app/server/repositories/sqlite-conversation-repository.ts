@@ -35,6 +35,27 @@ function mapMessage(row: Record<string, unknown>) {
 }
 
 export const sqliteConversationRepository: ConversationRepository = {
+  listConversations() {
+    return db.prepare('SELECT * FROM conversations ORDER BY updated_at DESC').all()
+      .map((row) => mapConversation(row as Record<string, unknown>))
+  },
+
+  listConversationPage(limit, offset, search) {
+    const clause = search ? ' WHERE customer_name LIKE ? OR subject LIKE ? OR tags LIKE ?' : ''
+    const args = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []
+    const total = (db.prepare(`SELECT COUNT(*) AS count FROM conversations${clause}`).get(...args) as { count: number }).count
+    const queueCounts = db.prepare(`
+      SELECT
+        COALESCE(SUM(CASE WHEN assigned_to IS NOT NULL AND assigned_to != '' THEN 1 ELSE 0 END), 0) AS mine,
+        COALESCE(SUM(CASE WHEN assigned_to IS NULL OR assigned_to = '' THEN 1 ELSE 0 END), 0) AS unassigned,
+        COALESCE(SUM(CASE WHEN status IN ('open', 'pending') OR escalated = 1 THEN 1 ELSE 0 END), 0) AS attention
+      FROM conversations
+    `).get() as { mine: number; unassigned: number; attention: number }
+    const items = db.prepare(`SELECT * FROM conversations${clause} ORDER BY updated_at DESC LIMIT ? OFFSET ?`)
+      .all(...args, limit, offset).map((row) => mapConversation(row as Record<string, unknown>))
+    return { items, total, queueCounts }
+  },
+
   createConversation(input) {
     const result = db.prepare(`
       INSERT INTO conversations (customer_name, subject, status, priority, topic, assigned_to, tags, escalated, created_at, updated_at)

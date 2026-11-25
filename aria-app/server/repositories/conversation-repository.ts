@@ -31,6 +31,11 @@ export type MessageRecord = {
 }
 
 export interface ConversationRepository {
+  listConversations(): ConversationRecord[]
+  listConversationPage(limit: number, offset: number, search: string): {
+    items: ConversationRecord[]; total: number
+    queueCounts: { mine: number; unassigned: number; attention: number }
+  }
   createConversation(input: Omit<ConversationRecord, 'id'>): ConversationRecord
   getConversation(id: number): ConversationRecord | undefined
   updateConversation(id: number, changes: Partial<Pick<ConversationRecord, 'status' | 'priority' | 'assignedTo' | 'tags' | 'escalated' | 'topic'>>): ConversationRecord | undefined

@@ -77,3 +77,33 @@ test('partial conversation updates ignore undefined fields and preserve explicit
     db.exec('ROLLBACK')
   }
 })
+
+test('conversation pages search metadata, paginate, and retain global queue counts', () => {
+  db.exec('BEGIN')
+  try {
+    const marker = crypto.randomUUID()
+    const before = sqliteConversationRepository.listConversationPage(1, 0, '').queueCounts
+    for (let index = 0; index < 3; index += 1) {
+      sqliteConversationRepository.createConversation({
+        customerName: index === 0 ? marker : 'Page Test Customer',
+        subject: index === 1 ? marker : 'Page Test',
+        tags: index === 2 ? [marker] : [], status: 'open', priority: 'normal', topic: 'General',
+        assignedTo: index === 0 ? 'Agent' : null, escalated: false,
+        createdAt: `2026-01-0${index + 1}T00:00:00.000Z`, updatedAt: `2026-01-0${index + 1}T00:00:00.000Z`,
+      })
+    }
+    const first = sqliteConversationRepository.listConversationPage(2, 0, marker)
+    const second = sqliteConversationRepository.listConversationPage(2, 2, marker)
+    assert.equal(first.total, 3)
+    assert.equal(first.items.length, 2)
+    assert.equal(second.items.length, 1)
+    assert.equal(new Set([...first.items, ...second.items].map((item) => item.id)).size, 3)
+    assert.ok(first.items[0].updatedAt > first.items[1].updatedAt)
+    assert.deepEqual({ ...first.queueCounts }, { mine: before.mine + 1, unassigned: before.unassigned + 2, attention: before.attention + 3 })
+    assert.deepEqual(second.queueCounts, first.queueCounts)
+    assert.equal(sqliteConversationRepository.listConversationPage(2, 0, crypto.randomUUID()).total, 0)
+    assert.ok(sqliteConversationRepository.listConversations().some((item) => item.customerName === marker))
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})

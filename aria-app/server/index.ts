@@ -652,15 +652,7 @@ app.post('/api/chat/stream', chatLimiter, async (request, response) => {
 })
 
 app.get('/api/conversations', (_request, response) => {
-  const rows = db.prepare(`
-    SELECT id, customer_name AS customer, subject, status, priority, topic,
-      assigned_to AS assignedTo, tags, escalated,
-      created_at AS createdAt, updated_at AS updatedAt
-    FROM conversations ORDER BY updated_at DESC
-  `).all().map((row) => {
-    const item = row as Record<string, unknown>
-    return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
-  })
+  const rows = sqliteConversationRepository.listConversations().map(({ customerName, ...item }) => ({ ...item, customer: customerName }))
   response.json(rows)
 })
 
@@ -672,24 +664,8 @@ app.get('/api/conversations/page', (request, response) => {
   const limit = Math.min(Math.max(Number(request.query.limit ?? 50) || 50, 1), 100)
   const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0)
   const search = String(request.query.q ?? '').trim()
-  const searchClause = search ? ` WHERE customer_name LIKE ? OR subject LIKE ? OR tags LIKE ?` : ''
-  const searchArgs = search ? [`%${search}%`, `%${search}%`, `%${search}%`] : []
-  const total = (db.prepare(`SELECT COUNT(*) AS count FROM conversations${searchClause}`).get(...searchArgs) as { count: number }).count
-  const queueCounts = db.prepare(`
-    SELECT
-      COALESCE(SUM(CASE WHEN assigned_to IS NOT NULL AND assigned_to != '' THEN 1 ELSE 0 END), 0) AS mine,
-      COALESCE(SUM(CASE WHEN assigned_to IS NULL OR assigned_to = '' THEN 1 ELSE 0 END), 0) AS unassigned,
-      COALESCE(SUM(CASE WHEN status IN ('open', 'pending') OR escalated = 1 THEN 1 ELSE 0 END), 0) AS attention
-    FROM conversations
-  `).get() as { mine: number; unassigned: number; attention: number }
-  const rows = db.prepare(`
-    SELECT id, customer_name AS customer, subject, status, priority, topic,
-      assigned_to AS assignedTo, tags, escalated, updated_at AS updatedAt
-    FROM conversations${searchClause} ORDER BY updated_at DESC LIMIT ? OFFSET ?
-  `).all(...searchArgs, limit, offset).map((row) => {
-    const item = row as Record<string, unknown>
-    return { ...item, tags: item.tags ? JSON.parse(String(item.tags)) : [], escalated: Boolean(item.escalated) }
-  })
+  const { items, total, queueCounts } = sqliteConversationRepository.listConversationPage(limit, offset, search)
+  const rows = items.map(({ customerName, ...item }) => ({ ...item, customer: customerName }))
   response.json({ items: rows, total, limit, offset, search, hasMore: offset + rows.length < total, queueCounts })
 })
 
