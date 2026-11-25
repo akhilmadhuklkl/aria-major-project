@@ -16,6 +16,7 @@ import {
   deleteKnowledgeDocuments,
   getKnowledgeDocumentVersions,
   getKnowledgeSourceFeedbackStats,
+  incrementKnowledgeUses,
   getGraphNode,
   inferTopic,
   listKnowledge,
@@ -592,7 +593,7 @@ async function processChatRequest(query: string, requestedConversationId: number
   })
   sqliteConversationRepository.updateConversation(conversationId, { topic: inferTopic(query) })
   for (const source of result.sources) {
-    db.prepare('UPDATE knowledge_documents SET uses = uses + 1 WHERE title = ?').run(source)
+    incrementKnowledgeUses(source)
   }
   if (result.shouldEscalate) {
     createNotification({ kind: 'escalation', title: 'Conversation needs human review', message: 'ARIA flagged this conversation for support-agent follow-up.' })

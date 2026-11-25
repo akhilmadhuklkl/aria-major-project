@@ -125,3 +125,51 @@ test('archived and review documents cannot enter semantic retrieval or indexing 
     db.close()
   }
 })
+
+test('knowledge feedback attribution and usage counters retain existing semantics', () => {
+  const { db, repository } = fixture()
+  try {
+    db.exec(`
+      CREATE TABLE messages (id TEXT PRIMARY KEY, sources TEXT);
+      CREATE TABLE feedback (message_id TEXT, rating INTEGER, feedback_type TEXT, quality_score REAL);
+    `)
+    const create = (title: string) => repository.createKnowledgeDocument({ title, category: 'Policy', content: title })
+    const first = create('First policy')
+    const second = create('Second policy')
+    const archived = create('Archived policy')
+    repository.archiveKnowledgeDocuments([archived.id])
+    const add = (sources: string, type: string, quality: number, rating: number | null = null) => {
+      const id = crypto.randomUUID()
+      db.prepare('INSERT INTO messages VALUES (?, ?)').run(id, sources)
+      db.prepare('INSERT INTO feedback VALUES (?, ?, ?, ?)').run(id, rating, type, quality)
+    }
+    add(JSON.stringify(['Unknown', first.title, second.title]), 'accepted', 100)
+    add(JSON.stringify([first.title, second.title]), 'customer_rating', 80, 4)
+    add(JSON.stringify([first.title]), 'edited', 60)
+    add(JSON.stringify([first.title]), 'rejected', 40)
+    add(JSON.stringify([second.title]), 'accepted', 90)
+    add(JSON.stringify([archived.title]), 'customer_rating', 0, 1)
+    add('not-json', 'customer_rating', 0, 1)
+    add('{}', 'customer_rating', 0, 1)
+    add('[]', 'customer_rating', 0, 1)
+    const stats = repository.getKnowledgeSourceFeedbackStats()
+    const { getKnowledgeSourceFeedbackStats } = repository
+    assert.deepEqual(getKnowledgeSourceFeedbackStats(), stats)
+    assert.equal(stats.length, 2)
+    assert.deepEqual(stats.find((item) => item.title === first.title), {
+      title: first.title, feedbackCount: 4, averageQuality: 70, averageRating: 4,
+      acceptedCount: 1, editedCount: 1, rejectedCount: 1,
+    })
+    assert.deepEqual(stats.find((item) => item.title === second.title), {
+      title: second.title, feedbackCount: 1, averageQuality: 90, averageRating: 0,
+      acceptedCount: 1, editedCount: 0, rejectedCount: 0,
+    })
+    repository.incrementKnowledgeUses(first.title)
+    repository.incrementKnowledgeUses(first.title)
+    repository.incrementKnowledgeUses(second.title)
+    repository.incrementKnowledgeUses('Missing policy')
+    assert.deepEqual(repository.listKnowledge().map((item) => [item.title, item.uses]), [[first.title, 2], [second.title, 1]])
+  } finally {
+    db.close()
+  }
+})

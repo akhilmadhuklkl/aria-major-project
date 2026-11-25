@@ -41,6 +41,8 @@ export type KnowledgeDocumentVersion = {
 }
 
 export interface KnowledgeRepository {
+  getKnowledgeSourceFeedbackStats(): KnowledgeSourceFeedbackStats[]
+  incrementKnowledgeUses(title: string): void
   listKnowledgeEmbeddingCandidates(): Array<KnowledgeDocument & { contentHash: string | null }>
   upsertKnowledgeEmbedding(input: KnowledgeEmbeddingInput): void
   getKnowledgeEmbeddingStats(): KnowledgeEmbeddingStats
@@ -53,4 +55,14 @@ export interface KnowledgeRepository {
   restoreKnowledgeDocuments(ids: number[]): { restored: number | bigint }
   deleteKnowledgeDocuments(ids: number[]): { deleted: number | bigint }
   getKnowledgeDocumentVersions(id: number): KnowledgeDocumentVersion[]
+}
+
+export type KnowledgeSourceFeedbackStats = {
+  title: string
+  feedbackCount: number
+  averageQuality: number
+  averageRating: number
+  acceptedCount: number
+  editedCount: number
+  rejectedCount: number
 }

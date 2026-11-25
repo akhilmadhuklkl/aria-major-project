@@ -7,6 +7,77 @@ const validIds = (ids: number[]) => [...new Set(ids.filter((id) => Number.isInte
 export function createSqliteKnowledgeRepository(db: DatabaseSync): KnowledgeRepository {
   const getDocument = (id: number) => db.prepare(`SELECT ${documentColumns} FROM knowledge_documents WHERE id = ?`).get(id) as KnowledgeDocument
   return {
+    getKnowledgeSourceFeedbackStats() {
+      const knownTitles = new Set(db.prepare('SELECT title FROM knowledge_documents WHERE archived_at IS NULL').all().map((item) => String(item.title)))
+      const rows = db.prepare(`
+        SELECT
+          messages.sources,
+          feedback.rating,
+          feedback.feedback_type AS feedbackType,
+          feedback.quality_score AS qualityScore
+        FROM feedback
+        JOIN messages ON messages.id = feedback.message_id
+        WHERE messages.sources IS NOT NULL
+          AND messages.sources != '[]'
+      `).all() as Array<{
+        sources: string
+        rating: number | null
+        feedbackType: string
+        qualityScore: number
+      }>
+
+      const aggregates = new Map<string, {
+        feedbackCount: number
+        qualityTotal: number
+        ratingCount: number
+        ratingTotal: number
+        acceptedCount: number
+        editedCount: number
+        rejectedCount: number
+      }>()
+
+      for (const row of rows) {
+        const title = parseSourceTitles(row.sources).find((source) => knownTitles.has(source))
+        if (!title) continue
+
+        const aggregate = aggregates.get(title) ?? {
+          feedbackCount: 0,
+          qualityTotal: 0,
+          ratingCount: 0,
+          ratingTotal: 0,
+          acceptedCount: 0,
+          editedCount: 0,
+          rejectedCount: 0,
+        }
+        aggregate.feedbackCount += 1
+        aggregate.qualityTotal += row.qualityScore
+        if (row.rating !== null) {
+          aggregate.ratingCount += 1
+          aggregate.ratingTotal += row.rating
+        }
+        if (row.feedbackType === 'accepted') aggregate.acceptedCount += 1
+        if (row.feedbackType === 'edited') aggregate.editedCount += 1
+        if (row.feedbackType === 'rejected') aggregate.rejectedCount += 1
+        aggregates.set(title, aggregate)
+      }
+
+      return Array.from(aggregates, ([title, aggregate]) => ({
+        title,
+        feedbackCount: aggregate.feedbackCount,
+        averageQuality: aggregate.feedbackCount
+          ? aggregate.qualityTotal / aggregate.feedbackCount
+          : 60,
+        averageRating: aggregate.ratingCount
+          ? aggregate.ratingTotal / aggregate.ratingCount
+          : 0,
+        acceptedCount: aggregate.acceptedCount,
+        editedCount: aggregate.editedCount,
+        rejectedCount: aggregate.rejectedCount,
+      }))
+    },
+    incrementKnowledgeUses(title) {
+      db.prepare('UPDATE knowledge_documents SET uses = uses + 1 WHERE title = ?').run(title)
+    },
     listKnowledgeEmbeddingCandidates() {
       return db.prepare(`
         SELECT documents.id, documents.title, documents.category, documents.content, documents.status,
@@ -102,5 +173,16 @@ export function createSqliteKnowledgeRepository(db: DatabaseSync): KnowledgeRepo
         FROM knowledge_document_versions WHERE knowledge_document_id = ? ORDER BY version DESC
       `).all(id) as KnowledgeDocumentVersion[]
     },
+  }
+}
+
+function parseSourceTitles(value: string) {
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string')
+      : []
+  } catch {
+    return []
   }
 }
