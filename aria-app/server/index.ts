@@ -36,19 +36,8 @@ import { getKnowledgeEmbeddingStats } from './database.js'
 import { calculateFeedbackAdjustment, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
 import {
-  authenticateUser,
-  changeUserPassword,
-  createSession,
-  createUser,
-  ensureAuthSchema,
-  getAuthenticatedUser,
+  createAuthService,
   getBearerToken,
-  getUserCount,
-  listSupportAgents,
-  listUsers,
-  requireAuth,
-  requireRole,
-  revokeSession,
   validateCredentials,
 } from './auth.js'
 import { extractDocumentText, getDocumentType } from './document-extraction.js'
@@ -76,13 +65,15 @@ const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 const analyticsRepository = createSqliteAnalyticsRepository(db)
 const runtimeRepositories = createRuntimeRepositories(databaseEngine)
 const systemRepository = runtimeRepositories.system
+const authService = createAuthService(runtimeRepositories.auth)
+await authService.ensureAuthSchema()
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
 }
 
 function recordAudit(request: express.Request, input: Omit<Parameters<typeof createAuditLog>[0], 'actorUserId' | 'actorEmail'>) {
-  const actor = getAuthenticatedUser(request)
+  const actor = authService.getAuthenticatedUser(request)
   createAuditLog({
     ...input,
     actorUserId: actor?.id,
@@ -116,10 +107,9 @@ const llmProvider = mastraModel.startsWith('google/')
     ? 'openai'
     : 'configured-model'
 
-ensureAuthSchema()
 const authRequired = process.env.AUTH_REQUIRED === 'true'
 const roleGuard = (...roles: ('admin' | 'support_agent' | 'customer')[]) => (
-  authRequired ? requireRole(...roles) : (_request: express.Request, _response: express.Response, next: express.NextFunction) => next()
+  authRequired ? authService.requireRole(...roles) : (_request: express.Request, _response: express.Response, next: express.NextFunction) => next()
 )
 
 function getLlmProviderConfigured() {
@@ -138,7 +128,7 @@ function getLlmProviderConfigured() {
   )
 }
 
-function getHealthSnapshot() {
+async function getHealthSnapshot() {
   const embeddingStats = getKnowledgeEmbeddingStats()
 
   return {
@@ -167,7 +157,7 @@ function getHealthSnapshot() {
       confidenceThreshold: Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7),
     },
     authRequired,
-    authSetupAvailable: getUserCount() === 0,
+    authSetupAvailable: await authService.getUserCount() === 0,
   }
 }
 
@@ -191,7 +181,7 @@ app.use('/api', (request, response, next) => {
     next()
     return
   }
-  requireAuth(request, response, next)
+  authService.requireAuth(request, response, next)
 })
 
 if (mastraServerEnabled) {
@@ -203,8 +193,8 @@ if (mastraServerEnabled) {
   await mastraServer.init()
 }
 
-app.get('/api/health', (_request, response) => {
-  response.json(getHealthSnapshot())
+app.get('/api/health', async (_request, response) => {
+  response.json(await getHealthSnapshot())
 })
 
 app.get('/api/ready', async (_request, response) => {
@@ -220,11 +210,11 @@ app.get('/api/audit-logs', roleGuard('admin'), (request, response) => {
   response.json(listAuditLogs(Number(request.query.limit ?? 50)))
 })
 
-app.get('/api/users', roleGuard('admin'), (_request, response) => {
-  response.json(listUsers())
+app.get('/api/users', roleGuard('admin'), async (_request, response) => {
+  response.json(await authService.listUsers())
 })
 
-app.post('/api/users', roleGuard('admin'), (request, response) => {
+app.post('/api/users', roleGuard('admin'), async (request, response) => {
   const credentials = validateCredentials(request.body ?? {})
   if ('error' in credentials) {
     response.status(400).json({ error: credentials.error })
@@ -243,7 +233,7 @@ app.post('/api/users', roleGuard('admin'), (request, response) => {
   }
 
   try {
-    const user = createUser({ email: credentials.email, displayName, password: credentials.password, role })
+    const user = await authService.createUser({ email: credentials.email, displayName, password: credentials.password, role })
     recordAudit(request, { action: 'user.created', entityType: 'user', entityId: user?.id, metadata: { role } })
     response.status(201).json(user)
   } catch {
@@ -412,8 +402,8 @@ app.post('/api/integrations/webhooks/:id/test', roleGuard('admin'), async (reque
   response.json({ delivered: true, event: 'knowledge.indexed' })
 })
 
-app.post('/api/auth/bootstrap', (request, response) => {
-  if (getUserCount() > 0) {
+app.post('/api/auth/bootstrap', async (request, response) => {
+  if (await authService.getUserCount() > 0) {
     response.status(409).json({ error: 'Authentication has already been initialized' })
     return
   }
@@ -430,32 +420,36 @@ app.post('/api/auth/bootstrap', (request, response) => {
     return
   }
 
-  const user = createUser({
+  const user = await authService.createUser({
     email: credentials.email,
     displayName,
     password: credentials.password,
     role: 'admin',
   })
-  response.status(201).json({ user, ...createSession(user!) })
+  if (!user) {
+    response.status(500).json({ error: 'Unable to create the administrator account' })
+    return
+  }
+  response.status(201).json({ user, ...(await authService.createSession(user)) })
 })
 
-app.post('/api/auth/login', (request, response) => {
+app.post('/api/auth/login', async (request, response) => {
   const credentials = validateCredentials(request.body ?? {})
   if ('error' in credentials) {
     response.status(400).json({ error: credentials.error })
     return
   }
 
-  const user = authenticateUser(credentials.email, credentials.password)
+  const user = await authService.authenticateUser(credentials.email, credentials.password)
   if (!user) {
     response.status(401).json({ error: 'Invalid email or password' })
     return
   }
-  response.json({ user, ...createSession(user) })
+  response.json({ user, ...(await authService.createSession(user)) })
 })
 
-app.post('/api/auth/password', requireAuth, (request, response) => {
-  const user = getAuthenticatedUser(request)
+app.post('/api/auth/password', authService.requireAuth, async (request, response) => {
+  const user = authService.getAuthenticatedUser(request)
   const currentPassword = String(request.body?.currentPassword ?? '')
   const nextPassword = String(request.body?.newPassword ?? '')
   if (!user || currentPassword.length === 0) {
@@ -470,7 +464,7 @@ app.post('/api/auth/password', requireAuth, (request, response) => {
     response.status(400).json({ error: 'New password must be different from the current password' })
     return
   }
-  if (!changeUserPassword(user.id, currentPassword, nextPassword)) {
+  if (!await authService.changeUserPassword(user.id, currentPassword, nextPassword)) {
     response.status(401).json({ error: 'Current password is incorrect' })
     return
   }
@@ -478,18 +472,18 @@ app.post('/api/auth/password', requireAuth, (request, response) => {
   response.status(204).send()
 })
 
-app.get('/api/auth/me', requireAuth, (request, response) => {
-  response.json({ user: getAuthenticatedUser(request) })
+app.get('/api/auth/me', authService.requireAuth, (request, response) => {
+  response.json({ user: authService.getAuthenticatedUser(request) })
 })
 
-app.post('/api/auth/logout', requireAuth, (request, response) => {
+app.post('/api/auth/logout', authService.requireAuth, async (request, response) => {
   const token = getBearerToken(request)
-  if (token) revokeSession(token)
+  if (token) await authService.revokeSession(token)
   response.status(204).send()
 })
 
 app.get('/api/system-status', async (_request, response) => {
-  const health = getHealthSnapshot()
+  const health = await getHealthSnapshot()
   const knowledge = listKnowledge()
   const indexedKnowledge = knowledge.filter((item) => item.status === 'indexed').length
   const recordCounts = await systemRepository.getRecordCounts()
@@ -653,8 +647,8 @@ app.get('/api/conversations', (_request, response) => {
   response.json(rows)
 })
 
-app.get('/api/support-agents', roleGuard('admin', 'support_agent'), (_request, response) => {
-  response.json(listSupportAgents())
+app.get('/api/support-agents', roleGuard('admin', 'support_agent'), async (_request, response) => {
+  response.json(await authService.listSupportAgents())
 })
 
 app.get('/api/conversations/page', (request, response) => {

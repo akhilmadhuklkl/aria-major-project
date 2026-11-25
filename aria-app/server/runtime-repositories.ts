@@ -3,6 +3,7 @@ import { db } from './database.js'
 import type { AsyncAnalyticsRepository } from './repositories/analytics-repository.js'
 import type { AsyncAuditRepository } from './repositories/audit-repository.js'
 import type { AsyncAuthRepository } from './repositories/auth-repository.js'
+import { sqliteAuthRepository } from './repositories/auth-repository.js'
 import type { AsyncConversationRepository } from './repositories/conversation-repository.js'
 import type { AsyncFeedbackRepository } from './repositories/feedback-repository.js'
 import type { AsyncGraphRepository } from './repositories/graph-repository.js'
@@ -39,8 +40,8 @@ export type PostgresRepositorySet = {
 export type RuntimePool = Pick<Pool, 'query' | 'connect' | 'end'>
 
 export type RuntimeRepositories =
-  | { engine: 'sqlite'; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
-  | { engine: 'postgres'; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
+  | { engine: 'sqlite'; auth: AsyncAuthRepository; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
+  | { engine: 'postgres'; auth: AsyncAuthRepository; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
 
 type RuntimeRepositoryOptions = {
   databaseUrl?: string
@@ -75,8 +76,52 @@ function createAsyncSqliteSystemRepository(): AsyncSystemRepository {
   }
 }
 
+function createAsyncSqliteAuthRepository(): AsyncAuthRepository {
+  return {
+    async ensureSchema() {
+      sqliteAuthRepository.ensureSchema()
+    },
+    async countUsers() {
+      return sqliteAuthRepository.countUsers()
+    },
+    async findUserByEmail(email) {
+      return sqliteAuthRepository.findUserByEmail(email)
+    },
+    async findUserById(id) {
+      return sqliteAuthRepository.findUserById(id)
+    },
+    async insertUser(input) {
+      return sqliteAuthRepository.insertUser(input)
+    },
+    async insertSession(input) {
+      sqliteAuthRepository.insertSession(input)
+    },
+    async revokeSession(tokenHash, revokedAt) {
+      sqliteAuthRepository.revokeSession(tokenHash, revokedAt)
+    },
+    async findUserByToken(tokenHash) {
+      return sqliteAuthRepository.findUserByToken(tokenHash)
+    },
+    async findCredentialsByUserId(id) {
+      return sqliteAuthRepository.findCredentialsByUserId(id)
+    },
+    async updateCredentials(id, credentials, updatedAt) {
+      sqliteAuthRepository.updateCredentials(id, credentials, updatedAt)
+    },
+    async revokeUserSessions(id, revokedAt) {
+      sqliteAuthRepository.revokeUserSessions(id, revokedAt)
+    },
+    async listSupportAgents() {
+      return sqliteAuthRepository.listSupportAgents()
+    },
+    async listUsers() {
+      return sqliteAuthRepository.listUsers()
+    },
+  }
+}
+
 export function createRuntimeRepositories(engine: DatabaseEngine, options: RuntimeRepositoryOptions = {}): RuntimeRepositories {
-  if (engine === 'sqlite') return { engine, system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
+  if (engine === 'sqlite') return { engine, auth: createAsyncSqliteAuthRepository(), system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
 
   const databaseUrl = options.databaseUrl?.trim() || process.env.DATABASE_URL?.trim()
   if (!databaseUrl) throw new Error('DATABASE_URL is required when DATABASE_ENGINE=postgres')
@@ -89,5 +134,5 @@ export function createRuntimeRepositories(engine: DatabaseEngine, options: Runti
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   })
   const postgres = createPostgresRepositorySet(pool)
-  return { engine, system: postgres.system, pool, postgres, close: () => pool.end() }
+  return { engine, auth: postgres.auth, system: postgres.system, pool, postgres, close: () => pool.end() }
 }

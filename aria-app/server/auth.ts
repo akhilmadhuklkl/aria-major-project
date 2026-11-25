@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 import type { NextFunction, Request, Response } from 'express'
-import { sqliteAuthRepository } from './repositories/auth-repository.js'
+import { sqliteAuthRepository, type AsyncAuthRepository } from './repositories/auth-repository.js'
 
 export type UserRole = 'admin' | 'support_agent' | 'customer'
 
@@ -81,6 +81,107 @@ export function getUserFromToken(token: string) {
 
   if (!row || new Date(row.expiresAt).getTime() <= Date.now()) return undefined
   return toPublicUser(row)
+}
+
+export type AuthService = {
+  ensureAuthSchema(): Promise<void>
+  createUser(input: { email: string; displayName: string; role: UserRole; password: string }): Promise<AuthUser | undefined>
+  authenticateUser(email: string, password: string): Promise<AuthUser | undefined>
+  createSession(user: AuthUser): Promise<{ token: string; expiresAt: string }>
+  revokeSession(token: string): Promise<void>
+  changeUserPassword(userId: number, currentPassword: string, nextPassword: string): Promise<boolean>
+  getUserFromToken(token: string): Promise<AuthUser | undefined>
+  getUserCount(): Promise<number>
+  listSupportAgents(): Promise<AuthUser[]>
+  listUsers(): Promise<AuthUser[]>
+  getAuthenticatedUser(request: Request): AuthUser | undefined
+  requireAuth(request: Request, response: Response, next: NextFunction): void
+  requireRole(...roles: UserRole[]): (request: Request, response: Response, next: NextFunction) => void
+}
+
+export function createAuthService(repository: AsyncAuthRepository): AuthService {
+  const requestUsers = new WeakMap<Request, AuthUser>()
+  const getUserFromToken = async (token: string) => {
+    const row = await repository.findUserByToken(hashToken(token))
+    if (!row || new Date(row.expiresAt).getTime() <= Date.now()) return undefined
+    return toPublicUser(row)
+  }
+
+  return {
+    async ensureAuthSchema() {
+      await repository.ensureSchema()
+    },
+    async createUser(input) {
+      const now = new Date().toISOString()
+      const salt = randomBytes(16).toString('hex')
+      const passwordHash = hashPassword(input.password, salt)
+      const id = await repository.insertUser({ id: 0, email: input.email, displayName: input.displayName.trim(), role: input.role, passwordHash, passwordSalt: salt, createdAt: now, updatedAt: now })
+      const user = await repository.findUserById(id)
+      return user ? toPublicUser(user) : undefined
+    },
+    async authenticateUser(email, password) {
+      const row = await repository.findUserByEmail(email)
+      if (!row) return undefined
+      return matchesPassword(password, row.passwordHash, row.passwordSalt) ? toPublicUser(row) : undefined
+    },
+    async createSession(user) {
+      const token = randomBytes(32).toString('base64url')
+      const now = new Date()
+      const expiresAt = new Date(now.getTime() + sessionDurationMs)
+      await repository.insertSession({ userId: user.id, tokenHash: hashToken(token), expiresAt: expiresAt.toISOString(), createdAt: now.toISOString() })
+      return { token, expiresAt: expiresAt.toISOString() }
+    },
+    async revokeSession(token) {
+      await repository.revokeSession(hashToken(token), new Date().toISOString())
+    },
+    async changeUserPassword(userId, currentPassword, nextPassword) {
+      const row = await repository.findCredentialsByUserId(userId)
+      if (!row || !matchesPassword(currentPassword, row.passwordHash, row.passwordSalt)) return false
+
+      const salt = randomBytes(16).toString('hex')
+      const now = new Date().toISOString()
+      await repository.updateCredentials(userId, { passwordHash: hashPassword(nextPassword, salt), passwordSalt: salt }, now)
+      await repository.revokeUserSessions(userId, now)
+      return true
+    },
+    async getUserFromToken(token) {
+      return getUserFromToken(token)
+    },
+    async getUserCount() {
+      return repository.countUsers()
+    },
+    async listSupportAgents() {
+      return repository.listSupportAgents()
+    },
+    async listUsers() {
+      return repository.listUsers()
+    },
+    getAuthenticatedUser(request) {
+      return requestUsers.get(request)
+    },
+    requireAuth(request, response, next) {
+      void (async () => {
+        const token = getBearerToken(request)
+        const user = token ? await getUserFromToken(token) : undefined
+        if (!user) {
+          response.status(401).json({ error: 'Authentication is required' })
+          return
+        }
+        requestUsers.set(request, user)
+        next()
+      })().catch(next)
+    },
+    requireRole(...roles) {
+      return (request, response, next) => {
+        const user = requestUsers.get(request)
+        if (!user || !roles.includes(user.role)) {
+          response.status(403).json({ error: 'You do not have permission for this action' })
+          return
+        }
+        next()
+      }
+    },
+  }
 }
 
 export function getBearerToken(request: Request) {

@@ -3,6 +3,7 @@ import test from 'node:test'
 import {
   authenticateUser,
   changeUserPassword,
+  createAuthService,
   createSession,
   createUser,
   ensureAuthSchema,
@@ -12,6 +13,7 @@ import {
   validateCredentials,
 } from '../auth.js'
 import { db } from '../database.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
 
 ensureAuthSchema()
 
@@ -88,5 +90,28 @@ test('changing a password invalidates existing sessions', () => {
   } finally {
     db.prepare('DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = ?)').run(email)
     db.prepare('DELETE FROM users WHERE email = ?').run(email)
+  }
+})
+
+test('async runtime auth service preserves SQLite authentication behavior', async () => {
+  const email = `async-auth-test-${Date.now()}@example.com`
+  const runtime = createRuntimeRepositories('sqlite')
+  const auth = createAuthService(runtime.auth)
+  await auth.ensureAuthSchema()
+  const user = await auth.createUser({ email, displayName: 'Async Auth Test User', role: 'support_agent', password: 'password123' })
+
+  try {
+    assert.ok(user)
+    assert.equal((await auth.authenticateUser(email, 'wrong-password')), undefined)
+    const authenticated = await auth.authenticateUser(email, 'password123')
+    assert.deepEqual(authenticated, user)
+    const session = await auth.createSession(user)
+    assert.deepEqual(await auth.getUserFromToken(session.token), user)
+    await auth.revokeSession(session.token)
+    assert.equal(await auth.getUserFromToken(session.token), undefined)
+  } finally {
+    db.prepare('DELETE FROM sessions WHERE user_id = (SELECT id FROM users WHERE email = ?)').run(email)
+    db.prepare('DELETE FROM users WHERE email = ?').run(email)
+    await runtime.close()
   }
 })

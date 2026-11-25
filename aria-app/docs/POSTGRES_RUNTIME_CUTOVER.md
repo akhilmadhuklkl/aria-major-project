@@ -36,6 +36,8 @@ The runtime repository factory now assembles all asynchronous PostgreSQL adapter
 
 The first controlled runtime integration now routes `/api/ready` and `/api/system-status` through the factory's async system repository. The SQLite implementation is wrapped without changing its behavior, while the PostgreSQL implementation is selected automatically by the same dependency boundary when PostgreSQL runtime support is enabled.
 
+Authentication is now the first feature boundary using the same runtime selection. Bootstrap, login, session validation, logout, password changes, user listings, and support-agent listings use the async auth service; the active SQLite runtime remains behaviorally unchanged while the PostgreSQL adapter is prepared for the later engine switch.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
