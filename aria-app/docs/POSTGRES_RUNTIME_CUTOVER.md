@@ -26,6 +26,8 @@ The PostgreSQL knowledge repository covers document lifecycle, version history, 
 
 The asynchronous PostgreSQL webhook repository now covers subscription creation, activation changes, deletion, delivery logging, and bounded delivery history. Event lists are serialized as JSONB parameters, delivery history never exposes subscription secrets, and foreign-key cascade behavior is tested against PostgreSQL. The adapter is not yet connected to live routes.
 
+The asynchronous PostgreSQL analytics repository now mirrors the SQLite metrics contract for date-filtered counts, feedback quality, retrieval methods, model providers, confidence thresholds, escalation, grounding, latency, and daily quality trends. Aggregate values are normalized from PostgreSQL numeric results, and JSONB source presence is evaluated without relying on SQLite text comparisons. The adapter is not yet connected to live routes.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.

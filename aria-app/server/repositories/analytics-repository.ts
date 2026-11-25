@@ -22,3 +22,7 @@ export type AnalyticsMetrics = {
 export interface AnalyticsRepository {
   getAnalyticsMetrics(since: string | undefined, confidenceThreshold: number): AnalyticsMetrics
 }
+
+export interface AsyncAnalyticsRepository {
+  getAnalyticsMetrics(since: string | undefined, confidenceThreshold: number): Promise<AnalyticsMetrics>
+}
