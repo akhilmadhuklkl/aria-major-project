@@ -68,6 +68,7 @@ import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
 import { sqliteConversationRepository } from './repositories/sqlite-conversation-repository.js'
+import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-repository.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
@@ -783,13 +784,7 @@ app.post('/api/feedback', (request, response) => {
     createdAt: new Date().toISOString(),
   }
 
-  db.prepare(`
-    INSERT INTO feedback (id, message_id, conversation_id, rating, feedback_type, comment, edited_response, quality_score, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    entry.id, entry.messageId, entry.conversationId, entry.rating ?? null, entry.feedbackType,
-    entry.comment, entry.editedResponse, entry.qualityScore, entry.createdAt,
-  )
+  sqliteFeedbackRepository.insertFeedback(entry)
   if (rating !== undefined && rating <= 2) {
     createNotification({ kind: 'feedback', title: 'Low customer rating', message: `A response received a ${rating}/5 rating and may need review.` })
     notifyWebhook('feedback.low_rating', { rating, conversationId, messageId })
@@ -827,10 +822,7 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), (request, re
     qualityScore: calculateQualityScore(undefined, action),
     createdAt: new Date().toISOString(),
   }
-  db.prepare(`
-    INSERT INTO feedback (id, message_id, conversation_id, feedback_type, edited_response, quality_score, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(entry.id, entry.messageId, entry.conversationId, entry.feedbackType, entry.editedResponse, entry.qualityScore, entry.createdAt)
+  sqliteFeedbackRepository.insertFeedback(entry)
   if (action === 'rejected' || action === 'edited') {
     createNotification({ kind: 'agent-action', title: action === 'rejected' ? 'AI response rejected' : 'AI response edited', message: 'An agent correction was recorded for future review.' })
     notifyWebhook('agent_action.corrected', { action, conversationId })
