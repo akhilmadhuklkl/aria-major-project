@@ -51,7 +51,16 @@ export const sqliteConversationRepository: ConversationRepository = {
   updateConversation(id, changes) {
     const current = this.getConversation(id)
     if (!current) return undefined
-    const next = { ...current, ...changes, updatedAt: new Date().toISOString() }
+    const next = {
+      ...current,
+      status: changes.status ?? current.status,
+      priority: changes.priority ?? current.priority,
+      topic: changes.topic ?? current.topic,
+      assignedTo: changes.assignedTo === undefined ? current.assignedTo : changes.assignedTo,
+      tags: changes.tags ?? current.tags,
+      escalated: changes.escalated ?? current.escalated,
+      updatedAt: new Date().toISOString(),
+    }
     db.prepare('UPDATE conversations SET status = ?, priority = ?, topic = ?, assigned_to = ?, tags = ?, escalated = ?, updated_at = ? WHERE id = ?')
       .run(next.status, next.priority, next.topic, next.assignedTo ?? null, JSON.stringify(next.tags), next.escalated ? 1 : 0, next.updatedAt, id)
     return this.getConversation(id)

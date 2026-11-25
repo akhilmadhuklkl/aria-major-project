@@ -42,3 +42,38 @@ test('conversation repository preserves conversation and message fields', () => 
     db.exec('ROLLBACK')
   }
 })
+
+test('partial conversation updates ignore undefined fields and preserve explicit clears', () => {
+  db.exec('BEGIN')
+  try {
+    const now = new Date().toISOString()
+    const conversation = sqliteConversationRepository.createConversation({
+      customerName: 'Partial Update Test', subject: 'Preserve metadata',
+      status: 'open', priority: 'high', topic: 'Refunds', assignedTo: 'Support Agent',
+      tags: ['refund'], escalated: true, createdAt: now, updatedAt: now,
+    })
+    const updated = sqliteConversationRepository.updateConversation(conversation.id, {
+      status: 'pending', priority: undefined, topic: undefined,
+      assignedTo: undefined, tags: undefined, escalated: undefined,
+    })
+    assert.ok(updated)
+    assert.equal(updated.status, 'pending')
+    assert.equal(updated.priority, 'high')
+    assert.equal(updated.topic, 'Refunds')
+    assert.equal(updated.assignedTo, 'Support Agent')
+    assert.deepEqual(updated.tags, ['refund'])
+    assert.equal(updated.escalated, true)
+
+    const cleared = sqliteConversationRepository.updateConversation(conversation.id, {
+      assignedTo: null, tags: [], escalated: false,
+    })
+    assert.ok(cleared)
+    assert.equal(cleared.assignedTo, null)
+    assert.deepEqual(cleared.tags, [])
+    assert.equal(cleared.escalated, false)
+    assert.equal(cleared.status, 'pending')
+    assert.equal(cleared.priority, 'high')
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
