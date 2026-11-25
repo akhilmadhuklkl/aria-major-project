@@ -33,7 +33,7 @@ test('PostgreSQL graph repository preserves properties, paths, lookup, and casca
     assert.deepEqual((await repository.listGraphRelationships()).find((item) => item.sourceId === 'issue')?.properties, { verified: true })
     await assert.rejects(repository.createGraphRelationship({ sourceId: 'missing', type: 'OWNS', targetId: 'procedure' }), { code: '23503' })
     const paths = await repository.queryGraphPaths('issue', 99)
-    assert.ok(paths.some((path) => path.nodes.join(',') === 'issue,procedure,knowledge'))
+    assert.ok(paths.some((path) => path.nodes.join(',') === 'issue,procedure,knowledge'), JSON.stringify(paths))
     assert.ok(paths.every((path) => path.relationships.length <= 2 && new Set(path.nodes).size === path.nodes.length))
     assert.deepEqual(await repository.queryGraphPaths('missing'), [])
     assert.deepEqual(await repository.findGraphKnowledgeTitles('refund'), ['Verified policy'])
