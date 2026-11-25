@@ -72,7 +72,9 @@ export const sqliteConversationRepository: ConversationRepository = {
   getCustomerContext(conversationId) {
     const conversation = this.getConversation(conversationId)
     if (!conversation) return undefined
-    const history = db.prepare('SELECT id, customer_name AS customerName, subject, status, priority, topic, assigned_to AS assignedTo, tags, escalated, created_at AS createdAt, updated_at AS updatedAt FROM conversations WHERE customer_name = ? AND id != ? ORDER BY updated_at DESC LIMIT 5').all(conversation.customerName, conversationId).map((row) => mapConversation(row as Record<string, unknown>))
-    return { customer: conversation.customerName, history }
+    const counts = db.prepare("SELECT COUNT(*) AS totalConversations, COALESCE(SUM(CASE WHEN status IN ('open', 'pending') THEN 1 ELSE 0 END), 0) AS openConversations FROM conversations WHERE customer_name = ?").get(conversation.customerName) as { totalConversations: number; openConversations: number }
+    const topics = db.prepare('SELECT topic, COUNT(*) AS count FROM conversations WHERE customer_name = ? GROUP BY topic ORDER BY count DESC, topic ASC LIMIT 5').all(conversation.customerName) as Array<{ topic: string; count: number }>
+    const history = db.prepare('SELECT id, customer_name AS customerName, subject, status, priority, topic, assigned_to AS assignedTo, tags, escalated, created_at AS createdAt, updated_at AS updatedAt, (SELECT content FROM messages WHERE conversation_id = conversations.id ORDER BY created_at DESC LIMIT 1) AS lastMessage FROM conversations WHERE customer_name = ? AND id != ? ORDER BY updated_at DESC LIMIT 5').all(conversation.customerName, conversationId).map((row) => ({ ...mapConversation(row as Record<string, unknown>), lastMessage: (row as Record<string, unknown>).lastMessage as string | null }))
+    return { customer: conversation.customerName, ...counts, topics, history }
   },
 }

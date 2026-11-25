@@ -68,6 +68,7 @@ import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
 import { sqliteConversationRepository } from './repositories/sqlite-conversation-repository.js'
+import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
@@ -705,28 +706,16 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
     return
   }
 
-  const current = db.prepare('SELECT * FROM conversations WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  const current = sqliteConversationRepository.getConversation(id)
   if (!current) {
     response.status(404).json({ error: 'conversation was not found' })
     return
   }
-  db.prepare(`
-    UPDATE conversations SET status = ?, priority = ?, assigned_to = ?, tags = ?, escalated = ?, updated_at = ?
-    WHERE id = ?
-  `).run(
-    status ?? String(current.status ?? 'open'),
-    priority ?? String(current.priority ?? 'normal'),
-    assignedTo === undefined ? (current.assigned_to == null ? null : String(current.assigned_to)) : assignedTo,
-    JSON.stringify(tags ?? JSON.parse(String(current.tags ?? '[]'))),
-    escalated === undefined ? Number(current.escalated ?? 0) : Number(escalated),
-    new Date().toISOString(),
-    id,
-  )
-  const updated = db.prepare(`
-    SELECT id, customer_name AS customer, subject, status, priority, topic,
-      assigned_to AS assignedTo, tags, escalated, created_at AS createdAt, updated_at AS updatedAt
-    FROM conversations WHERE id = ?
-  `).get(id) as Record<string, unknown>
+  const updated = sqliteConversationRepository.updateConversation(id, { status: status as ConversationStatus | undefined, priority: priority as ConversationPriority | undefined, assignedTo, tags, escalated })
+  if (!updated) {
+    response.status(404).json({ error: 'conversation was not found' })
+    return
+  }
   const conversationChange = escalated !== undefined
     ? (escalated ? 'marked for escalation' : 'removed from escalation')
     : status
@@ -736,37 +725,22 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), (reques
         : assignedTo !== undefined
           ? (assignedTo ? `assigned to ${assignedTo}` : 'returned to the unassigned queue')
           : 'metadata updated'
-  createNotification({ kind: 'conversation', title: 'Conversation updated', message: `${String(updated.customer)} was ${conversationChange}.` })
+  createNotification({ kind: 'conversation', title: 'Conversation updated', message: `${updated.customerName} was ${conversationChange}.` })
   recordAudit(request, { action: 'conversation.updated', entityType: 'conversation', entityId: id, metadata: { status, priority, assignedTo, escalated } })
-  response.json({ ...updated, tags: JSON.parse(String(updated.tags ?? '[]')), escalated: Boolean(updated.escalated) })
+  response.json({ ...updated, customer: updated.customerName })
 })
 
 app.get('/api/conversations/:id/context', roleGuard('admin', 'support_agent'), (request, response) => {
   const id = Number(request.params.id)
-  const conversation = db.prepare('SELECT id, customer_name AS customer FROM conversations WHERE id = ?').get(id) as { id: number; customer: string } | undefined
-  if (!conversation) {
+  const context = sqliteConversationRepository.getCustomerContext(id)
+  if (!context) {
     response.status(404).json({ error: 'conversation was not found' })
     return
   }
-
-  const counts = db.prepare(`
-    SELECT COUNT(*) AS totalConversations,
-      COALESCE(SUM(CASE WHEN status IN ('open', 'pending') THEN 1 ELSE 0 END), 0) AS openConversations
-    FROM conversations WHERE customer_name = ?
-  `).get(conversation.customer) as { totalConversations: number; openConversations: number }
-  const topics = db.prepare(`
-    SELECT topic, COUNT(*) AS count
-    FROM conversations WHERE customer_name = ?
-    GROUP BY topic ORDER BY count DESC, topic ASC LIMIT 5
-  `).all(conversation.customer)
-  const history = db.prepare(`
-    SELECT id, subject, status, priority, topic, updated_at AS updatedAt,
-      (SELECT content FROM messages WHERE conversation_id = conversations.id ORDER BY created_at DESC LIMIT 1) AS lastMessage
-    FROM conversations WHERE customer_name = ? AND id != ?
-    ORDER BY updated_at DESC LIMIT 5
-  `).all(conversation.customer, id)
-
-  response.json({ customer: conversation.customer, ...counts, topics, history })
+  response.json({
+    ...context,
+    history: context.history.map((item) => ({ ...item, customer: item.customerName })),
+  })
 })
 
 app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (request, response) => {
@@ -776,32 +750,25 @@ app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (r
     return
   }
 
-  const conversation = db.prepare(`
-    SELECT customer_name AS customer, subject, status, priority, topic, assigned_to AS assignedTo,
-      created_at AS createdAt, updated_at AS updatedAt
-    FROM conversations WHERE id = ?
-  `).get(id) as Record<string, unknown> | undefined
+  const conversation = sqliteConversationRepository.getConversation(id)
   if (!conversation) {
     response.status(404).json({ error: 'conversation was not found' })
     return
   }
 
-  const messages = db.prepare(`
-    SELECT role, content, created_at AS createdAt
-    FROM messages WHERE conversation_id = ? ORDER BY created_at ASC
-  `).all(id) as Array<{ role: string; content: string; createdAt: string }>
+  const messages = sqliteConversationRepository.listMessages(id)
 
   const lines = [
     'ARIA Conversation Export',
     '========================',
-    `Customer: ${String(conversation.customer)}`,
-    `Subject: ${String(conversation.subject)}`,
-    `Status: ${String(conversation.status)}`,
-    `Priority: ${String(conversation.priority)}`,
-    `Topic: ${String(conversation.topic)}`,
-    `Assigned to: ${String(conversation.assignedTo ?? 'Unassigned')}`,
-    `Created: ${String(conversation.createdAt)}`,
-    `Updated: ${String(conversation.updatedAt)}`,
+    `Customer: ${conversation.customerName}`,
+    `Subject: ${conversation.subject}`,
+    `Status: ${conversation.status}`,
+    `Priority: ${conversation.priority}`,
+    `Topic: ${conversation.topic}`,
+    `Assigned to: ${conversation.assignedTo ?? 'Unassigned'}`,
+    `Created: ${conversation.createdAt}`,
+    `Updated: ${conversation.updatedAt}`,
     '',
     'Messages',
     '--------',
