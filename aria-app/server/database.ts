@@ -1,6 +1,9 @@
 import { mkdirSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { createSqliteKnowledgeRepository } from './repositories/sqlite-knowledge-repository.js'
+import type { KnowledgeDocument } from './repositories/knowledge-repository.js'
+export type { KnowledgeDocument } from './repositories/knowledge-repository.js'
 import { databaseEngine } from './database-runtime.js'
 
 void databaseEngine
@@ -9,17 +12,6 @@ const databasePath = resolve('data', 'aria.db')
 mkdirSync(dirname(databasePath), { recursive: true })
 
 export const db = new DatabaseSync(databasePath)
-
-export type KnowledgeDocument = {
-  id: number
-  title: string
-  category: string
-  content: string
-  status: string
-  uses: number
-  updatedAt: string
-  archivedAt?: string | null
-}
 
 db.exec(`
   PRAGMA foreign_keys = ON;
@@ -397,124 +389,10 @@ export function calculateQualityScore(rating?: number, feedbackType = 'customer_
   return Math.max(0, Math.min(100, ratingScore + actionAdjustment))
 }
 
-export function listKnowledge() {
-  return db.prepare(`
-    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
-    FROM knowledge_documents
-    WHERE archived_at IS NULL
-    ORDER BY uses DESC, updated_at DESC
-  `).all() as KnowledgeDocument[]
-}
-
-export function listArchivedKnowledge() {
-  return db.prepare(`
-    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
-    FROM knowledge_documents
-    WHERE archived_at IS NOT NULL
-    ORDER BY archived_at DESC
-  `).all() as KnowledgeDocument[]
-}
-
-export function createKnowledgeDocument(input: { title: string; category: string; content: string; status?: string; sourceFilename?: string }) {
-  const now = new Date().toISOString()
-  const created = db.prepare(`
-    INSERT INTO knowledge_documents (title, category, content, status, uses, updated_at, archived_at)
-    VALUES (?, ?, ?, ?, 0, ?, NULL)
-  `).run(input.title, input.category, input.content, input.status ?? 'indexed', now)
-
-  const id = Number(created.lastInsertRowid)
-  db.prepare(`
-    INSERT INTO knowledge_document_versions
-      (knowledge_document_id, version, title, category, content, source_filename, created_at)
-    VALUES (?, 1, ?, ?, ?, ?, ?)
-  `).run(id, input.title, input.category, input.content, input.sourceFilename ?? null, now)
-
-  return db.prepare(`
-    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
-    FROM knowledge_documents WHERE id = ?
-  `).get(id) as KnowledgeDocument
-}
-
-export function archiveKnowledgeDocuments(ids: number[]) {
-  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
-  if (uniqueIds.length === 0) return { archived: 0 }
-  const placeholders = uniqueIds.map(() => '?').join(', ')
-  const result = db.prepare(`
-    UPDATE knowledge_documents SET archived_at = ?, updated_at = ?
-    WHERE id IN (${placeholders}) AND archived_at IS NULL
-  `).run(new Date().toISOString(), new Date().toISOString(), ...uniqueIds)
-  return { archived: result.changes }
-}
-
-export function restoreKnowledgeDocuments(ids: number[]) {
-  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
-  if (uniqueIds.length === 0) return { restored: 0 }
-  const placeholders = uniqueIds.map(() => '?').join(', ')
-  const result = db.prepare(`
-    UPDATE knowledge_documents SET archived_at = NULL, updated_at = ?
-    WHERE id IN (${placeholders}) AND archived_at IS NOT NULL
-  `).run(new Date().toISOString(), ...uniqueIds)
-  return { restored: result.changes }
-}
-
-export function updateKnowledgeDocument(id: number, input: {
-  title: string
-  category: string
-  content: string
-  status?: string
-  sourceFilename?: string
-}) {
-  const current = db.prepare('SELECT id FROM knowledge_documents WHERE id = ? AND archived_at IS NULL').get(id)
-  if (!current) return null
-  const now = new Date().toISOString()
-  const nextVersion = db.prepare(`
-    SELECT COALESCE(MAX(version), 0) + 1 AS version
-    FROM knowledge_document_versions WHERE knowledge_document_id = ?
-  `).get(id) as { version: number }
-
-  db.prepare(`
-    UPDATE knowledge_documents
-    SET title = ?, category = ?, content = ?, status = ?, updated_at = ?
-    WHERE id = ?
-  `).run(input.title, input.category, input.content, input.status ?? 'indexed', now, id)
-  db.prepare(`
-    INSERT INTO knowledge_document_versions
-      (knowledge_document_id, version, title, category, content, source_filename, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, nextVersion.version, input.title, input.category, input.content, input.sourceFilename ?? null, now)
-  db.prepare('DELETE FROM knowledge_embeddings WHERE knowledge_document_id = ?').run(id)
-
-  return db.prepare(`
-    SELECT id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt
-    FROM knowledge_documents WHERE id = ?
-  `).get(id) as KnowledgeDocument
-}
-
-export function getKnowledgeDocumentVersions(id: number) {
-  return db.prepare(`
-    SELECT id, knowledge_document_id AS knowledgeDocumentId, version, title, category,
-      content, source_filename AS sourceFilename, created_at AS createdAt, archived_at AS archivedAt
-    FROM knowledge_document_versions
-    WHERE knowledge_document_id = ?
-    ORDER BY version DESC
-  `).all(id)
-}
-
-export function deleteKnowledgeDocuments(ids: number[]) {
-  const uniqueIds = [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
-
-  if (uniqueIds.length === 0) {
-    return { deleted: 0 }
-  }
-
-  const placeholders = uniqueIds.map(() => '?').join(', ')
-  const result = db.prepare(`
-    DELETE FROM knowledge_documents
-    WHERE id IN (${placeholders})
-  `).run(...uniqueIds)
-
-  return { deleted: result.changes }
-}
+export const {
+  listKnowledge, listArchivedKnowledge, createKnowledgeDocument, updateKnowledgeDocument,
+  archiveKnowledgeDocuments, restoreKnowledgeDocuments, deleteKnowledgeDocuments, getKnowledgeDocumentVersions,
+} = createSqliteKnowledgeRepository(db)
 
 export type KnowledgeEmbeddingRecord = {
   knowledgeDocumentId: number
