@@ -57,6 +57,10 @@ export interface KnowledgeRepository {
   getKnowledgeDocumentVersions(id: number): KnowledgeDocumentVersion[]
 }
 
+export type AsyncKnowledgeRepository = {
+  [Method in keyof KnowledgeRepository]: (...args: Parameters<KnowledgeRepository[Method]>) => Promise<ReturnType<KnowledgeRepository[Method]>>
+}
+
 export type KnowledgeSourceFeedbackStats = {
   title: string
   feedbackCount: number

@@ -22,6 +22,8 @@ The asynchronous PostgreSQL authentication repository now provides user and sess
 
 The asynchronous PostgreSQL conversation repository now covers conversation/message writes and reads, case-insensitive search, pagination, global queue counts, partial metadata updates, latest-assistant lookup, and customer context. JSON array fields are explicitly serialized for JSONB parameters. Metadata updates are a single SQL statement that preserves omitted fields while allowing explicit unassignment and clearing tags/escalation. Real-database tests use temporary tables and rollback. Live chat and Agent Workspace routes still use SQLite.
 
+The PostgreSQL knowledge repository covers document lifecycle, version history, embeddings, usage counts, and feedback attribution. Document creation and updates use transactions so version history stays in sync with content and stale embeddings are invalidated atomically. Archived documents remain excluded from indexing and semantic retrieval. The adapter is exercised by `npm run test:postgres` but is not yet connected to live routes.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
