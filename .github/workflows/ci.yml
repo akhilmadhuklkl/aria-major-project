@@ -10,6 +10,9 @@ defaults:
   run:
     working-directory: aria-app
 
+env:
+  ONNXRUNTIME_NODE_INSTALL_CUDA: skip
+
 jobs:
   verify:
     runs-on: ubuntu-latest

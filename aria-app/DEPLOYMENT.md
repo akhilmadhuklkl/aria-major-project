@@ -2,6 +2,8 @@
 
 ## Local container run
 
+The default container and CI runners use CPU inference. Dependency installation sets `ONNXRUNTIME_NODE_INSTALL_CUDA=skip` to avoid downloading optional CUDA binaries; this does not disable ONNX Runtime CPU support. GPU-enabled deployments require separate CUDA provisioning.
+
 1. Copy `.env.example` to `.env` and set the required provider key.
 2. Run `docker compose up --build` from `aria-app/`.
 3. Open `http://localhost:8787/` for the built React application.
