@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { db } from '../database.js'
 import { sqliteNotificationRepository } from '../repositories/sqlite-notification-repository.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
 
 const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = sqliteNotificationRepository
 
@@ -39,5 +40,18 @@ test('mark all notifications read preserves existing timestamps and ignores miss
     assert.ok((db.prepare('SELECT read_at FROM notifications WHERE id = ?').get(unread.id) as { read_at: string }).read_at)
   } finally {
     db.exec('ROLLBACK')
+  }
+})
+
+test('async runtime notification adapter preserves SQLite behavior', async () => {
+  const runtime = createRuntimeRepositories('sqlite')
+  const notification = await runtime.notifications.createNotification({ kind: 'test', title: 'Async notification', message: 'Runtime adapter test.' })
+  try {
+    assert.ok((await runtime.notifications.listNotifications()).some((item) => item.id === notification.id))
+    assert.equal(await runtime.notifications.markNotificationRead(notification.id), true)
+    assert.ok((await runtime.notifications.listNotifications()).find((item) => item.id === notification.id)?.readAt)
+  } finally {
+    db.prepare('DELETE FROM notifications WHERE id = ?').run(notification.id)
+    await runtime.close()
   }
 })

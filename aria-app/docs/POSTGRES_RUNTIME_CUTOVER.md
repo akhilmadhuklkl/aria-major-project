@@ -42,6 +42,8 @@ Conversation persistence is now the second feature boundary. Chat message writes
 
 Feedback persistence is now the third feature boundary. Customer ratings and agent accept, edit, and reject actions use the runtime-selected async feedback repository; existing notification, webhook, and audit side effects remain part of the route workflow.
 
+Notifications and audit logging are now the fourth feature boundary. Notification listing, read-state updates, creation, audit listing, and audit writes use the runtime-selected async repositories, including side effects from knowledge, conversation, feedback, graph, webhook, and authentication routes.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.

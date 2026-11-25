@@ -3,6 +3,7 @@ import test from 'node:test'
 import { db } from '../database.js'
 import { ensureAuthSchema } from '../auth.js'
 import { sqliteAuditRepository } from '../repositories/sqlite-audit-repository.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
 
 const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 
@@ -55,5 +56,19 @@ test('audit repository retains defaults, entity identifiers, and structured meta
     assert.equal(listAuditLogs(1).length, 1)
   } finally {
     db.exec('ROLLBACK')
+  }
+})
+
+test('async runtime audit adapter preserves SQLite metadata', async () => {
+  const runtime = createRuntimeRepositories('sqlite')
+  const entry = await runtime.audit.createAuditLog({ action: 'runtime.test', entityType: 'test', entityId: 0, metadata: { passed: true } })
+  try {
+    const stored = (await runtime.audit.listAuditLogs(100)).find((item) => item.id === entry.id)
+    assert.ok(stored)
+    assert.equal(stored.entityId, '0')
+    assert.deepEqual(stored.metadata, { passed: true })
+  } finally {
+    db.prepare('DELETE FROM audit_logs WHERE id = ?').run(entry.id)
+    await runtime.close()
   }
 })

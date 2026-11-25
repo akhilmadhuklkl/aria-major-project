@@ -51,20 +51,20 @@ import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEv
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
-import { sqliteNotificationRepository } from './repositories/sqlite-notification-repository.js'
-import { sqliteAuditRepository } from './repositories/sqlite-audit-repository.js'
 import { createSqliteAnalyticsRepository } from './repositories/sqlite-analytics-repository.js'
 import { checkDatabaseReadiness } from './readiness.js'
 import { createRuntimeRepositories } from './runtime-repositories.js'
+import type { NewAuditLog } from './repositories/audit-repository.js'
+import type { AsyncNotificationRepository } from './repositories/notification-repository.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
-const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = sqliteNotificationRepository
-const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 const analyticsRepository = createSqliteAnalyticsRepository(db)
 const runtimeRepositories = createRuntimeRepositories(databaseEngine)
 const systemRepository = runtimeRepositories.system
 const conversationRepository = runtimeRepositories.conversations
 const feedbackRepository = runtimeRepositories.feedback
+const notificationRepository = runtimeRepositories.notifications
+const auditRepository = runtimeRepositories.audit
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
 
@@ -72,9 +72,13 @@ function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: 
   void dispatchWebhookEvent(event, data)
 }
 
-function recordAudit(request: express.Request, input: Omit<Parameters<typeof createAuditLog>[0], 'actorUserId' | 'actorEmail'>) {
+function createNotification(input: Parameters<AsyncNotificationRepository['createNotification']>[0]) {
+  return notificationRepository.createNotification(input)
+}
+
+async function recordAudit(request: express.Request, input: Omit<NewAuditLog, 'actorUserId' | 'actorEmail'>) {
   const actor = authService.getAuthenticatedUser(request)
-  createAuditLog({
+  await auditRepository.createAuditLog({
     ...input,
     actorUserId: actor?.id,
     actorEmail: actor?.email,
@@ -202,12 +206,12 @@ app.get('/api/ready', async (_request, response) => {
   response.status(readiness.ready ? 200 : 503).json(readiness)
 })
 
-app.get('/api/notifications', (_request, response) => {
-  response.json(listNotifications())
+app.get('/api/notifications', async (_request, response) => {
+  response.json(await notificationRepository.listNotifications())
 })
 
-app.get('/api/audit-logs', roleGuard('admin'), (request, response) => {
-  response.json(listAuditLogs(Number(request.query.limit ?? 50)))
+app.get('/api/audit-logs', roleGuard('admin'), async (request, response) => {
+  response.json(await auditRepository.listAuditLogs(Number(request.query.limit ?? 50)))
 })
 
 app.get('/api/users', roleGuard('admin'), async (_request, response) => {
@@ -234,20 +238,20 @@ app.post('/api/users', roleGuard('admin'), async (request, response) => {
 
   try {
     const user = await authService.createUser({ email: credentials.email, displayName, password: credentials.password, role })
-    recordAudit(request, { action: 'user.created', entityType: 'user', entityId: user?.id, metadata: { role } })
+    await recordAudit(request, { action: 'user.created', entityType: 'user', entityId: user?.id, metadata: { role } })
     response.status(201).json(user)
   } catch {
     response.status(409).json({ error: 'A user with this email already exists' })
   }
 })
 
-app.post('/api/notifications/read-all', (_request, response) => {
-  response.json({ markedRead: markAllNotificationsRead() })
+app.post('/api/notifications/read-all', async (_request, response) => {
+  response.json({ markedRead: await notificationRepository.markAllNotificationsRead() })
 })
 
-app.post('/api/notifications/:id/read', (request, response) => {
+app.post('/api/notifications/:id/read', async (request, response) => {
   const id = Number(request.params.id)
-  if (!Number.isInteger(id) || id <= 0 || !markNotificationRead(id)) {
+  if (!Number.isInteger(id) || id <= 0 || !await notificationRepository.markNotificationRead(id)) {
     response.status(404).json({ error: 'notification was not found' })
     return
   }
@@ -286,7 +290,7 @@ app.post('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), asyn
   response.status(201).json(neo4jGraphStore
     ? await neo4jGraphStore.upsertNode({ id, type, properties })
     : upsertGraphNode({ id, type: type as Parameters<typeof upsertGraphNode>[0]['type'], properties }))
-  recordAudit(request, { action: 'graph.node.created', entityType: 'graph_node', entityId: id, metadata: { type } })
+  await recordAudit(request, { action: 'graph.node.created', entityType: 'graph_node', entityId: id, metadata: { type } })
 })
 
 app.post('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent'), async (request, response) => {
@@ -302,7 +306,7 @@ app.post('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent
   const created = neo4jGraphStore
     ? await neo4jGraphStore.createRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
     : createGraphRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
-  recordAudit(request, { action: 'graph.relationship.created', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
+  await recordAudit(request, { action: 'graph.relationship.created', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
   response.status(201).json(created)
 })
 
@@ -321,7 +325,7 @@ app.delete('/api/knowledge-graph/relationships', roleGuard('admin', 'support_age
     response.status(404).json({ error: 'graph relationship was not found' })
     return
   }
-  recordAudit(request, { action: 'graph.relationship.deleted', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
+  await recordAudit(request, { action: 'graph.relationship.deleted', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
   response.json({ deleted: true })
 })
 
@@ -332,7 +336,7 @@ app.delete('/api/knowledge-graph/nodes/:id', roleGuard('admin', 'support_agent')
     response.status(404).json({ error: 'graph node was not found' })
     return
   }
-  recordAudit(request, { action: 'graph.node.deleted', entityType: 'graph_node', entityId: id })
+  await recordAudit(request, { action: 'graph.node.deleted', entityType: 'graph_node', entityId: id })
   response.json({ deleted: true })
 })
 
@@ -344,7 +348,7 @@ app.get('/api/integrations/webhooks/deliveries', roleGuard('admin'), (request, r
   response.json(listWebhookDeliveries(Number(request.query.limit ?? 30)))
 })
 
-app.post('/api/integrations/webhooks', roleGuard('admin'), (request, response) => {
+app.post('/api/integrations/webhooks', roleGuard('admin'), async (request, response) => {
   const name = String(request.body?.name ?? '').trim()
   const url = String(request.body?.url ?? '').trim()
   const requestedEvents = Array.isArray(request.body?.events) ? request.body.events.map((event: unknown) => String(event)) : ['*']
@@ -355,30 +359,30 @@ app.post('/api/integrations/webhooks', roleGuard('admin'), (request, response) =
   }
   try {
     const created = createWebhookSubscription({ name, url, events })
-    recordAudit(request, { action: 'webhook.created', entityType: 'webhook', entityId: created.id, metadata: { name, events } })
+    await recordAudit(request, { action: 'webhook.created', entityType: 'webhook', entityId: created.id, metadata: { name, events } })
     response.status(201).json(created)
   } catch {
     response.status(409).json({ error: 'a webhook with this URL already exists' })
   }
 })
 
-app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), (request, response) => {
+app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), async (request, response) => {
   const id = Number(request.params.id)
   if (!Number.isInteger(id) || id <= 0 || !deleteWebhookSubscription(id)) {
     response.status(404).json({ error: 'webhook was not found' })
     return
   }
-  recordAudit(request, { action: 'webhook.deleted', entityType: 'webhook', entityId: id })
+  await recordAudit(request, { action: 'webhook.deleted', entityType: 'webhook', entityId: id })
   response.json({ deleted: true })
 })
 
-app.patch('/api/integrations/webhooks/:id', roleGuard('admin'), (request, response) => {
+app.patch('/api/integrations/webhooks/:id', roleGuard('admin'), async (request, response) => {
   const id = Number(request.params.id)
   if (!Number.isInteger(id) || id <= 0 || typeof request.body?.active !== 'boolean' || !updateWebhookSubscription(id, request.body.active)) {
     response.status(400).json({ error: 'a valid webhook id and boolean active value are required' })
     return
   }
-  recordAudit(request, { action: request.body.active ? 'webhook.activated' : 'webhook.paused', entityType: 'webhook', entityId: id, metadata: { active: request.body.active } })
+  await recordAudit(request, { action: request.body.active ? 'webhook.activated' : 'webhook.paused', entityType: 'webhook', entityId: id, metadata: { active: request.body.active } })
   response.json({ updated: true, active: request.body.active })
 })
 
@@ -394,11 +398,11 @@ app.post('/api/integrations/webhooks/:id/test', roleGuard('admin'), async (reque
     return
   }
   if (!delivered) {
-    recordAudit(request, { action: 'webhook.test_failed', entityType: 'webhook', entityId: id, metadata: { event: 'knowledge.indexed' } })
+    await recordAudit(request, { action: 'webhook.test_failed', entityType: 'webhook', entityId: id, metadata: { event: 'knowledge.indexed' } })
     response.status(502).json({ delivered: false, error: 'webhook test delivery failed; check delivery history' })
     return
   }
-  recordAudit(request, { action: 'webhook.test_delivered', entityType: 'webhook', entityId: id, metadata: { event: 'knowledge.indexed' } })
+  await recordAudit(request, { action: 'webhook.test_delivered', entityType: 'webhook', entityId: id, metadata: { event: 'knowledge.indexed' } })
   response.json({ delivered: true, event: 'knowledge.indexed' })
 })
 
@@ -468,7 +472,7 @@ app.post('/api/auth/password', authService.requireAuth, async (request, response
     response.status(401).json({ error: 'Current password is incorrect' })
     return
   }
-  recordAudit(request, { action: 'user.password_changed', entityType: 'user', entityId: user.id })
+  await recordAudit(request, { action: 'user.password_changed', entityType: 'user', entityId: user.id })
   response.status(204).send()
 })
 
@@ -586,7 +590,7 @@ async function processChatRequest(query: string, requestedConversationId: number
     incrementKnowledgeUses(source)
   }
   if (result.shouldEscalate) {
-    createNotification({ kind: 'escalation', title: 'Conversation needs human review', message: 'ARIA flagged this conversation for support-agent follow-up.' })
+    await createNotification({ kind: 'escalation', title: 'Conversation needs human review', message: 'ARIA flagged this conversation for support-agent follow-up.' })
   }
 
   return {
@@ -692,8 +696,8 @@ app.patch('/api/conversations/:id', roleGuard('admin', 'support_agent'), async (
         : assignedTo !== undefined
           ? (assignedTo ? `assigned to ${assignedTo}` : 'returned to the unassigned queue')
           : 'metadata updated'
-  createNotification({ kind: 'conversation', title: 'Conversation updated', message: `${updated.customerName} was ${conversationChange}.` })
-  recordAudit(request, { action: 'conversation.updated', entityType: 'conversation', entityId: id, metadata: { status, priority, assignedTo, escalated } })
+  await createNotification({ kind: 'conversation', title: 'Conversation updated', message: `${updated.customerName} was ${conversationChange}.` })
+  await recordAudit(request, { action: 'conversation.updated', entityType: 'conversation', entityId: id, metadata: { status, priority, assignedTo, escalated } })
   response.json({ ...updated, customer: updated.customerName })
 })
 
@@ -776,7 +780,7 @@ app.post('/api/feedback', async (request, response) => {
 
   await feedbackRepository.insertFeedback(entry)
   if (rating !== undefined && rating <= 2) {
-    createNotification({ kind: 'feedback', title: 'Low customer rating', message: `A response received a ${rating}/5 rating and may need review.` })
+    await createNotification({ kind: 'feedback', title: 'Low customer rating', message: `A response received a ${rating}/5 rating and may need review.` })
     notifyWebhook('feedback.low_rating', { rating, conversationId, messageId })
   }
   response.status(201).json(entry)
@@ -814,11 +818,11 @@ app.post('/api/agent-actions', roleGuard('admin', 'support_agent'), async (reque
   }
   await feedbackRepository.insertFeedback(entry)
   if (action === 'rejected' || action === 'edited') {
-    createNotification({ kind: 'agent-action', title: action === 'rejected' ? 'AI response rejected' : 'AI response edited', message: 'An agent correction was recorded for future review.' })
+    await createNotification({ kind: 'agent-action', title: action === 'rejected' ? 'AI response rejected' : 'AI response edited', message: 'An agent correction was recorded for future review.' })
     notifyWebhook('agent_action.corrected', { action, conversationId })
   }
 
-  recordAudit(request, { action: `agent.${action}`, entityType: 'conversation', entityId: conversationId, metadata: { feedbackType: action } })
+  await recordAudit(request, { action: `agent.${action}`, entityType: 'conversation', entityId: conversationId, metadata: { feedbackType: action } })
 
   response.status(201).json(entry)
 })
@@ -831,7 +835,7 @@ app.get('/api/knowledge/archived', roleGuard('admin', 'support_agent'), (_reques
   response.json(listArchivedKnowledge())
 })
 
-app.post('/api/knowledge', roleGuard('admin', 'support_agent'), (request, response) => {
+app.post('/api/knowledge', roleGuard('admin', 'support_agent'), async (request, response) => {
   const title = String(request.body?.title ?? '').trim()
   const category = String(request.body?.category ?? '').trim()
   const content = String(request.body?.content ?? '').trim()
@@ -849,8 +853,8 @@ app.post('/api/knowledge', roleGuard('admin', 'support_agent'), (request, respon
 
   try {
     const document = createKnowledgeDocument({ title, category, content, status })
-    createNotification({ kind: 'knowledge', title: 'Knowledge document created', message: `${document.title} was added to the knowledge base.` })
-    recordAudit(request, { action: 'knowledge.created', entityType: 'knowledge_document', entityId: document.id, metadata: { category, status } })
+    await createNotification({ kind: 'knowledge', title: 'Knowledge document created', message: `${document.title} was added to the knowledge base.` })
+    await recordAudit(request, { action: 'knowledge.created', entityType: 'knowledge_document', entityId: document.id, metadata: { category, status } })
     response.status(201).json(document)
   } catch {
     response.status(409).json({ error: 'a knowledge document with this title already exists' })
@@ -904,9 +908,9 @@ app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.si
       await embeddingService.dispose()
     }
 
-    createNotification({ kind: 'knowledge', title: 'Knowledge document indexed', message: `${request.file.originalname} is ready for retrieval.` })
+    await createNotification({ kind: 'knowledge', title: 'Knowledge document indexed', message: `${request.file.originalname} is ready for retrieval.` })
     notifyWebhook('knowledge.indexed', { title: document.title, sourceFilename: request.file.originalname })
-    recordAudit(request, { action: 'knowledge.uploaded', entityType: 'knowledge_document', entityId: document.id, metadata: { category, sourceFilename: request.file.originalname } })
+    await recordAudit(request, { action: 'knowledge.uploaded', entityType: 'knowledge_document', entityId: document.id, metadata: { category, sourceFilename: request.file.originalname } })
     response.status(201).json({ ...document, indexed: true, sourceFilename: request.file.originalname })
   } catch (error) {
     if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
@@ -952,8 +956,8 @@ app.put('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (reques
         await embeddingService.dispose()
       }
     }
-    createNotification({ kind: 'knowledge', title: 'Knowledge document updated', message: `${updated.title} was saved and re-indexed for retrieval.` })
-    recordAudit(request, { action: 'knowledge.updated', entityType: 'knowledge_document', entityId: id, metadata: { category, status } })
+    await createNotification({ kind: 'knowledge', title: 'Knowledge document updated', message: `${updated.title} was saved and re-indexed for retrieval.` })
+    await recordAudit(request, { action: 'knowledge.updated', entityType: 'knowledge_document', entityId: id, metadata: { category, status } })
     response.json({ ...updated, indexed: status === 'indexed', reindexRequired: false })
   } catch {
     response.status(409).json({ error: 'a knowledge document with this title already exists' })
@@ -969,7 +973,7 @@ app.get('/api/knowledge/:id/versions', roleGuard('admin', 'support_agent'), (req
   response.json(getKnowledgeDocumentVersions(id))
 })
 
-app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), (request, response) => {
+app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), async (request, response) => {
   const ids = Array.isArray(request.body?.ids) ? request.body.ids.map((id: unknown) => Number(id)) : []
   if (ids.length === 0 || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
     response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
@@ -977,13 +981,13 @@ app.post('/api/knowledge/archive', roleGuard('admin', 'support_agent'), (request
   }
   const result = archiveKnowledgeDocuments(ids)
   if (result.archived > 0) {
-    createNotification({ kind: 'knowledge', title: 'Knowledge documents archived', message: `${result.archived} knowledge document${result.archived === 1 ? '' : 's'} moved to the archive.` })
-    recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
+    await createNotification({ kind: 'knowledge', title: 'Knowledge documents archived', message: `${result.archived} knowledge document${result.archived === 1 ? '' : 's'} moved to the archive.` })
+    await recordAudit(request, { action: 'knowledge.archived', entityType: 'knowledge_document', metadata: { ids } })
   }
   response.json(result)
 })
 
-app.post('/api/knowledge/restore', roleGuard('admin', 'support_agent'), (request, response) => {
+app.post('/api/knowledge/restore', roleGuard('admin', 'support_agent'), async (request, response) => {
   const ids = Array.isArray(request.body?.ids) ? request.body.ids.map((id: unknown) => Number(id)) : []
   if (ids.length === 0 || ids.some((id: number) => !Number.isInteger(id) || id <= 0)) {
     response.status(400).json({ error: 'ids must be a non-empty array of knowledge ids' })
@@ -991,13 +995,13 @@ app.post('/api/knowledge/restore', roleGuard('admin', 'support_agent'), (request
   }
   const result = restoreKnowledgeDocuments(ids)
   if (result.restored > 0) {
-    createNotification({ kind: 'knowledge', title: 'Knowledge documents restored', message: `${result.restored} archived knowledge document${result.restored === 1 ? '' : 's'} restored.` })
-    recordAudit(request, { action: 'knowledge.restored', entityType: 'knowledge_document', metadata: { ids } })
+    await createNotification({ kind: 'knowledge', title: 'Knowledge documents restored', message: `${result.restored} archived knowledge document${result.restored === 1 ? '' : 's'} restored.` })
+    await recordAudit(request, { action: 'knowledge.restored', entityType: 'knowledge_document', metadata: { ids } })
   }
   response.json(result)
 })
 
-app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, response) => {
+app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = Number(request.params.id)
 
   if (!Number.isInteger(id) || id <= 0) {
@@ -1011,11 +1015,11 @@ app.delete('/api/knowledge/:id', roleGuard('admin', 'support_agent'), (request, 
     return
   }
 
-  recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', entityId: id })
+  await recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', entityId: id })
   response.json(result)
 })
 
-app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), (request, response) => {
+app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), async (request, response) => {
   const ids = Array.isArray(request.body?.ids)
     ? request.body.ids.map((id: unknown) => Number(id))
     : []
@@ -1027,8 +1031,8 @@ app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), (request, resp
 
   const result = deleteKnowledgeDocuments(ids)
   if (result.deleted > 0) {
-    createNotification({ kind: 'knowledge', title: 'Knowledge documents deleted', message: `${result.deleted} knowledge document${result.deleted === 1 ? '' : 's'} permanently deleted.` })
-    recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', metadata: { ids } })
+    await createNotification({ kind: 'knowledge', title: 'Knowledge documents deleted', message: `${result.deleted} knowledge document${result.deleted === 1 ? '' : 's'} permanently deleted.` })
+    await recordAudit(request, { action: 'knowledge.deleted', entityType: 'knowledge_document', metadata: { ids } })
   }
   response.json(result)
 })
