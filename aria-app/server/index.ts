@@ -67,6 +67,7 @@ import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEv
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
+import { sqliteConversationRepository } from './repositories/sqlite-conversation-repository.js'
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
@@ -567,46 +568,28 @@ async function processChatRequest(query: string, requestedConversationId: number
 
   if (!conversationId) {
     const subject = query.length > 48 ? `${query.slice(0, 45)}...` : query
-    const created = db.prepare(`
-      INSERT INTO conversations (customer_name, subject, status, priority, topic, created_at, updated_at)
-      VALUES (?, ?, 'open', 'normal', ?, ?, ?)
-    `).run('Demo Customer', subject, inferTopic(query), now, now)
-    conversationId = Number(created.lastInsertRowid)
+    const created = sqliteConversationRepository.createConversation({
+      customerName: 'Demo Customer', subject, status: 'open', priority: 'normal', topic: inferTopic(query),
+      assignedTo: null, tags: [], escalated: false, createdAt: now, updatedAt: now,
+    })
+    conversationId = created.id
   }
 
   const customerMessageId = crypto.randomUUID()
-  db.prepare(`
-    INSERT INTO messages (id, conversation_id, role, content, created_at)
-    VALUES (?, ?, 'customer', ?, ?)
-  `).run(customerMessageId, conversationId, query, now)
+  sqliteConversationRepository.appendMessage({ id: customerMessageId, conversationId, role: 'customer', content: query, createdAt: now, shouldEscalate: false })
 
   const result = await agent.generateResponse(query, language)
   const latencyMs = Math.max(0, Date.now() - startedAt)
   const assistantMessageId = crypto.randomUUID()
   const assistantCreatedAt = new Date().toISOString()
 
-  db.prepare(`
-    INSERT INTO messages (
-      id, conversation_id, role, content, confidence, sources, source_scores,
-      retrieval_method, generation_provider, latency_ms, should_escalate, created_at
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    assistantMessageId,
-    conversationId,
-    'assistant',
-    result.answer,
-    result.confidence,
-    JSON.stringify(result.sources),
-    JSON.stringify(result.sourceScores),
-    result.retrievalMethod,
-    result.generationProvider,
-    latencyMs,
-    result.shouldEscalate ? 1 : 0,
-    assistantCreatedAt,
-  )
-  db.prepare('UPDATE conversations SET topic = ?, updated_at = ? WHERE id = ?')
-    .run(inferTopic(query), assistantCreatedAt, conversationId)
+  sqliteConversationRepository.appendMessage({
+    id: assistantMessageId, conversationId, role: 'assistant', content: result.answer,
+    confidence: result.confidence, sources: result.sources, sourceScores: result.sourceScores,
+    retrievalMethod: result.retrievalMethod, generationProvider: result.generationProvider,
+    latencyMs, shouldEscalate: result.shouldEscalate, createdAt: assistantCreatedAt,
+  })
+  sqliteConversationRepository.updateConversation(conversationId, { topic: inferTopic(query) })
   for (const source of result.sources) {
     db.prepare('UPDATE knowledge_documents SET uses = uses + 1 WHERE title = ?').run(source)
   }
@@ -831,30 +814,7 @@ app.get('/api/conversations/:id/export', roleGuard('admin', 'support_agent'), (r
 })
 
 app.get('/api/conversations/:id/messages', (request, response) => {
-  const rows = db.prepare(`
-    SELECT
-      id,
-      conversation_id AS conversationId,
-      role,
-      content,
-      confidence,
-      sources,
-      source_scores AS sourceScores,
-      retrieval_method AS retrievalMethod,
-      generation_provider AS generationProvider,
-      should_escalate AS shouldEscalate,
-      created_at AS createdAt
-    FROM messages WHERE conversation_id = ? ORDER BY created_at ASC
-  `).all(Number(request.params.id)).map((row) => {
-    const message = row as Record<string, unknown>
-    return {
-      ...message,
-      sources: message.sources ? JSON.parse(String(message.sources)) : [],
-      sourceScores: message.sourceScores ? JSON.parse(String(message.sourceScores)) : [],
-      shouldEscalate: Boolean(message.shouldEscalate),
-    }
-  })
-  response.json(rows)
+  response.json(sqliteConversationRepository.listMessages(Number(request.params.id)))
 })
 
 app.post('/api/feedback', (request, response) => {
