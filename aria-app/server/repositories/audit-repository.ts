@@ -22,3 +22,8 @@ export interface AuditRepository {
   createAuditLog(input: NewAuditLog): NewAuditLog & { id: number; createdAt: string }
   listAuditLogs(limit?: number): AuditLogRecord[]
 }
+
+export interface AsyncAuditRepository {
+  createAuditLog(input: NewAuditLog): Promise<NewAuditLog & { id: number; createdAt: string }>
+  listAuditLogs(limit?: number): Promise<AuditLogRecord[]>
+}

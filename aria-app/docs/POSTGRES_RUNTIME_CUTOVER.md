@@ -14,6 +14,8 @@ The first asynchronous PostgreSQL implementation is the notification repository.
 
 The asynchronous PostgreSQL feedback repository now supports customer ratings and agent feedback writes, with parameterized values and nullable fields. Unit tests run with `npm test`; `npm run test:postgres` also covers real PostgreSQL round-trips, duplicate IDs, and foreign-key failures using temporary tables and rollback. This adapter is not yet connected to live routes.
 
+The asynchronous PostgreSQL audit repository supports event insertion and recent-event listing, with JSONB metadata, numeric ID mapping, ISO timestamps, and existing default actor values. Its integration test uses temporary tables with a test-local identity sequence and checks metadata round-trips and actor deletion. Like notifications and feedback, it is not yet selected by the live runtime.
+
 Other PostgreSQL adapters, asynchronous caller conversion, shared cross-engine contract tests, transactional writes, and production cutover remain pending. Existing synchronous SQLite contracts must still be reconciled with the async adapters before runtime selection can be enabled.
 
 ## Cutover Stages
