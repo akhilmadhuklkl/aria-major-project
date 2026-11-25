@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Pool } from 'pg'
 import { db } from '../database.js'
+import { serializeJsonb } from './postgres-json.js'
 
 const databaseUrl = process.env.DATABASE_URL?.trim()
 if (!databaseUrl) {
@@ -26,18 +27,18 @@ try {
   await copyTable('users', ['id', 'email', 'display_name', 'role', 'password_hash', 'password_salt', 'created_at', 'updated_at'])
   await copyTable('conversations', ['id', 'customer_name', 'subject', 'status', 'priority', 'topic', 'assigned_to', 'tags', 'escalated', 'created_at', 'updated_at'], (row) => ({
     ...row,
-    tags: row.tags ? JSON.parse(String(row.tags)) : [],
+    tags: serializeJsonb(row.tags, []),
     escalated: Boolean(row.escalated),
   }))
   await copyTable('knowledge_documents', ['id', 'title', 'category', 'content', 'status', 'uses', 'archived_at', 'updated_at'])
   await copyTable('knowledge_embeddings', ['knowledge_document_id', 'model', 'dimensions', 'vector', 'content_hash', 'updated_at'], (row) => ({
     ...row,
-    vector: JSON.parse(String(row.vector)),
+    vector: serializeJsonb(row.vector, []),
   }))
   await copyTable('messages', ['id', 'conversation_id', 'role', 'content', 'confidence', 'sources', 'source_scores', 'retrieval_method', 'generation_provider', 'latency_ms', 'should_escalate', 'created_at'], (row) => ({
     ...row,
-    sources: row.sources ? JSON.parse(String(row.sources)) : null,
-    source_scores: row.source_scores ? JSON.parse(String(row.source_scores)) : null,
+    sources: serializeJsonb(row.sources),
+    source_scores: serializeJsonb(row.source_scores),
     should_escalate: Boolean(row.should_escalate),
   }))
   await copyTable('feedback', ['id', 'message_id', 'conversation_id', 'rating', 'feedback_type', 'comment', 'edited_response', 'quality_score', 'created_at'])
@@ -46,21 +47,21 @@ try {
   await copyTable('notifications', ['id', 'kind', 'title', 'message', 'read_at', 'created_at'])
   await copyTable('webhook_subscriptions', ['id', 'name', 'url', 'secret', 'events', 'active', 'created_at', 'updated_at'], (row) => ({
     ...row,
-    events: row.events ? JSON.parse(String(row.events)) : ['*'],
+    events: serializeJsonb(row.events, ['*']),
     active: Boolean(row.active),
   }))
   await copyTable('webhook_delivery_logs', ['id', 'webhook_id', 'event', 'status', 'response_status', 'attempts', 'error', 'created_at'])
   await copyTable('graph_nodes', ['id', 'type', 'properties', 'created_at', 'updated_at'], (row) => ({
     ...row,
-    properties: row.properties ? JSON.parse(String(row.properties)) : {},
+    properties: serializeJsonb(row.properties, {}),
   }))
   await copyTable('graph_relationships', ['id', 'source_id', 'type', 'target_id', 'properties', 'created_at'], (row) => ({
     ...row,
-    properties: row.properties ? JSON.parse(String(row.properties)) : {},
+    properties: serializeJsonb(row.properties, {}),
   }))
   await copyTable('audit_logs', ['id', 'actor_user_id', 'actor_email', 'action', 'entity_type', 'entity_id', 'metadata', 'created_at'], (row) => ({
     ...row,
-    metadata: row.metadata ? JSON.parse(String(row.metadata)) : {},
+    metadata: serializeJsonb(row.metadata, {}),
   }))
 
   for (const [table, sourceCount] of Object.entries(migratedCounts)) {
