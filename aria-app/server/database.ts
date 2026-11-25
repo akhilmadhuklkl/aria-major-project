@@ -391,13 +391,6 @@ export function inferTopic(message: string) {
   return 'General'
 }
 
-export function createNotification(input: { kind: string; title: string; message: string }) {
-  const createdAt = new Date().toISOString()
-  const result = db.prepare('INSERT INTO notifications (kind, title, message, created_at) VALUES (?, ?, ?, ?)')
-    .run(input.kind, input.title, input.message, createdAt)
-  return { id: Number(result.lastInsertRowid), ...input, readAt: null, createdAt }
-}
-
 export function createAuditLog(input: {
   actorUserId?: number
   actorEmail?: string
@@ -431,21 +424,6 @@ export function listAuditLogs(limit = 50) {
     const item = row as Record<string, unknown>
     return { ...item, metadata: JSON.parse(String(item.metadata ?? '{}')) }
   })
-}
-
-export function listNotifications(limit = 20) {
-  return db.prepare(`
-    SELECT id, kind, title, message, read_at AS readAt, created_at AS createdAt
-    FROM notifications ORDER BY created_at DESC LIMIT ?
-  `).all(Math.max(1, Math.min(limit, 100)))
-}
-
-export function markNotificationRead(id: number) {
-  return db.prepare('UPDATE notifications SET read_at = ? WHERE id = ?').run(new Date().toISOString(), id).changes > 0
-}
-
-export function markAllNotificationsRead() {
-  return db.prepare('UPDATE notifications SET read_at = ? WHERE read_at IS NULL').run(new Date().toISOString()).changes
 }
 
 export function calculateQualityScore(rating?: number, feedbackType = 'customer_rating') {

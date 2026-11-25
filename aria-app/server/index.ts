@@ -12,7 +12,6 @@ import {
   archiveKnowledgeDocuments,
   restoreKnowledgeDocuments,
   createAuditLog,
-  createNotification,
   createKnowledgeDocument,
   db,
   deleteKnowledgeDocuments,
@@ -24,10 +23,7 @@ import {
   listArchivedKnowledge,
   listGraphNodes,
   listGraphRelationships,
-  listNotifications,
   listAuditLogs,
-  markAllNotificationsRead,
-  markNotificationRead,
   queryGraphPaths,
   createGraphRelationship,
   deleteGraphNode,
@@ -69,7 +65,10 @@ import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
 import { sqliteConversationRepository } from './repositories/sqlite-conversation-repository.js'
 import { sqliteFeedbackRepository } from './repositories/sqlite-feedback-repository.js'
+import { sqliteNotificationRepository } from './repositories/sqlite-notification-repository.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
+
+const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = sqliteNotificationRepository
 
 function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
   void dispatchWebhookEvent(event, data)
