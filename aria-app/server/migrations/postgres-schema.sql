@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   revoked_at TIMESTAMPTZ
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_pg_users_email_lower ON users(lower(email));
+
 CREATE TABLE IF NOT EXISTS conversations (
   id BIGSERIAL PRIMARY KEY,
   customer_name TEXT NOT NULL,

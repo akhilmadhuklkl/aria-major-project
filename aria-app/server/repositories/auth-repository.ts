@@ -28,6 +28,10 @@ export interface AuthRepository {
   listUsers(): StoredAuthUser[]
 }
 
+export type AsyncAuthRepository = {
+  [Method in keyof AuthRepository]: (...args: Parameters<AuthRepository[Method]>) => Promise<ReturnType<AuthRepository[Method]>>
+}
+
 export const sqliteAuthRepository: AuthRepository = {
   ensureSchema() {
     db.exec(`

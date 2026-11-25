@@ -33,6 +33,7 @@ const expectedTables: Record<string, string[]> = {
 }
 
 const expectedIndexes = [
+  'idx_pg_users_email_lower',
   'idx_pg_conversations_status_updated',
   'idx_pg_messages_conversation_created',
   'idx_pg_feedback_conversation_created',
