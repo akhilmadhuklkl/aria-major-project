@@ -9,7 +9,6 @@ import multer from 'multer'
 import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
-  db,
   getGraphNode,
   inferTopic,
   listGraphNodes,
@@ -40,7 +39,6 @@ import { createWebhookService, normalizeWebhookEvents, validateWebhookUrl, webho
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
-import { createSqliteAnalyticsRepository } from './repositories/sqlite-analytics-repository.js'
 import { checkDatabaseReadiness } from './readiness.js'
 import { createRuntimeRepositories } from './runtime-repositories.js'
 import type { NewAuditLog } from './repositories/audit-repository.js'
@@ -48,7 +46,6 @@ import type { AsyncKnowledgeRepository } from './repositories/knowledge-reposito
 import type { AsyncNotificationRepository } from './repositories/notification-repository.js'
 import type { ConversationPriority, ConversationStatus } from './repositories/conversation-repository.js'
 
-const analyticsRepository = createSqliteAnalyticsRepository(db)
 const runtimeRepositories = createRuntimeRepositories(databaseEngine)
 const systemRepository = runtimeRepositories.system
 const conversationRepository = runtimeRepositories.conversations
@@ -56,6 +53,7 @@ const feedbackRepository = runtimeRepositories.feedback
 const notificationRepository = runtimeRepositories.notifications
 const auditRepository = runtimeRepositories.audit
 const knowledgeRepository: AsyncKnowledgeRepository = runtimeRepositories.knowledge
+const analyticsRepository = runtimeRepositories.analytics
 const webhookService = createWebhookService(runtimeRepositories.webhooks)
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
@@ -1032,7 +1030,7 @@ app.delete('/api/knowledge', roleGuard('admin', 'support_agent'), async (request
 app.get('/api/analytics/summary', async (request, response) => {
   const range = String(request.query.range ?? '7d')
   const since = range === 'all' ? undefined : new Date(Date.now() - (range === '30d' ? 30 : 7) * 24 * 60 * 60 * 1000).toISOString()
-  const { conversationCount, feedbackStats, accepted, corrected, topicRows, rejected, retrievalRows, providerRows, escalationCount, responseMessageCount, latencyStats, confidenceStats, groundedResponseCount, highConfidenceCount, lowConfidenceCount, qualityTrend } = analyticsRepository.getAnalyticsMetrics(since, Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7))
+  const { conversationCount, feedbackStats, accepted, corrected, topicRows, rejected, retrievalRows, providerRows, escalationCount, responseMessageCount, latencyStats, confidenceStats, groundedResponseCount, highConfidenceCount, lowConfidenceCount, qualityTrend } = await analyticsRepository.getAnalyticsMetrics(since, Number(process.env.AI_CONFIDENCE_THRESHOLD ?? 0.7))
   const sourceStats = await knowledgeRepository.getKnowledgeSourceFeedbackStats()
   const adaptedSources = sourceStats.map((source) => ({
     title: source.title,

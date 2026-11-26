@@ -24,6 +24,7 @@ test('runtime repository factory keeps SQLite explicit and does not create a Pos
   assert.equal(typeof runtime.audit.listAuditLogs, 'function')
   assert.equal(typeof runtime.knowledge.listKnowledge, 'function')
   assert.equal(typeof runtime.webhooks.listSubscriptionsWithSecrets, 'function')
+  assert.equal(typeof runtime.analytics.getAnalyticsMetrics, 'function')
   assert.equal(typeof runtime.system.verifyConnection, 'function')
   assert.equal(typeof runtime.system.getRecordCounts, 'function')
   await runtime.system.verifyConnection()
@@ -45,6 +46,7 @@ test('runtime repository factory assembles every PostgreSQL adapter and owns poo
   assert.equal(runtime.audit, runtime.postgres.audit)
   assert.equal(runtime.knowledge, runtime.postgres.knowledge)
   assert.equal(runtime.webhooks, runtime.postgres.webhooks)
+  assert.equal(runtime.analytics, runtime.postgres.analytics)
   assert.equal(runtime.system, runtime.postgres.system)
   assert.equal(runtime.pool, pool)
   assert.deepEqual(Object.keys(runtime.postgres).sort(), ['analytics', 'audit', 'auth', 'conversations', 'feedback', 'graph', 'knowledge', 'notifications', 'system', 'webhooks'])
@@ -81,6 +83,18 @@ test('async runtime knowledge adapter preserves SQLite lifecycle and embeddings'
     assert.equal((await runtime.knowledge.listKnowledge()).some((item) => item.id === document.id), false)
   } finally {
     db.prepare('DELETE FROM knowledge_documents WHERE id = ?').run(document.id)
+    await runtime.close()
+  }
+})
+
+test('async runtime analytics adapter returns SQLite metrics', async () => {
+  const runtime = createRuntimeRepositories('sqlite')
+  try {
+    const metrics = await runtime.analytics.getAnalyticsMetrics(undefined, 0.7)
+    assert.ok(Number.isFinite(metrics.conversationCount.count))
+    assert.ok(Number.isFinite(metrics.feedbackStats.averageQuality))
+    assert.ok(Array.isArray(metrics.qualityTrend))
+  } finally {
     await runtime.close()
   }
 })

@@ -48,6 +48,8 @@ Knowledge persistence and retrieval are now the fifth feature boundary. Knowledg
 
 Webhook persistence and delivery history are now the sixth feature boundary. Subscription creation, listing, activation, deletion, delivery records, event filtering, retries, and test deliveries use the runtime-selected async webhook repository while preserving HMAC signing and the public secret-safe response shape.
 
+Analytics is now the seventh feature boundary. The summary endpoint reads conversation, feedback, retrieval, provider, confidence, latency, escalation, and quality-trend metrics through the runtime-selected analytics repository.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
