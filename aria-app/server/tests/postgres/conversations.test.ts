@@ -19,7 +19,13 @@ test('PostgreSQL conversations support queues, independent messages, partial upd
         ALTER TABLE pg_temp.messages ADD FOREIGN KEY (conversation_id) REFERENCES pg_temp.conversations(id);
       `)
       const repository = createPostgresConversationRepository(client)
-      await runConversationRepositoryContract(repository, `postgres-conversation-${Date.now()}`)
+      await client.query('SAVEPOINT conversation_repository_contract')
+      try {
+        await runConversationRepositoryContract(repository, `postgres-conversation-${Date.now()}`)
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT conversation_repository_contract')
+        await client.query('RELEASE SAVEPOINT conversation_repository_contract')
+      }
       const now = '2026-01-01T00:00:00.000Z'
       const base = { customerName: 'Test Customer', subject: 'Refund request', status: 'open' as const, priority: 'high' as const, topic: 'Refunds', tags: ['refund'], assignedTo: 'Agent', escalated: true, createdAt: now, updatedAt: now }
       const first = await repository.createConversation(base)
