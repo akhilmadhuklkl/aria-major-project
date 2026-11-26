@@ -238,6 +238,9 @@ function createAsyncSqliteKnowledgeRepository(): AsyncKnowledgeRepository {
     async createKnowledgeDocument(input) {
       return repository.createKnowledgeDocument(input)
     },
+    async createKnowledgeDocumentWithEmbedding(input, embedding) {
+      return repository.createKnowledgeDocumentWithEmbedding(input, embedding)
+    },
     async updateKnowledgeDocument(id, input) {
       return repository.updateKnowledgeDocument(id, input)
     },

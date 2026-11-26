@@ -16,6 +16,69 @@ test('PostgreSQL knowledge upserts JSON vectors and filters invalid bulk IDs', a
   assert.equal(calls.length, 2)
 })
 
+test('PostgreSQL knowledge persists a document, version, and embedding in one transaction', async () => {
+  const statements: string[] = []
+  const timestamp = '2026-01-01T00:00:00.000Z'
+  const client = {
+    async query(sql: string) {
+      const statement = sql.trim().split(/\s+/).slice(0, 3).join(' ')
+      statements.push(statement)
+      if (statement === 'INSERT INTO knowledge_documents') {
+        return {
+          rows: [{ id: '3', title: 'Atomic policy', category: 'FAQ', content: 'Text', status: 'indexed', uses: 0, updatedAt: timestamp, archivedAt: null }],
+          rowCount: 1,
+        }
+      }
+      return { rows: [], rowCount: 1 }
+    },
+    release() {},
+  }
+  const repository = createPostgresKnowledgeRepository({ connect: async () => client } as unknown as Pick<Pool, 'query' | 'connect'>)
+
+  const document = await repository.createKnowledgeDocumentWithEmbedding(
+    { title: 'Atomic policy', category: 'FAQ', content: 'Text' },
+    { model: 'test-model', vector: [1, 0], contentHash: 'hash' },
+  )
+  assert.equal(document.id, 3)
+  assert.deepEqual(statements, [
+    'BEGIN ISOLATION LEVEL',
+    'INSERT INTO knowledge_documents',
+    'INSERT INTO knowledge_document_versions',
+    'INSERT INTO knowledge_embeddings',
+    'COMMIT',
+  ])
+})
+
+test('PostgreSQL knowledge rolls back atomic indexing when embedding persistence fails', async () => {
+  const statements: string[] = []
+  const failure = new Error('embedding insert failed')
+  const client = {
+    async query(sql: string) {
+      const statement = sql.trim().split(/\s+/).slice(0, 3).join(' ')
+      statements.push(statement)
+      if (statement === 'INSERT INTO knowledge_embeddings') throw failure
+      return { rows: [{ id: '3', title: 'Atomic policy', category: 'FAQ', content: 'Text', status: 'indexed', uses: 0, updatedAt: '2026-01-01T00:00:00.000Z', archivedAt: null }], rowCount: 1 }
+    },
+    release() {},
+  }
+  const repository = createPostgresKnowledgeRepository({ connect: async () => client } as unknown as Pick<Pool, 'query' | 'connect'>)
+
+  await assert.rejects(
+    repository.createKnowledgeDocumentWithEmbedding(
+      { title: 'Atomic policy', category: 'FAQ', content: 'Text' },
+      { model: 'test-model', vector: [1, 0], contentHash: 'hash' },
+    ),
+    (error) => error === failure,
+  )
+  assert.deepEqual(statements, [
+    'BEGIN ISOLATION LEVEL',
+    'INSERT INTO knowledge_documents',
+    'INSERT INTO knowledge_document_versions',
+    'INSERT INTO knowledge_embeddings',
+    'ROLLBACK',
+  ])
+})
+
 test('PostgreSQL knowledge rolls back failed version writes and discards a client if rollback fails', async () => {
   for (const failRollback of [false, true]) {
     const statements: string[] = []

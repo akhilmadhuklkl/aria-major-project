@@ -1,5 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
-import type { EmbeddedKnowledgeDocument, KnowledgeDocument, KnowledgeDocumentVersion, KnowledgeEmbeddingStats, KnowledgeRepository } from './knowledge-repository.js'
+import type { EmbeddedKnowledgeDocument, KnowledgeDocument, KnowledgeDocumentInput, KnowledgeDocumentVersion, KnowledgeEmbeddingStats, KnowledgeRepository } from './knowledge-repository.js'
 
 const documentColumns = 'id, title, category, content, status, uses, updated_at AS updatedAt, archived_at AS archivedAt'
 const validIds = (ids: number[]) => [...new Set(ids.filter((id) => Number.isInteger(id) && id > 0))]
@@ -135,6 +135,31 @@ export function createSqliteKnowledgeRepository(db: DatabaseSync): KnowledgeRepo
         VALUES (?, 1, ?, ?, ?, ?, ?)
       `).run(id, input.title, input.category, input.content, input.sourceFilename ?? null, now)
       return getDocument(id)
+    },
+    createKnowledgeDocumentWithEmbedding(input: KnowledgeDocumentInput, embedding) {
+      const savepoint = 'aria_knowledge_indexing'
+      db.exec(`SAVEPOINT ${savepoint}`)
+      try {
+        const now = new Date().toISOString()
+        const created = db.prepare(`
+          INSERT INTO knowledge_documents (title, category, content, status, uses, updated_at, archived_at)
+          VALUES (?, ?, ?, ?, 0, ?, NULL)
+        `).run(input.title, input.category, input.content, input.status ?? 'indexed', now)
+        const id = Number(created.lastInsertRowid)
+        db.prepare(`
+          INSERT INTO knowledge_document_versions (knowledge_document_id, version, title, category, content, source_filename, created_at)
+          VALUES (?, 1, ?, ?, ?, ?, ?)
+        `).run(id, input.title, input.category, input.content, input.sourceFilename ?? null, now)
+        db.prepare(`
+          INSERT INTO knowledge_embeddings (knowledge_document_id, model, dimensions, vector, content_hash, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(id, embedding.model, embedding.vector.length, JSON.stringify(embedding.vector), embedding.contentHash, now)
+        db.exec(`RELEASE SAVEPOINT ${savepoint}`)
+        return getDocument(id)
+      } catch (error) {
+        try { db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`) } finally { db.exec(`RELEASE SAVEPOINT ${savepoint}`) }
+        throw error
+      }
     },
     updateKnowledgeDocument(id, input) {
       if (!db.prepare('SELECT id FROM knowledge_documents WHERE id = ? AND archived_at IS NULL').get(id)) return null

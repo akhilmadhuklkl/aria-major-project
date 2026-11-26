@@ -73,6 +73,21 @@ export function createPostgresKnowledgeRepository(pool: Pick<Pool, 'query' | 'co
         return mapDocument(row)
       })
     },
+    async createKnowledgeDocumentWithEmbedding(input, embedding) {
+      return transaction(async (client) => {
+        const now = new Date().toISOString()
+        const { rows: [row] } = await client.query<DocumentRow>(`
+          INSERT INTO knowledge_documents AS d (title, category, content, status, updated_at)
+          VALUES ($1, $2, $3, $4, $5) RETURNING ${columns}
+        `, [input.title, input.category, input.content, input.status ?? 'indexed', now])
+        await appendVersion(client, row.id, input, now)
+        await client.query(`
+          INSERT INTO knowledge_embeddings (knowledge_document_id, model, dimensions, vector, content_hash, updated_at)
+          VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+        `, [row.id, embedding.model, embedding.vector.length, JSON.stringify(embedding.vector), embedding.contentHash, now])
+        return mapDocument(row)
+      })
+    },
     async updateKnowledgeDocument(id, input) {
       return transaction(async (client) => {
         const now = new Date().toISOString()

@@ -869,26 +869,26 @@ app.post('/api/knowledge/upload', roleGuard('admin', 'support_agent'), upload.si
       return
     }
 
-    const document = await knowledgeRepository.createKnowledgeDocument({
+    const embeddingText = createKnowledgeEmbeddingText({ title, category, content })
+    const embeddingService = new LocalEmbeddingService()
+    let vector: number[]
+    try {
+      vector = await embeddingService.embed(embeddingText)
+    } finally {
+      await embeddingService.dispose()
+    }
+
+    const document = await knowledgeRepository.createKnowledgeDocumentWithEmbedding({
       title,
       category,
       content,
       status: 'indexed',
       sourceFilename: request.file.originalname,
+    }, {
+      model: embeddingModel,
+      vector,
+      contentHash: createContentHash(embeddingText),
     })
-    const embeddingService = new LocalEmbeddingService()
-    try {
-      const embeddingText = createKnowledgeEmbeddingText(document)
-      const vector = await embeddingService.embed(embeddingText)
-      await knowledgeRepository.upsertKnowledgeEmbedding({
-        knowledgeDocumentId: document.id,
-        model: embeddingModel,
-        vector,
-        contentHash: createContentHash(embeddingText),
-      })
-    } finally {
-      await embeddingService.dispose()
-    }
 
     await createNotification({ kind: 'knowledge', title: 'Knowledge document indexed', message: `${request.file.originalname} is ready for retrieval.` })
     notifyWebhook('knowledge.indexed', { title: document.title, sourceFilename: request.file.originalname })

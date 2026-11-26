@@ -406,23 +406,21 @@ export async function runKnowledgeRepositoryContract(repository: KnowledgeContra
   let documentId: number | undefined
 
   try {
-    const document = await repository.createKnowledgeDocument({
+    const document = await repository.createKnowledgeDocumentWithEmbedding({
       title,
       category: 'Policy',
       content: 'Contract guidance',
       sourceFilename: `${prefix}.txt`,
+    }, {
+      model: 'contract-model',
+      vector: [1, 0],
+      contentHash: 'contract-hash',
     })
     documentId = document.id
     assert.equal(document.status, 'indexed')
     assert.equal(document.archivedAt, null)
     assert.equal((await repository.getKnowledgeDocumentVersions(document.id))[0]?.version, 1)
 
-    await repository.upsertKnowledgeEmbedding({
-      knowledgeDocumentId: document.id,
-      model: 'contract-model',
-      vector: [1, 0],
-      contentHash: 'contract-hash',
-    })
     assert.equal((await repository.listEmbeddedKnowledge()).find((item) => item.id === document.id)?.model, 'contract-model')
 
     const updated = await repository.updateKnowledgeDocument(document.id, {

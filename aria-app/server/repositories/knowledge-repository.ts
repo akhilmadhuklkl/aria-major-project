@@ -50,6 +50,7 @@ export interface KnowledgeRepository {
   listKnowledge(): KnowledgeDocument[]
   listArchivedKnowledge(): KnowledgeDocument[]
   createKnowledgeDocument(input: KnowledgeDocumentInput): KnowledgeDocument
+  createKnowledgeDocumentWithEmbedding(input: KnowledgeDocumentInput, embedding: Omit<KnowledgeEmbeddingInput, 'knowledgeDocumentId'>): KnowledgeDocument
   updateKnowledgeDocument(id: number, input: KnowledgeDocumentInput): KnowledgeDocument | null
   archiveKnowledgeDocuments(ids: number[]): { archived: number | bigint }
   restoreKnowledgeDocuments(ids: number[]): { restored: number | bigint }
