@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { createSqliteSystemRepository } from '../repositories/sqlite-system-repository.js'
 import { checkDatabaseReadiness } from '../readiness.js'
+import { runSystemRepositoryContract } from './contracts/repository-contracts.js'
 
 test('system repository probes the database and returns accurate record counts', () => {
   const db = new DatabaseSync(':memory:')
@@ -15,6 +16,17 @@ test('system repository probes the database and returns accurate record counts',
     assert.deepEqual(repository.getRecordCounts(), { conversations: 2, feedbackRecords: 1 })
   } finally { db.close() }
   assert.throws(() => repository.verifyConnection())
+})
+
+test('SQLite system repository satisfies the shared cross-engine contract', async () => {
+  const db = new DatabaseSync(':memory:')
+  const repository = createSqliteSystemRepository(db)
+  try {
+    db.exec('CREATE TABLE conversations (id INTEGER); CREATE TABLE feedback (id INTEGER);')
+    await runSystemRepositoryContract(repository, () => {
+      db.exec('INSERT INTO conversations VALUES (1), (2); INSERT INTO feedback VALUES (1);')
+    })
+  } finally { db.close() }
 })
 
 test('readiness checks the primary database even when Neo4j is configured', async () => {

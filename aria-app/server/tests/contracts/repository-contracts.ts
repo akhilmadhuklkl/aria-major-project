@@ -7,11 +7,13 @@ import type { AsyncNotificationRepository, NotificationRepository } from '../../
 import type { AsyncAuditRepository, AuditRepository } from '../../repositories/audit-repository.js'
 import type { AsyncAuthRepository, AuthRepository } from '../../repositories/auth-repository.js'
 import type { AnalyticsRepository, AsyncAnalyticsRepository } from '../../repositories/analytics-repository.js'
+import type { AsyncSystemRepository, SystemRepository } from '../../repositories/system-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
 type AuditContractRepository = AuditRepository | AsyncAuditRepository
 type AuthContractRepository = AuthRepository | AsyncAuthRepository
 type AnalyticsContractRepository = AnalyticsRepository | AsyncAnalyticsRepository
+type SystemContractRepository = SystemRepository | AsyncSystemRepository
 type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
@@ -141,6 +143,16 @@ export async function runAnalyticsRepositoryContract(
   assert.equal(all.rejected.count, 1)
   assert.equal(all.escalationCount.count, 2)
   assert.equal((await repository.getAnalyticsMetrics(dates.since, 0.8)).highConfidenceCount.count, 0)
+}
+
+export async function runSystemRepositoryContract(
+  repository: SystemContractRepository,
+  seed: () => void | Promise<void>,
+) {
+  await repository.verifyConnection()
+  assert.deepEqual(await repository.getRecordCounts(), { conversations: 0, feedbackRecords: 0 })
+  await seed()
+  assert.deepEqual(await repository.getRecordCounts(), { conversations: 2, feedbackRecords: 1 })
 }
 
 export async function runFeedbackRepositoryContract(

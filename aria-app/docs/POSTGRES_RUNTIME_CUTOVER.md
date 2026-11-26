@@ -16,7 +16,7 @@ The asynchronous PostgreSQL feedback repository now supports customer ratings an
 
 The asynchronous PostgreSQL audit repository supports event insertion and recent-event listing, with JSONB metadata, numeric ID mapping, ISO timestamps, and existing default actor values. Its integration test uses temporary tables with a test-local identity sequence and checks metadata round-trips and actor deletion. Like notifications and feedback, it is not yet selected by the live runtime.
 
-Shared cross-engine contract coverage now runs against the knowledge, graph, conversation, feedback, notification, audit, authentication, and analytics repositories in both SQLite and PostgreSQL test paths. Final coverage for the remaining system and webhook adapters, transaction review, and production cutover remain pending.
+Shared cross-engine contract coverage now runs against the knowledge, graph, conversation, feedback, notification, audit, authentication, analytics, and system repositories in both SQLite and PostgreSQL test paths. Final coverage for the remaining webhook adapter, transaction review, and production cutover remain pending.
 
 The asynchronous PostgreSQL authentication repository now provides user and session persistence, case-insensitive email lookup, public user projections, credential updates, and session revocation. Schema setup remains migration-owned; the adapter checks the migrated tables rather than creating them on a login request. A unique index on `lower(email)` preserves SQLite's email uniqueness behavior. Shared contract tests now verify the equivalent SQLite and PostgreSQL lifecycle, including role filtering and credential redaction. Password hashing, expiry enforcement, authorization, and atomic password-change/session-revocation orchestration remain service responsibilities; live authentication still uses SQLite.
 
@@ -28,7 +28,7 @@ The asynchronous PostgreSQL webhook repository now covers subscription creation,
 
 The asynchronous PostgreSQL analytics repository now mirrors the SQLite metrics contract for date-filtered counts, feedback quality, retrieval methods, model providers, confidence thresholds, escalation, grounding, latency, and daily quality trends. Aggregate values are normalized from PostgreSQL numeric results, and JSONB source presence is evaluated without relying on SQLite text comparisons. Shared contract tests verify empty aggregates, date cutoffs, grouping, numeric normalization, and confidence-threshold behavior. The adapter is not yet connected to live routes.
 
-The asynchronous PostgreSQL system repository now supports connectivity probes and conversation/feedback record counts for readiness and operational status checks. PostgreSQL count results are normalized to application numbers, and the adapter is not yet connected to live routes.
+The asynchronous PostgreSQL system repository now supports connectivity probes and conversation/feedback record counts for readiness and operational status checks. PostgreSQL count results are normalized to application numbers, and a shared contract verifies empty and populated count behavior in both database paths. The adapter is not yet connected to live routes.
 
 The asynchronous PostgreSQL graph repository now supports typed node upserts, JSONB properties, directed relationship upserts, bounded path queries, one-hop knowledge-title lookup, and foreign-key cascade deletion. Its behavior is covered against real PostgreSQL temporary tables and is exposed through the runtime factory.
 
