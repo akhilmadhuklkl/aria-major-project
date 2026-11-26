@@ -1,11 +1,51 @@
 import assert from 'node:assert/strict'
 import type { AsyncConversationRepository, ConversationRepository } from '../../repositories/conversation-repository.js'
+import type { AsyncFeedbackRepository, FeedbackRecord, FeedbackRepository } from '../../repositories/feedback-repository.js'
 import type { AsyncGraphRepository, GraphRepository } from '../../repositories/graph-repository.js'
 import type { AsyncKnowledgeRepository, KnowledgeRepository } from '../../repositories/knowledge-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
+type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
+
+export async function runFeedbackRepositoryContract(
+  repository: FeedbackContractRepository,
+  readFeedback: (id: string) => Promise<FeedbackRecord | undefined>,
+  conversationId: number,
+  messageId: string,
+  prefix: string,
+) {
+  const createdAt = '2026-01-01T00:00:00.000Z'
+  const entries: FeedbackRecord[] = [
+    {
+      id: `${prefix}:rating`, messageId, conversationId, rating: 0,
+      feedbackType: 'customer_rating', comment: '', qualityScore: 0, createdAt,
+    },
+    {
+      id: `${prefix}:accepted`, messageId, conversationId,
+      feedbackType: 'accepted', qualityScore: 1, createdAt,
+    },
+    {
+      id: `${prefix}:edited`, messageId, conversationId,
+      feedbackType: 'edited', editedResponse: 'Revised response', qualityScore: 0.75, createdAt,
+    },
+    {
+      id: `${prefix}:rejected`, messageId, conversationId,
+      feedbackType: 'rejected', comment: 'Needs review', qualityScore: 0.25, createdAt,
+    },
+  ]
+
+  for (const entry of entries) {
+    await repository.insertFeedback(entry)
+    assert.deepEqual(await readFeedback(entry.id), {
+      ...entry,
+      rating: entry.rating ?? null,
+      comment: entry.comment ?? null,
+      editedResponse: entry.editedResponse ?? null,
+    })
+  }
+}
 
 export async function runConversationRepositoryContract(repository: ConversationContractRepository, prefix: string) {
   const now = '2026-01-01T00:00:00.000Z'

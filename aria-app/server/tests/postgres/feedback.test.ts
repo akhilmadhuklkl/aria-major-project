@@ -2,6 +2,8 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresFeedbackRepository } from '../../repositories/postgres-feedback-repository.js'
+import type { FeedbackRecord } from '../../repositories/feedback-repository.js'
+import { runFeedbackRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL feedback persists customer and agent fields and enforces constraints', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -20,6 +22,24 @@ test('PostgreSQL feedback persists customer and agent fields and enforces constr
         INSERT INTO pg_temp.messages VALUES ('test-message');
       `)
       const repository = createPostgresFeedbackRepository(client)
+      const readFeedback = async (id: string): Promise<FeedbackRecord | undefined> => {
+        const { rows } = await client.query('SELECT id, message_id AS "messageId", conversation_id AS "conversationId", rating, feedback_type AS "feedbackType", comment, edited_response AS "editedResponse", quality_score AS "qualityScore", created_at AS "createdAt" FROM pg_temp.feedback WHERE id = $1', [id])
+        const row = rows[0] as Record<string, unknown> | undefined
+        return row ? {
+          id: String(row.id), messageId: String(row.messageId), conversationId: Number(row.conversationId),
+          rating: row.rating === null || row.rating === undefined ? null : Number(row.rating), feedbackType: String(row.feedbackType),
+          comment: row.comment === null || row.comment === undefined ? null : String(row.comment),
+          editedResponse: row.editedResponse === null || row.editedResponse === undefined ? null : String(row.editedResponse),
+          qualityScore: Number(row.qualityScore), createdAt: (row.createdAt as Date).toISOString(),
+        } : undefined
+      }
+      await client.query('SAVEPOINT feedback_repository_contract')
+      try {
+        await runFeedbackRepositoryContract(repository, readFeedback, 42, 'test-message', `postgres-feedback-${Date.now()}`)
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT feedback_repository_contract')
+        await client.query('RELEASE SAVEPOINT feedback_repository_contract')
+      }
       const createdAt = '2026-01-01T00:00:00.000Z'
       for (const feedbackType of ['customer_rating', 'accepted', 'edited', 'rejected']) {
         const entry = {

@@ -16,7 +16,7 @@ The asynchronous PostgreSQL feedback repository now supports customer ratings an
 
 The asynchronous PostgreSQL audit repository supports event insertion and recent-event listing, with JSONB metadata, numeric ID mapping, ISO timestamps, and existing default actor values. Its integration test uses temporary tables with a test-local identity sequence and checks metadata round-trips and actor deletion. Like notifications and feedback, it is not yet selected by the live runtime.
 
-Shared cross-engine contract coverage now runs against the knowledge, graph, and conversation repositories in both SQLite and PostgreSQL test paths. Final coverage for the remaining adapters, transaction review, and production cutover remain pending.
+Shared cross-engine contract coverage now runs against the knowledge, graph, conversation, and feedback repositories in both SQLite and PostgreSQL test paths. Final coverage for the remaining adapters, transaction review, and production cutover remain pending.
 
 The asynchronous PostgreSQL authentication repository now provides user and session persistence, case-insensitive email lookup, public user projections, credential updates, and session revocation. Schema setup remains migration-owned; the adapter checks the migrated tables rather than creating them on a login request. A unique index on `lower(email)` preserves SQLite's email uniqueness behavior. Password hashing, expiry enforcement, authorization, and atomic password-change/session-revocation orchestration remain service responsibilities; live authentication still uses SQLite.
 

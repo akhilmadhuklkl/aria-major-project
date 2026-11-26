@@ -4,6 +4,33 @@ import { db } from '../database.js'
 import { sqliteConversationRepository } from '../repositories/sqlite-conversation-repository.js'
 import { sqliteFeedbackRepository } from '../repositories/sqlite-feedback-repository.js'
 import { createRuntimeRepositories } from '../runtime-repositories.js'
+import { runFeedbackRepositoryContract } from './contracts/repository-contracts.js'
+
+test('SQLite feedback repository satisfies the shared cross-engine contract', async () => {
+  db.exec('BEGIN')
+  try {
+    const now = new Date().toISOString()
+    const conversation = sqliteConversationRepository.createConversation({
+      customerName: `Feedback Contract ${Date.now()}`, subject: 'Shared feedback contract', status: 'open',
+      priority: 'normal', topic: 'General', tags: [], escalated: false, createdAt: now, updatedAt: now,
+    })
+    const messageId = `feedback-contract-message-${Date.now()}`
+    sqliteConversationRepository.appendMessage({ id: messageId, conversationId: conversation.id, role: 'assistant', content: 'Contract answer', shouldEscalate: false, createdAt: now })
+    const readFeedback = async (id: string) => {
+      const row = db.prepare('SELECT id, message_id AS messageId, conversation_id AS conversationId, rating, feedback_type AS feedbackType, comment, edited_response AS editedResponse, quality_score AS qualityScore, created_at AS createdAt FROM feedback WHERE id = ?').get(id) as Record<string, unknown> | undefined
+      return row ? {
+        id: String(row.id), messageId: String(row.messageId), conversationId: Number(row.conversationId),
+        rating: row.rating === null || row.rating === undefined ? null : Number(row.rating), feedbackType: String(row.feedbackType),
+        comment: row.comment === null || row.comment === undefined ? null : String(row.comment),
+        editedResponse: row.editedResponse === null || row.editedResponse === undefined ? null : String(row.editedResponse),
+        qualityScore: Number(row.qualityScore), createdAt: String(row.createdAt),
+      } : undefined
+    }
+    await runFeedbackRepositoryContract(sqliteFeedbackRepository, readFeedback, conversation.id, messageId, `sqlite-feedback-${Date.now()}`)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
 
 test('feedback repository preserves customer and agent feedback with nullable fields', () => {
   db.exec('BEGIN')
