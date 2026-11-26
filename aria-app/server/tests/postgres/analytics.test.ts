@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresAnalyticsRepository } from '../../repositories/postgres-analytics-repository.js'
+import { runAnalyticsRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL analytics preserves cutoff boundaries, grouping, and assistant metrics', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -15,6 +16,23 @@ test('PostgreSQL analytics preserves cutoff boundaries, grouping, and assistant 
       SET search_path TO pg_temp;
     `)
     const repository = createPostgresAnalyticsRepository(pool)
+    await pool.query('SAVEPOINT analytics_repository_contract')
+    try {
+      await runAnalyticsRepositoryContract(repository, async ({ old, since, recent }) => {
+        await pool.query('INSERT INTO conversations VALUES ($1, $2), ($3, $4), ($5, $6)', ['Old topic', old, 'Refunds', since, 'Refunds', recent])
+        await pool.query('INSERT INTO feedback VALUES ($1, $2, $3, $4), ($5, $6, $7, $8), ($9, $10, $11, $12), ($13, $14, $15, $16)', [1, 20, 'rejected', old, 4, 80, 'customer_rating', since, null, 100, 'accepted', since, null, 60, 'edited', recent])
+        await pool.query('INSERT INTO messages VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8), ($9, $10, $11, $12, $13, $14, $15::jsonb, $16), ($17, $18, $19, $20, $21, $22, $23::jsonb, $24), ($25, $26, $27, $28, $29, $30, $31::jsonb, $32), ($33, $34, $35, $36, $37, $38, $39::jsonb, $40)', [
+          'assistant', 'keyword', 'old-provider', true, 999, 0.1, '[]', old,
+          'customer', null, null, false, null, null, null, since,
+          'assistant', 'hybrid', 'mastra-gemini', false, 100, 0.7, '["Refund policy"]', since,
+          'assistant', 'none', null, true, 300, 0.5, '[]', recent,
+          'assistant', null, null, false, null, null, null, recent,
+        ])
+      })
+    } finally {
+      await pool.query('ROLLBACK TO SAVEPOINT analytics_repository_contract')
+      await pool.query('RELEASE SAVEPOINT analytics_repository_contract')
+    }
     const old = '2026-01-01T00:00:00.000Z'
     const since = '2026-01-08T00:00:00.000Z'
     const recent = '2026-01-09T00:00:00.000Z'

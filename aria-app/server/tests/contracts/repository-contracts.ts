@@ -6,10 +6,12 @@ import type { AsyncKnowledgeRepository, KnowledgeRepository } from '../../reposi
 import type { AsyncNotificationRepository, NotificationRepository } from '../../repositories/notification-repository.js'
 import type { AsyncAuditRepository, AuditRepository } from '../../repositories/audit-repository.js'
 import type { AsyncAuthRepository, AuthRepository } from '../../repositories/auth-repository.js'
+import type { AnalyticsRepository, AsyncAnalyticsRepository } from '../../repositories/analytics-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
 type AuditContractRepository = AuditRepository | AsyncAuditRepository
 type AuthContractRepository = AuthRepository | AsyncAuthRepository
+type AnalyticsContractRepository = AnalyticsRepository | AsyncAnalyticsRepository
 type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
@@ -90,6 +92,55 @@ export async function runAuthRepositoryContract(repository: AuthContractReposito
   })
   assert.ok((await repository.listUsers()).some((item) => item.id === customerId && item.role === 'customer'))
   assert.equal((await repository.listSupportAgents()).some((item) => item.id === customerId), false)
+}
+
+export type AnalyticsContractDates = { old: string; since: string; recent: string }
+
+export async function runAnalyticsRepositoryContract(
+  repository: AnalyticsContractRepository,
+  seed: (dates: AnalyticsContractDates) => void | Promise<void>,
+) {
+  const dates = {
+    old: '2026-01-01T00:00:00.000Z',
+    since: '2026-01-08T00:00:00.000Z',
+    recent: '2026-01-09T00:00:00.000Z',
+  }
+  const empty = await repository.getAnalyticsMetrics(dates.since, 0.7)
+  for (const count of [empty.conversationCount, empty.accepted, empty.corrected, empty.rejected,
+    empty.escalationCount, empty.responseMessageCount, empty.groundedResponseCount,
+    empty.highConfidenceCount, empty.lowConfidenceCount]) assert.equal(count.count, 0)
+  assert.deepEqual({ ...empty.feedbackStats }, { count: 0, averageRating: 0, averageQuality: 0 })
+  assert.equal(empty.latencyStats.averageLatencyMs, 0)
+  assert.equal(empty.confidenceStats.averageConfidence, 0)
+  for (const series of [empty.topicRows, empty.retrievalRows, empty.providerRows, empty.qualityTrend]) assert.deepEqual(series, [])
+
+  await seed(dates)
+  const metrics = await repository.getAnalyticsMetrics(dates.since, 0.7)
+  assert.equal(metrics.conversationCount.count, 2)
+  assert.deepEqual({ ...metrics.feedbackStats }, { count: 3, averageRating: 4, averageQuality: 80 })
+  assert.equal(metrics.accepted.count, 1)
+  assert.equal(metrics.corrected.count, 1)
+  assert.equal(metrics.rejected.count, 0)
+  assert.deepEqual(metrics.topicRows.map((row) => ({ ...row })), [{ topic: 'Refunds', conversations: 2 }])
+  assert.deepEqual(metrics.retrievalRows.map((row) => ({ ...row })), [{ method: 'none', count: 3 }, { method: 'hybrid', count: 1 }])
+  assert.deepEqual(metrics.providerRows.map((row) => ({ ...row })), [{ provider: 'unknown', count: 2 }, { provider: 'mastra-gemini', count: 1 }])
+  assert.equal(metrics.responseMessageCount.count, 3)
+  assert.equal(metrics.escalationCount.count, 1)
+  assert.equal(metrics.latencyStats.averageLatencyMs, 200)
+  assert.equal(metrics.confidenceStats.averageConfidence, 0.6)
+  assert.equal(metrics.groundedResponseCount.count, 1)
+  assert.equal(metrics.highConfidenceCount.count, 1)
+  assert.equal(metrics.lowConfidenceCount.count, 1)
+  assert.deepEqual(metrics.qualityTrend.map((row) => ({ ...row })), [
+    { day: '2026-01-08', quality: 90, rating: 4 }, { day: '2026-01-09', quality: 60, rating: 0 },
+  ])
+
+  const all = await repository.getAnalyticsMetrics(undefined, 0.7)
+  assert.equal(all.conversationCount.count, 3)
+  assert.equal(all.feedbackStats.count, 4)
+  assert.equal(all.rejected.count, 1)
+  assert.equal(all.escalationCount.count, 2)
+  assert.equal((await repository.getAnalyticsMetrics(dates.since, 0.8)).highConfidenceCount.count, 0)
 }
 
 export async function runFeedbackRepositoryContract(

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { createSqliteAnalyticsRepository } from '../repositories/sqlite-analytics-repository.js'
+import { runAnalyticsRepositoryContract, type AnalyticsContractDates } from './contracts/repository-contracts.js'
 
 function fixture() {
   const db = new DatabaseSync(':memory:')
@@ -12,6 +13,24 @@ function fixture() {
       latency_ms INTEGER, confidence REAL, sources TEXT, created_at TEXT);
   `)
   return { db, repository: createSqliteAnalyticsRepository(db) }
+}
+
+function seedAnalyticsFixture(db: DatabaseSync, { old, since, recent }: AnalyticsContractDates) {
+  const conversation = db.prepare('INSERT INTO conversations VALUES (?, ?)')
+  conversation.run('Old topic', old)
+  conversation.run('Refunds', since)
+  conversation.run('Refunds', recent)
+  const feedback = db.prepare('INSERT INTO feedback VALUES (?, ?, ?, ?)')
+  feedback.run(1, 20, 'rejected', old)
+  feedback.run(4, 80, 'customer_rating', since)
+  feedback.run(null, 100, 'accepted', since)
+  feedback.run(null, 60, 'edited', recent)
+  const message = db.prepare('INSERT INTO messages VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+  message.run('assistant', 'keyword', 'old-provider', 1, 999, 0.1, '[]', old)
+  message.run('customer', null, null, 0, null, null, null, since)
+  message.run('assistant', 'hybrid', 'mastra-gemini', 0, 100, 0.7, '["Refund policy"]', since)
+  message.run('assistant', 'none', null, 1, 300, 0.5, '[]', recent)
+  message.run('assistant', null, null, 0, null, null, null, recent)
 }
 
 test('analytics repository returns zero aggregates and empty series for an empty database', () => {
@@ -27,6 +46,13 @@ test('analytics repository returns zero aggregates and empty series for an empty
       assert.equal(metrics.confidenceStats.averageConfidence, 0)
       for (const series of [metrics.topicRows, metrics.retrievalRows, metrics.providerRows, metrics.qualityTrend]) assert.deepEqual(series, [])
     }
+  } finally { db.close() }
+})
+
+test('SQLite analytics repository satisfies the shared cross-engine contract', async () => {
+  const { db, repository } = fixture()
+  try {
+    await runAnalyticsRepositoryContract(repository, (dates) => seedAnalyticsFixture(db, dates))
   } finally { db.close() }
 })
 
