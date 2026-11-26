@@ -16,6 +16,7 @@ test('PostgreSQL analytics preserves cutoff boundaries, grouping, and assistant 
       SET search_path TO pg_temp;
     `)
     const repository = createPostgresAnalyticsRepository(pool)
+    await pool.query('BEGIN')
     await pool.query('SAVEPOINT analytics_repository_contract')
     try {
       await runAnalyticsRepositoryContract(repository, async ({ old, since, recent }) => {
@@ -64,6 +65,7 @@ test('PostgreSQL analytics preserves cutoff boundaries, grouping, and assistant 
     assert.deepEqual(metrics.qualityTrend, [{ day: '2026-01-08', quality: 90, rating: 4 }, { day: '2026-01-09', quality: 60, rating: 0 }])
     assert.equal((await repository.getAnalyticsMetrics(undefined, 0.7)).conversationCount.count, 3)
     assert.equal((await repository.getAnalyticsMetrics(since, 0.8)).highConfidenceCount.count, 0)
+    await pool.query('ROLLBACK')
   } finally {
     await pool.end()
   }
