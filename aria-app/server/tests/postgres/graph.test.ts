@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresGraphRepository } from '../../repositories/postgres-graph-repository.js'
+import { runGraphRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL graph repository preserves properties, paths, lookup, and cascade deletion', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -19,6 +20,7 @@ test('PostgreSQL graph repository preserves properties, paths, lookup, and casca
       SET search_path TO pg_temp;
     `)
     const repository = createPostgresGraphRepository(client)
+    await runGraphRepositoryContract(repository, `postgres-${Date.now()}`)
     const first = await repository.upsertGraphNode({ id: 'issue', type: 'SupportIssue', properties: { title: 'Refund delay', active: false, count: 0, optional: null } })
     await repository.upsertGraphNode({ id: 'procedure', type: 'SupportProcedure' })
     await repository.upsertGraphNode({ id: 'knowledge', type: 'KnowledgeDocument', properties: { title: 'Verified policy' } })

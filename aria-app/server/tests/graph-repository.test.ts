@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { createSqliteGraphRepository } from '../repositories/sqlite-graph-repository.js'
+import { runGraphRepositoryContract } from './contracts/repository-contracts.js'
 
 function fixture() {
   const db = new DatabaseSync(':memory:')
@@ -54,5 +55,12 @@ test('graph repository retains directed bounded paths and one-hop knowledge look
     assert.deepEqual(findGraphKnowledgeTitles('refund'), ['Verified policy'])
     assert.deepEqual(findGraphKnowledgeTitles('unrelated'), [])
     assert.deepEqual(findGraphKnowledgeTitles(''), [])
+  } finally { db.close() }
+})
+
+test('SQLite graph repository satisfies the shared cross-engine contract', async () => {
+  const { db, repository } = fixture()
+  try {
+    await runGraphRepositoryContract(repository, `sqlite-${Date.now()}`)
   } finally { db.close() }
 })

@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import test from 'node:test'
 import { createSqliteKnowledgeRepository } from '../repositories/sqlite-knowledge-repository.js'
+import { runKnowledgeRepositoryContract } from './contracts/repository-contracts.js'
 
 function fixture() {
   const db = new DatabaseSync(':memory:')
@@ -172,4 +173,11 @@ test('knowledge feedback attribution and usage counters retain existing semantic
   } finally {
     db.close()
   }
+})
+
+test('SQLite knowledge repository satisfies the shared cross-engine contract', async () => {
+  const { db, repository } = fixture()
+  try {
+    await runKnowledgeRepositoryContract(repository, `sqlite-${Date.now()}`)
+  } finally { db.close() }
 })

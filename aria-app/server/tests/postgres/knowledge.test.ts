@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresKnowledgeRepository } from '../../repositories/postgres-knowledge-repository.js'
+import { runKnowledgeRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL knowledge preserves lifecycle, atomic versions, embeddings, and feedback attribution', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -24,6 +25,7 @@ test('PostgreSQL knowledge preserves lifecycle, atomic versions, embeddings, and
       SET search_path TO pg_temp;
     `)
     const repository = createPostgresKnowledgeRepository(pool)
+    await runKnowledgeRepositoryContract(repository, `postgres-${Date.now()}`)
     assert.deepEqual(await repository.getKnowledgeEmbeddingStats(), { count: 0, minimumDimensions: 0, maximumDimensions: 0, modelCount: 0 })
     const input = { title: 'Customer\'s refund policy', category: 'Policy', content: 'Original refund guidance', sourceFilename: 'refund.txt' }
     await assert.rejects(repository.createKnowledgeDocument({ ...input, sourceFilename: 'reject-version' }), { code: '23514' })
