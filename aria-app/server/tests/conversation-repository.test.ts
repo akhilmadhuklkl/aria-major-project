@@ -3,6 +3,16 @@ import test from 'node:test'
 import { db } from '../database.js'
 import { sqliteConversationRepository } from '../repositories/sqlite-conversation-repository.js'
 import { createRuntimeRepositories } from '../runtime-repositories.js'
+import { runConversationRepositoryContract } from './contracts/repository-contracts.js'
+
+test('SQLite conversation repository satisfies the shared cross-engine contract', async () => {
+  db.exec('BEGIN')
+  try {
+    await runConversationRepositoryContract(sqliteConversationRepository, `sqlite-conversation-${Date.now()}`)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
 
 test('conversation repository preserves conversation and message fields', () => {
   db.exec('BEGIN')
