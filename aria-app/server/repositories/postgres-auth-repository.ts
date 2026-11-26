@@ -10,7 +10,7 @@ type PostgresAuthClient = Pick<Pool, 'query' | 'connect'> | Pick<PoolClient, 'qu
 
 export function createPostgresAuthRepository(client: PostgresAuthClient): AsyncAuthRepository {
   async function transaction<T>(work: (connection: Pick<PoolClient, 'query'>) => Promise<T>) {
-    if ('connect' in client && typeof client.connect === 'function') {
+    if (!('release' in client) && 'connect' in client && typeof client.connect === 'function') {
       const connection = await client.connect()
       let discardConnection = false
       try {
