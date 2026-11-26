@@ -2,7 +2,7 @@
 
 ## Current State
 
-ARIA currently runs on SQLite through Node's synchronous `DatabaseSync` API. PostgreSQL support is prepared for migration, preflight checks, schema verification, row-count validation, and CI validation, but the live request handlers still use SQLite directly.
+ARIA currently runs on SQLite through Node's synchronous `DatabaseSync` API. The live request handlers now depend on the runtime repository factory, while PostgreSQL support is prepared for migration, preflight checks, schema verification, row-count validation, and CI validation.
 
 `DATABASE_ENGINE=sqlite` is therefore the only supported runtime setting. The server fails fast for other values so a deployment cannot appear to use PostgreSQL while silently writing to SQLite.
 
@@ -16,7 +16,7 @@ The asynchronous PostgreSQL feedback repository now supports customer ratings an
 
 The asynchronous PostgreSQL audit repository supports event insertion and recent-event listing, with JSONB metadata, numeric ID mapping, ISO timestamps, and existing default actor values. Its integration test uses temporary tables with a test-local identity sequence and checks metadata round-trips and actor deletion. Like notifications and feedback, it is not yet selected by the live runtime.
 
-Other PostgreSQL adapters, asynchronous caller conversion, shared cross-engine contract tests, transactional writes, and production cutover remain pending. Existing synchronous SQLite contracts must still be reconciled with the async adapters before runtime selection can be enabled.
+Shared cross-engine contract tests, final transaction review, and production cutover remain pending. Existing synchronous SQLite contracts must still be reconciled with the async adapters before runtime selection can be enabled.
 
 The asynchronous PostgreSQL authentication repository now provides user and session persistence, case-insensitive email lookup, public user projections, credential updates, and session revocation. Schema setup remains migration-owned; the adapter checks the migrated tables rather than creating them on a login request. A unique index on `lower(email)` preserves SQLite's email uniqueness behavior. Password hashing, expiry enforcement, authorization, and atomic password-change/session-revocation orchestration remain service responsibilities; live authentication still uses SQLite.
 
@@ -30,7 +30,7 @@ The asynchronous PostgreSQL analytics repository now mirrors the SQLite metrics 
 
 The asynchronous PostgreSQL system repository now supports connectivity probes and conversation/feedback record counts for readiness and operational status checks. PostgreSQL count results are normalized to application numbers, and the adapter is not yet connected to live routes.
 
-The asynchronous PostgreSQL graph repository now supports typed node upserts, JSONB properties, directed relationship upserts, bounded path queries, one-hop knowledge-title lookup, and foreign-key cascade deletion. Its behavior is covered against real PostgreSQL temporary tables, and the adapter is not yet connected to live routes.
+The asynchronous PostgreSQL graph repository now supports typed node upserts, JSONB properties, directed relationship upserts, bounded path queries, one-hop knowledge-title lookup, and foreign-key cascade deletion. Its behavior is covered against real PostgreSQL temporary tables and is exposed through the runtime factory.
 
 The runtime repository factory now assembles all asynchronous PostgreSQL adapters behind one explicit `createRuntimeRepositories('postgres', ...)` boundary and owns pool shutdown. SQLite remains the active server runtime; the factory is intentionally not wired into feature request handlers until their synchronous calls are converted to async repository calls and cross-engine contract tests pass.
 
@@ -50,7 +50,7 @@ Webhook persistence and delivery history are now the sixth feature boundary. Sub
 
 Analytics is now the seventh feature boundary. The summary endpoint reads conversation, feedback, retrieval, provider, confidence, latency, escalation, and quality-trend metrics through the runtime-selected analytics repository.
 
-Knowledge graph persistence is now the eighth feature boundary. Graph node and relationship CRUD, bounded path queries, and graph-assisted knowledge-title lookup use the runtime-selected graph repository; the optional Neo4j path remains available when `GRAPH_STORE=neo4j` is configured.
+Knowledge graph persistence is now the eighth feature boundary. Graph node and relationship CRUD, bounded path queries, and graph-assisted knowledge-title lookup use the runtime-selected graph repository; the optional Neo4j path remains available when `GRAPH_STORE=neo4j` is configured. All eight request-handler boundaries now use the factory, but PostgreSQL selection remains gated until shared cross-engine verification and deployment cutover are complete.
 
 ## Cutover Stages
 

@@ -1,4 +1,4 @@
-import { findGraphKnowledgeTitles, type KnowledgeDocument } from './database.js'
+import type { KnowledgeDocument } from './repositories/knowledge-repository.js'
 import type { KnowledgeRetriever, KnowledgeSnippet } from './agent-service.js'
 import { SemanticKnowledgeRetriever, type SemanticKnowledgeMatch } from './semantic-retrieval.js'
 import { FeedbackAdaptationRanker } from './feedback-adaptation.js'
@@ -20,7 +20,7 @@ export class HybridKnowledgeRetriever {
     keywordRetriever: KeywordRetriever,
     semanticRetriever: SemanticRetriever = new SemanticKnowledgeRetriever(),
     feedbackRanker: FeedbackAdaptationRanker = new FeedbackAdaptationRanker(),
-    graphRetriever: GraphRetriever = findGraphKnowledgeTitles,
+    graphRetriever: GraphRetriever = async () => [],
   ) {
     this.keywordRetriever = keywordRetriever
     this.semanticRetriever = semanticRetriever

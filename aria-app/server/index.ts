@@ -7,10 +7,6 @@ import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import multer from 'multer'
 import { createAgentService, getAgentProvider } from './agent-service.js'
-import {
-  calculateQualityScore,
-  inferTopic,
-} from './database.js'
 import { calculateFeedbackAdjustment, FeedbackAdaptationRanker, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
 import { searchKnowledge } from './keyword-retrieval.js'
@@ -33,6 +29,7 @@ import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
 import { checkDatabaseReadiness } from './readiness.js'
 import { createRuntimeRepositories } from './runtime-repositories.js'
+import { calculateQualityScore, inferTopic } from './support-domain.js'
 import type { NewAuditLog } from './repositories/audit-repository.js'
 import type { AsyncKnowledgeRepository } from './repositories/knowledge-repository.js'
 import type { AsyncNotificationRepository } from './repositories/notification-repository.js'

@@ -1,4 +1,4 @@
-import { listEmbeddedKnowledge as listSqliteEmbeddedKnowledge, type KnowledgeDocument } from './database.js'
+import type { KnowledgeDocument } from './repositories/knowledge-repository.js'
 import { LocalEmbeddingService } from './embedding-service.js'
 import type { EmbeddedKnowledgeDocument } from './repositories/knowledge-repository.js'
 
@@ -15,7 +15,7 @@ export class SemanticKnowledgeRetriever {
 
   constructor(
     embeddingService = new LocalEmbeddingService(),
-    loadEmbeddedKnowledge: EmbeddedKnowledgeLoader = listSqliteEmbeddedKnowledge,
+    loadEmbeddedKnowledge: EmbeddedKnowledgeLoader = async () => [],
   ) {
     this.embeddingService = embeddingService
     this.loadEmbeddedKnowledge = loadEmbeddedKnowledge

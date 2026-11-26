@@ -1,7 +1,4 @@
-import {
-  getKnowledgeSourceFeedbackStats,
-  type KnowledgeSourceFeedbackStats,
-} from './database.js'
+import type { KnowledgeSourceFeedbackStats } from './repositories/knowledge-repository.js'
 import type { SemanticKnowledgeMatch } from './semantic-retrieval.js'
 
 export const maximumFeedbackAdjustment = 0.03
@@ -20,7 +17,7 @@ type FeedbackStatsLoader = () => KnowledgeSourceFeedbackStats[] | Promise<Knowle
 export class FeedbackAdaptationRanker {
   private readonly loadFeedbackStats: FeedbackStatsLoader
 
-  constructor(loadFeedbackStats: FeedbackStatsLoader = getKnowledgeSourceFeedbackStats) {
+  constructor(loadFeedbackStats: FeedbackStatsLoader = async () => []) {
     this.loadFeedbackStats = loadFeedbackStats
   }
 
