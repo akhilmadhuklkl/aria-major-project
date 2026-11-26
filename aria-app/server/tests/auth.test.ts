@@ -14,8 +14,19 @@ import {
 } from '../auth.js'
 import { db } from '../database.js'
 import { createRuntimeRepositories } from '../runtime-repositories.js'
+import { sqliteAuthRepository } from '../repositories/auth-repository.js'
+import { runAuthRepositoryContract } from './contracts/repository-contracts.js'
 
 ensureAuthSchema()
+
+test('SQLite auth repository satisfies the shared cross-engine contract', async () => {
+  db.exec('BEGIN')
+  try {
+    await runAuthRepositoryContract(sqliteAuthRepository, `sqlite-auth-${Date.now()}`)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
 
 test('credential validation normalizes valid input and rejects weak credentials', () => {
   assert.deepEqual(validateCredentials({ email: '  Agent@Example.com ', password: 'password123' }), {

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresAuthRepository } from '../../repositories/postgres-auth-repository.js'
+import { runAuthRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL authentication repository preserves user, credential, and session lifecycle', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -21,6 +22,13 @@ test('PostgreSQL authentication repository preserves user, credential, and sessi
       `)
       const repository = createPostgresAuthRepository(client)
       await repository.ensureSchema()
+      await client.query('SAVEPOINT auth_repository_contract')
+      try {
+        await runAuthRepositoryContract(repository, `postgres-auth-${Date.now()}`)
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT auth_repository_contract')
+        await client.query('RELEASE SAVEPOINT auth_repository_contract')
+      }
       assert.equal(await repository.countUsers(), 0)
       const now = '2026-01-01T00:00:00.000Z'
       const input = { id: 0, email: 'Agent@Example.com', displayName: 'Agent', role: 'support_agent' as const, passwordHash: 'test-hash', passwordSalt: 'test-salt', createdAt: now, updatedAt: now }

@@ -5,9 +5,11 @@ import type { AsyncGraphRepository, GraphRepository } from '../../repositories/g
 import type { AsyncKnowledgeRepository, KnowledgeRepository } from '../../repositories/knowledge-repository.js'
 import type { AsyncNotificationRepository, NotificationRepository } from '../../repositories/notification-repository.js'
 import type { AsyncAuditRepository, AuditRepository } from '../../repositories/audit-repository.js'
+import type { AsyncAuthRepository, AuthRepository } from '../../repositories/auth-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
 type AuditContractRepository = AuditRepository | AsyncAuditRepository
+type AuthContractRepository = AuthRepository | AsyncAuthRepository
 type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
@@ -36,6 +38,58 @@ export async function runAuditRepositoryContract(repository: AuditContractReposi
   assert.equal(defaults.entityId, null)
   assert.deepEqual(defaults.metadata, {})
   assert.equal((await repository.listAuditLogs(1)).length, 1)
+}
+
+export async function runAuthRepositoryContract(repository: AuthContractRepository, prefix: string) {
+  await repository.ensureSchema()
+  const now = '2026-01-01T00:00:00.000Z'
+  const expiresAt = '2026-01-01T08:00:00.000Z'
+  const email = `${prefix}@example.com`
+  const credentials = { passwordHash: `${prefix}-hash`, passwordSalt: `${prefix}-salt` }
+  const input = {
+    id: 0, email, displayName: `${prefix} Support`, role: 'support_agent' as const,
+    ...credentials, createdAt: now, updatedAt: now,
+  }
+  const before = await repository.countUsers()
+  const id = await repository.insertUser(input)
+  const publicUser = { id, email, displayName: input.displayName, role: input.role }
+
+  assert.equal(await repository.countUsers(), before + 1)
+  const foundById = await repository.findUserById(id)
+  const foundByEmail = await repository.findUserByEmail(email.toUpperCase())
+  const foundCredentials = await repository.findCredentialsByUserId(id)
+  assert.deepEqual(foundById ? { ...foundById } : foundById, publicUser)
+  assert.deepEqual(foundByEmail ? { ...foundByEmail } : foundByEmail, { ...publicUser, ...credentials })
+  assert.deepEqual(foundCredentials ? { ...foundCredentials } : foundCredentials, credentials)
+
+  const listed = await repository.listUsers()
+  const listedUser = listed.find((item) => item.id === id)
+  assert.deepEqual(listedUser ? { ...listedUser } : listedUser, publicUser)
+  assert.equal('passwordHash' in (listedUser ?? {}), false)
+  assert.equal('passwordSalt' in (listedUser ?? {}), false)
+  assert.ok((await repository.listSupportAgents()).some((item) => item.id === id && item.role === 'support_agent'))
+
+  await repository.insertSession({ userId: id, tokenHash: `${prefix}-first-token`, expiresAt, createdAt: now })
+  const foundByToken = await repository.findUserByToken(`${prefix}-first-token`)
+  assert.deepEqual(foundByToken ? { ...foundByToken } : foundByToken, { ...publicUser, expiresAt })
+  await repository.revokeSession(`${prefix}-first-token`, now)
+  assert.equal(await repository.findUserByToken(`${prefix}-first-token`), undefined)
+
+  await repository.insertSession({ userId: id, tokenHash: `${prefix}-second-token`, expiresAt, createdAt: now })
+  const updatedCredentials = { passwordHash: `${prefix}-new-hash`, passwordSalt: `${prefix}-new-salt` }
+  await repository.updateCredentials(id, updatedCredentials, expiresAt)
+  const refreshedCredentials = await repository.findCredentialsByUserId(id)
+  assert.deepEqual(refreshedCredentials ? { ...refreshedCredentials } : refreshedCredentials, updatedCredentials)
+  await repository.revokeUserSessions(id, expiresAt)
+  assert.equal(await repository.findUserByToken(`${prefix}-second-token`), undefined)
+
+  const customerEmail = `${prefix}-customer@example.com`
+  const customerId = await repository.insertUser({
+    id: 0, email: customerEmail, displayName: `${prefix} Customer`, role: 'customer',
+    passwordHash: `${prefix}-customer-hash`, passwordSalt: `${prefix}-customer-salt`, createdAt: now, updatedAt: now,
+  })
+  assert.ok((await repository.listUsers()).some((item) => item.id === customerId && item.role === 'customer'))
+  assert.equal((await repository.listSupportAgents()).some((item) => item.id === customerId), false)
 }
 
 export async function runFeedbackRepositoryContract(
