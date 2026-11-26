@@ -46,6 +46,8 @@ Notifications and audit logging are now the fourth feature boundary. Notificatio
 
 Knowledge persistence and retrieval are now the fifth feature boundary. Knowledge CRUD, archive and restore, version history, embedding reads and writes, usage counters, source-feedback statistics, chat keyword search, semantic retrieval, feedback adaptation, and the indexing/evaluation scripts use the runtime-selected knowledge repository.
 
+Webhook persistence and delivery history are now the sixth feature boundary. Subscription creation, listing, activation, deletion, delivery records, event filtering, retries, and test deliveries use the runtime-selected async webhook repository while preserving HMAC signing and the public secret-safe response shape.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.

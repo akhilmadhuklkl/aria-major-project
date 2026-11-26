@@ -36,7 +36,7 @@ import {
   embeddingModel,
   LocalEmbeddingService,
 } from './embedding-service.js'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, normalizeWebhookEvents, testWebhookSubscription, updateWebhookSubscription, validateWebhookUrl, webhookEvents } from './webhooks.js'
+import { createWebhookService, normalizeWebhookEvents, validateWebhookUrl, webhookEvents, type WebhookEvent } from './webhooks.js'
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
@@ -56,11 +56,12 @@ const feedbackRepository = runtimeRepositories.feedback
 const notificationRepository = runtimeRepositories.notifications
 const auditRepository = runtimeRepositories.audit
 const knowledgeRepository: AsyncKnowledgeRepository = runtimeRepositories.knowledge
+const webhookService = createWebhookService(runtimeRepositories.webhooks)
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
 
-function notifyWebhook(event: Parameters<typeof dispatchWebhookEvent>[0], data: Record<string, unknown>) {
-  void dispatchWebhookEvent(event, data)
+function notifyWebhook(event: WebhookEvent, data: Record<string, unknown>) {
+  void webhookService.dispatchWebhookEvent(event, data)
 }
 
 function createNotification(input: Parameters<AsyncNotificationRepository['createNotification']>[0]) {
@@ -331,12 +332,12 @@ app.delete('/api/knowledge-graph/nodes/:id', roleGuard('admin', 'support_agent')
   response.json({ deleted: true })
 })
 
-app.get('/api/integrations/webhooks', roleGuard('admin'), (_request, response) => {
-  response.json(listWebhookSubscriptions())
+app.get('/api/integrations/webhooks', roleGuard('admin'), async (_request, response) => {
+  response.json(await webhookService.listWebhookSubscriptions())
 })
 
-app.get('/api/integrations/webhooks/deliveries', roleGuard('admin'), (request, response) => {
-  response.json(listWebhookDeliveries(Number(request.query.limit ?? 30)))
+app.get('/api/integrations/webhooks/deliveries', roleGuard('admin'), async (request, response) => {
+  response.json(await webhookService.listWebhookDeliveries(Number(request.query.limit ?? 30)))
 })
 
 app.post('/api/integrations/webhooks', roleGuard('admin'), async (request, response) => {
@@ -349,7 +350,7 @@ app.post('/api/integrations/webhooks', roleGuard('admin'), async (request, respo
     return
   }
   try {
-    const created = createWebhookSubscription({ name, url, events })
+    const created = await webhookService.createWebhookSubscription({ name, url, events })
     await recordAudit(request, { action: 'webhook.created', entityType: 'webhook', entityId: created.id, metadata: { name, events } })
     response.status(201).json(created)
   } catch {
@@ -359,7 +360,7 @@ app.post('/api/integrations/webhooks', roleGuard('admin'), async (request, respo
 
 app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), async (request, response) => {
   const id = Number(request.params.id)
-  if (!Number.isInteger(id) || id <= 0 || !deleteWebhookSubscription(id)) {
+  if (!Number.isInteger(id) || id <= 0 || !await webhookService.deleteWebhookSubscription(id)) {
     response.status(404).json({ error: 'webhook was not found' })
     return
   }
@@ -369,7 +370,7 @@ app.delete('/api/integrations/webhooks/:id', roleGuard('admin'), async (request,
 
 app.patch('/api/integrations/webhooks/:id', roleGuard('admin'), async (request, response) => {
   const id = Number(request.params.id)
-  if (!Number.isInteger(id) || id <= 0 || typeof request.body?.active !== 'boolean' || !updateWebhookSubscription(id, request.body.active)) {
+  if (!Number.isInteger(id) || id <= 0 || typeof request.body?.active !== 'boolean' || !await webhookService.updateWebhookSubscription(id, request.body.active)) {
     response.status(400).json({ error: 'a valid webhook id and boolean active value are required' })
     return
   }
@@ -383,7 +384,7 @@ app.post('/api/integrations/webhooks/:id/test', roleGuard('admin'), async (reque
     response.status(404).json({ error: 'webhook was not found' })
     return
   }
-  const delivered = await testWebhookSubscription(id)
+  const delivered = await webhookService.testWebhookSubscription(id)
   if (delivered === undefined) {
     response.status(404).json({ error: 'webhook was not found' })
     return

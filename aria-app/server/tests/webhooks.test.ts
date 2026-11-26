@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import test from 'node:test'
-import { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, normalizeWebhookEvents, signWebhookPayload, testWebhookSubscription, updateWebhookSubscription, validateWebhookUrl } from '../webhooks.js'
+import { createRuntimeRepositories } from '../runtime-repositories.js'
+import { createWebhookService, normalizeWebhookEvents, signWebhookPayload, validateWebhookUrl } from '../webhooks.js'
 
-function cleanupFilteredFixtures() {
-  for (const subscription of listWebhookSubscriptions()) {
-    if (subscription.name.startsWith('Filtered ')) deleteWebhookSubscription(subscription.id)
+const runtime = createRuntimeRepositories('sqlite')
+const webhookService = createWebhookService(runtime.webhooks)
+const { createWebhookSubscription, deleteWebhookSubscription, dispatchWebhookEvent, listWebhookDeliveries, listWebhookSubscriptions, testWebhookSubscription, updateWebhookSubscription } = webhookService
+
+async function cleanupFilteredFixtures() {
+  for (const subscription of await listWebhookSubscriptions()) {
+    if (subscription.name.startsWith('Filtered ')) await deleteWebhookSubscription(subscription.id)
   }
 }
 
@@ -21,46 +26,46 @@ test('webhook registration validates secure URLs and event names', () => {
   assert.deepEqual(normalizeWebhookEvents([]), ['*'])
 })
 
-test('webhook listing never exposes delivery secrets', () => {
-  const subscription = createWebhookSubscription({
+test('webhook listing never exposes delivery secrets', async () => {
+  const subscription = await createWebhookSubscription({
     name: 'Secret visibility test',
     url: `https://example.com/aria-test-${Date.now()}`,
     events: ['knowledge.indexed'],
   })
-  const listed = listWebhookSubscriptions().find((item) => item.id === subscription.id) as Record<string, unknown> | undefined
+  const listed = (await listWebhookSubscriptions()).find((item) => item.id === subscription.id) as Record<string, unknown> | undefined
   assert.ok(listed)
   assert.equal('secret' in listed, false)
   assert.equal(listed?.url, subscription.url)
-  assert.equal(deleteWebhookSubscription(subscription.id), true)
+  assert.equal(await deleteWebhookSubscription(subscription.id), true)
 })
 
-test('webhook delivery history is safe to expose', () => {
-  const subscription = createWebhookSubscription({
+test('webhook delivery history is safe to expose', async () => {
+  const subscription = await createWebhookSubscription({
     name: 'Delivery history test',
     url: `https://example.com/aria-history-${Date.now()}`,
     events: ['knowledge.indexed'],
   })
   try {
-    assert.equal(listWebhookDeliveries().some((item) => Number((item as { webhookId: number }).webhookId) === subscription.id), false)
-    assert.equal('secret' in (listWebhookDeliveries()[0] ?? {}), false)
+    assert.equal((await listWebhookDeliveries()).some((item) => Number((item as { webhookId: number }).webhookId) === subscription.id), false)
+    assert.equal('secret' in ((await listWebhookDeliveries())[0] ?? {}), false)
   } finally {
-    deleteWebhookSubscription(subscription.id)
+    await deleteWebhookSubscription(subscription.id)
   }
 })
 
-test('webhook activation can be paused without deleting configuration', () => {
-  const subscription = createWebhookSubscription({
+test('webhook activation can be paused without deleting configuration', async () => {
+  const subscription = await createWebhookSubscription({
     name: 'Activation toggle test',
     url: `https://example.com/aria-toggle-${Date.now()}`,
     events: ['knowledge.indexed'],
   })
   try {
-    assert.equal(updateWebhookSubscription(subscription.id, false), true)
-    assert.equal(listWebhookSubscriptions().find((item) => item.id === subscription.id)?.active, false)
-    assert.equal(updateWebhookSubscription(subscription.id, true), true)
-    assert.equal(listWebhookSubscriptions().find((item) => item.id === subscription.id)?.active, true)
+    assert.equal(await updateWebhookSubscription(subscription.id, false), true)
+    assert.equal((await listWebhookSubscriptions()).find((item) => item.id === subscription.id)?.active, false)
+    assert.equal(await updateWebhookSubscription(subscription.id, true), true)
+    assert.equal((await listWebhookSubscriptions()).find((item) => item.id === subscription.id)?.active, true)
   } finally {
-    deleteWebhookSubscription(subscription.id)
+    await deleteWebhookSubscription(subscription.id)
   }
 })
 
@@ -91,7 +96,7 @@ test('dispatches a signed webhook and records delivery success', async () => {
   await new Promise<void>((resolve) => server?.once('listening', () => resolve()))
   const receivedUrl = `http://127.0.0.1:${(server?.address() as { port: number }).port}`
 
-  const subscription = createWebhookSubscription({
+  const subscription = await createWebhookSubscription({
     name: `Delivery success ${Date.now()}`,
     url: receivedUrl,
     events: ['knowledge.indexed'],
@@ -102,9 +107,9 @@ test('dispatches a signed webhook and records delivery success', async () => {
     assert.equal(received.event, 'knowledge.indexed')
     assert.equal(JSON.parse(received.body).event, 'knowledge.indexed')
     assert.equal(received.signature, `sha256=${signWebhookPayload(subscription.secret, received.body)}`)
-    assert.ok(listWebhookDeliveries().some((item) => Number((item as { webhookId: number }).webhookId) === subscription.id && (item as { status: string }).status === 'delivered'))
+    assert.ok((await listWebhookDeliveries()).some((item) => Number((item as { webhookId: number }).webhookId) === subscription.id && (item as { status: string }).status === 'delivered'))
   } finally {
-    deleteWebhookSubscription(subscription.id)
+    await deleteWebhookSubscription(subscription.id)
     await new Promise<void>((resolve) => server?.close(() => resolve()))
   }
 })
@@ -121,27 +126,27 @@ test('retries failed webhook delivery three times and records the failure', asyn
     server?.listen(0, '127.0.0.1', () => resolve())
   })
 
-  const subscription = createWebhookSubscription({
+  const subscription = await createWebhookSubscription({
     name: `Delivery failure ${Date.now()}`,
     url: `http://127.0.0.1:${(server.address() as { port: number }).port}`,
     events: ['knowledge.indexed'],
   })
   try {
     await dispatchWebhookEvent('knowledge.indexed', { title: 'Unavailable policy receiver' })
-    const delivery = listWebhookDeliveries().find((item) => Number((item as { webhookId: number }).webhookId) === subscription.id) as { status: string; attempts: number; responseStatus: number; error?: string } | undefined
+    const delivery = (await listWebhookDeliveries()).find((item) => Number((item as { webhookId: number }).webhookId) === subscription.id) as { status: string; attempts: number; responseStatus: number; error?: string } | undefined
     assert.equal(attempts, 3)
     assert.equal(delivery?.status, 'failed')
     assert.equal(delivery?.attempts, 3)
     assert.equal(delivery?.responseStatus, 500)
     assert.equal(delivery?.error, 'HTTP 500')
   } finally {
-    deleteWebhookSubscription(subscription.id)
+    await deleteWebhookSubscription(subscription.id)
     await new Promise<void>((resolve) => server?.close(() => resolve()))
   }
 })
 
 test('delivers only subscribed events and supports wildcard subscriptions', async () => {
-  cleanupFilteredFixtures()
+  await cleanupFilteredFixtures()
   const receivedEvents: string[] = []
   const server = createServer((request, response) => {
     if (new URL(request.url ?? '/', 'http://127.0.0.1').searchParams.has('hook')) {
@@ -156,22 +161,22 @@ test('delivers only subscribed events and supports wildcard subscriptions', asyn
   })
 
   const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`
-  const matching = createWebhookSubscription({ name: `Filtered match ${Date.now()}`, url: `${url}?hook=matching`, events: ['knowledge.indexed'] })
-  const unrelated = createWebhookSubscription({ name: `Filtered unrelated ${Date.now()}`, url: `${url}?hook=unrelated`, events: ['feedback.low_rating'] })
-  const wildcard = createWebhookSubscription({ name: `Filtered wildcard ${Date.now()}`, url: `${url}?hook=wildcard`, events: ['*'] })
+  const matching = await createWebhookSubscription({ name: `Filtered match ${Date.now()}`, url: `${url}?hook=matching`, events: ['knowledge.indexed'] })
+  const unrelated = await createWebhookSubscription({ name: `Filtered unrelated ${Date.now()}`, url: `${url}?hook=unrelated`, events: ['feedback.low_rating'] })
+  const wildcard = await createWebhookSubscription({ name: `Filtered wildcard ${Date.now()}`, url: `${url}?hook=wildcard`, events: ['*'] })
   try {
     await dispatchWebhookEvent('knowledge.indexed', { title: 'Filtered policy' })
     assert.equal(receivedEvents.length, 2)
     assert.deepEqual(receivedEvents, ['knowledge.indexed', 'knowledge.indexed'])
-    const deliveries = listWebhookDeliveries()
+    const deliveries = await listWebhookDeliveries()
     assert.ok(deliveries.some((item) => Number((item as { webhookId: number }).webhookId) === matching.id))
     assert.ok(deliveries.some((item) => Number((item as { webhookId: number }).webhookId) === wildcard.id))
     assert.equal(deliveries.some((item) => Number((item as { webhookId: number }).webhookId) === unrelated.id), false)
   } finally {
-    deleteWebhookSubscription(matching.id)
-    deleteWebhookSubscription(unrelated.id)
-    deleteWebhookSubscription(wildcard.id)
-    cleanupFilteredFixtures()
+    await deleteWebhookSubscription(matching.id)
+    await deleteWebhookSubscription(unrelated.id)
+    await deleteWebhookSubscription(wildcard.id)
+    await cleanupFilteredFixtures()
     server.closeAllConnections()
     await new Promise<void>((resolve) => server.close(() => resolve()))
   }

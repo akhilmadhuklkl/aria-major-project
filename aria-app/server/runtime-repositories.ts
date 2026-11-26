@@ -16,6 +16,7 @@ import { sqliteNotificationRepository } from './repositories/sqlite-notification
 import { sqliteAuditRepository } from './repositories/sqlite-audit-repository.js'
 import type { AsyncSystemRepository } from './repositories/system-repository.js'
 import type { AsyncWebhookRepository } from './repositories/webhook-repository.js'
+import { sqliteWebhookRepository } from './repositories/sqlite-webhook-repository.js'
 import { createPostgresAnalyticsRepository } from './repositories/postgres-analytics-repository.js'
 import { createPostgresAuditRepository } from './repositories/postgres-audit-repository.js'
 import { createPostgresAuthRepository } from './repositories/postgres-auth-repository.js'
@@ -45,8 +46,8 @@ export type PostgresRepositorySet = {
 export type RuntimePool = Pick<Pool, 'query' | 'connect' | 'end'>
 
 export type RuntimeRepositories =
-  | { engine: 'sqlite'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; feedback: AsyncFeedbackRepository; notifications: AsyncNotificationRepository; audit: AsyncAuditRepository; knowledge: AsyncKnowledgeRepository; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
-  | { engine: 'postgres'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; feedback: AsyncFeedbackRepository; notifications: AsyncNotificationRepository; audit: AsyncAuditRepository; knowledge: AsyncKnowledgeRepository; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
+  | { engine: 'sqlite'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; feedback: AsyncFeedbackRepository; notifications: AsyncNotificationRepository; audit: AsyncAuditRepository; knowledge: AsyncKnowledgeRepository; webhooks: AsyncWebhookRepository; system: AsyncSystemRepository; postgres: null; close(): Promise<void> }
+  | { engine: 'postgres'; auth: AsyncAuthRepository; conversations: AsyncConversationRepository; feedback: AsyncFeedbackRepository; notifications: AsyncNotificationRepository; audit: AsyncAuditRepository; knowledge: AsyncKnowledgeRepository; webhooks: AsyncWebhookRepository; system: AsyncSystemRepository; pool: RuntimePool; postgres: PostgresRepositorySet; close(): Promise<void> }
 
 type RuntimeRepositoryOptions = {
   databaseUrl?: string
@@ -241,8 +242,31 @@ function createAsyncSqliteKnowledgeRepository(): AsyncKnowledgeRepository {
   }
 }
 
+function createAsyncSqliteWebhookRepository(): AsyncWebhookRepository {
+  return {
+    async insertSubscription(input) {
+      return sqliteWebhookRepository.insertSubscription(input)
+    },
+    async listSubscriptionsWithSecrets() {
+      return sqliteWebhookRepository.listSubscriptionsWithSecrets()
+    },
+    async deleteSubscription(id) {
+      return sqliteWebhookRepository.deleteSubscription(id)
+    },
+    async updateSubscription(id, active, updatedAt) {
+      return sqliteWebhookRepository.updateSubscription(id, active, updatedAt)
+    },
+    async insertDelivery(input) {
+      sqliteWebhookRepository.insertDelivery(input)
+    },
+    async listDeliveries(limit) {
+      return sqliteWebhookRepository.listDeliveries(limit)
+    },
+  }
+}
+
 export function createRuntimeRepositories(engine: DatabaseEngine, options: RuntimeRepositoryOptions = {}): RuntimeRepositories {
-  if (engine === 'sqlite') return { engine, auth: createAsyncSqliteAuthRepository(), conversations: createAsyncSqliteConversationRepository(), feedback: createAsyncSqliteFeedbackRepository(), notifications: createAsyncSqliteNotificationRepository(), audit: createAsyncSqliteAuditRepository(), knowledge: createAsyncSqliteKnowledgeRepository(), system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
+  if (engine === 'sqlite') return { engine, auth: createAsyncSqliteAuthRepository(), conversations: createAsyncSqliteConversationRepository(), feedback: createAsyncSqliteFeedbackRepository(), notifications: createAsyncSqliteNotificationRepository(), audit: createAsyncSqliteAuditRepository(), knowledge: createAsyncSqliteKnowledgeRepository(), webhooks: createAsyncSqliteWebhookRepository(), system: createAsyncSqliteSystemRepository(), postgres: null, close: async () => {} }
 
   const databaseUrl = options.databaseUrl?.trim() || process.env.DATABASE_URL?.trim()
   if (!databaseUrl) throw new Error('DATABASE_URL is required when DATABASE_ENGINE=postgres')
@@ -255,5 +279,5 @@ export function createRuntimeRepositories(engine: DatabaseEngine, options: Runti
     ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
   })
   const postgres = createPostgresRepositorySet(pool)
-  return { engine, auth: postgres.auth, conversations: postgres.conversations, feedback: postgres.feedback, notifications: postgres.notifications, audit: postgres.audit, knowledge: postgres.knowledge, system: postgres.system, pool, postgres, close: () => pool.end() }
+  return { engine, auth: postgres.auth, conversations: postgres.conversations, feedback: postgres.feedback, notifications: postgres.notifications, audit: postgres.audit, knowledge: postgres.knowledge, webhooks: postgres.webhooks, system: postgres.system, pool, postgres, close: () => pool.end() }
 }
