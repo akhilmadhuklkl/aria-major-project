@@ -22,6 +22,38 @@ test('PostgreSQL auth binds parameters, maps IDs and expiry, and excludes creden
   assert.deepEqual(calls.at(-1)?.values, ['revoked-at', 'token-hash'])
   await repository.updateCredentials(7, { passwordHash: 'new-hash', passwordSalt: 'new-salt' }, 'updated-at')
   assert.deepEqual(calls.at(-1)?.values, ['new-hash', 'new-salt', 'updated-at', 7])
+  const transactionStart = calls.length
+  await repository.updateCredentialsAndRevokeSessions(7, { passwordHash: 'atomic-hash', passwordSalt: 'atomic-salt' }, 'atomic-at')
+  assert.deepEqual(calls.slice(transactionStart).map(({ sql }) => sql.trim()), [
+    'SAVEPOINT aria_auth_password_change',
+    'UPDATE users SET password_hash = $1, password_salt = $2, updated_at = $3 WHERE id = $4',
+    'UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL',
+    'RELEASE SAVEPOINT aria_auth_password_change',
+  ])
+})
+
+test('PostgreSQL auth rolls back an atomic password change when session revocation fails', async () => {
+  const statements: string[] = []
+  const failure = new Error('session update failed')
+  const repository = createPostgresAuthRepository({
+    query: async (sql: string) => {
+      statements.push(sql.trim())
+      if (sql.includes('UPDATE sessions')) throw failure
+      return { rows: [], rowCount: 1 }
+    },
+  } as unknown as Pick<Pool, 'query'>)
+
+  await assert.rejects(
+    repository.updateCredentialsAndRevokeSessions(7, { passwordHash: 'atomic-hash', passwordSalt: 'atomic-salt' }, 'atomic-at'),
+    (error) => error === failure,
+  )
+  assert.deepEqual(statements, [
+    'SAVEPOINT aria_auth_password_change',
+    'UPDATE users SET password_hash = $1, password_salt = $2, updated_at = $3 WHERE id = $4',
+    'UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL',
+    'ROLLBACK TO SAVEPOINT aria_auth_password_change',
+    'RELEASE SAVEPOINT aria_auth_password_change',
+  ])
 })
 
 test('PostgreSQL auth returns undefined for missing identities and propagates errors', async () => {

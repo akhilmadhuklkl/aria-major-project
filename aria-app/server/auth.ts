@@ -71,8 +71,7 @@ export function changeUserPassword(userId: number, currentPassword: string, next
 
   const salt = randomBytes(16).toString('hex')
   const now = new Date().toISOString()
-  sqliteAuthRepository.updateCredentials(userId, { passwordHash: hashPassword(nextPassword, salt), passwordSalt: salt }, now)
-  sqliteAuthRepository.revokeUserSessions(userId, now)
+  sqliteAuthRepository.updateCredentialsAndRevokeSessions(userId, { passwordHash: hashPassword(nextPassword, salt), passwordSalt: salt }, now)
   return true
 }
 
@@ -140,8 +139,7 @@ export function createAuthService(repository: AsyncAuthRepository): AuthService 
 
       const salt = randomBytes(16).toString('hex')
       const now = new Date().toISOString()
-      await repository.updateCredentials(userId, { passwordHash: hashPassword(nextPassword, salt), passwordSalt: salt }, now)
-      await repository.revokeUserSessions(userId, now)
+      await repository.updateCredentialsAndRevokeSessions(userId, { passwordHash: hashPassword(nextPassword, salt), passwordSalt: salt }, now)
       return true
     },
     async getUserFromToken(token) {

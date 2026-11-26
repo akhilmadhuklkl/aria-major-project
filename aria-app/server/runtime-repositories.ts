@@ -128,6 +128,9 @@ function createAsyncSqliteAuthRepository(): AsyncAuthRepository {
     async revokeUserSessions(id, revokedAt) {
       sqliteAuthRepository.revokeUserSessions(id, revokedAt)
     },
+    async updateCredentialsAndRevokeSessions(id, credentials, updatedAt) {
+      sqliteAuthRepository.updateCredentialsAndRevokeSessions(id, credentials, updatedAt)
+    },
     async listSupportAgents() {
       return sqliteAuthRepository.listSupportAgents()
     },

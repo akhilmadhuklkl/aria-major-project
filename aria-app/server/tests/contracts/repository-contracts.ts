@@ -83,10 +83,9 @@ export async function runAuthRepositoryContract(repository: AuthContractReposito
 
   await repository.insertSession({ userId: id, tokenHash: `${prefix}-second-token`, expiresAt, createdAt: now })
   const updatedCredentials = { passwordHash: `${prefix}-new-hash`, passwordSalt: `${prefix}-new-salt` }
-  await repository.updateCredentials(id, updatedCredentials, expiresAt)
+  await repository.updateCredentialsAndRevokeSessions(id, updatedCredentials, expiresAt)
   const refreshedCredentials = await repository.findCredentialsByUserId(id)
   assert.deepEqual(refreshedCredentials ? { ...refreshedCredentials } : refreshedCredentials, updatedCredentials)
-  await repository.revokeUserSessions(id, expiresAt)
   assert.equal(await repository.findUserByToken(`${prefix}-second-token`), undefined)
 
   const customerEmail = `${prefix}-customer@example.com`

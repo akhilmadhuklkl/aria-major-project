@@ -6,7 +6,42 @@ const userColumns = 'id, email, display_name AS "displayName", role'
 const credentialColumns = 'password_hash AS "passwordHash", password_salt AS "passwordSalt"'
 const publicUser = (row: UserRow): StoredAuthUser => ({ id: Number(row.id), email: row.email, displayName: row.displayName, role: row.role })
 
-export function createPostgresAuthRepository(client: Pick<Pool | PoolClient, 'query'>): AsyncAuthRepository {
+type PostgresAuthClient = Pick<Pool, 'query' | 'connect'> | Pick<PoolClient, 'query'>
+
+export function createPostgresAuthRepository(client: PostgresAuthClient): AsyncAuthRepository {
+  async function transaction<T>(work: (connection: Pick<PoolClient, 'query'>) => Promise<T>) {
+    if ('connect' in client && typeof client.connect === 'function') {
+      const connection = await client.connect()
+      let discardConnection = false
+      try {
+        await connection.query('BEGIN ISOLATION LEVEL READ COMMITTED')
+        const result = await work(connection)
+        await connection.query('COMMIT')
+        return result
+      } catch (error) {
+        try {
+          await connection.query('ROLLBACK')
+        } catch {
+          discardConnection = true
+        }
+        throw error
+      } finally {
+        connection.release(discardConnection)
+      }
+    }
+
+    const savepoint = 'aria_auth_password_change'
+    await client.query(`SAVEPOINT ${savepoint}`)
+    try {
+      const result = await work(client)
+      await client.query(`RELEASE SAVEPOINT ${savepoint}`)
+      return result
+    } catch (error) {
+      try { await client.query(`ROLLBACK TO SAVEPOINT ${savepoint}`) } finally { await client.query(`RELEASE SAVEPOINT ${savepoint}`) }
+      throw error
+    }
+  }
+
   return {
     async ensureSchema() {
       // PostgreSQL schema creation is owned by migrations, not authentication requests.
@@ -57,6 +92,12 @@ export function createPostgresAuthRepository(client: Pick<Pool | PoolClient, 'qu
     },
     async revokeUserSessions(id, revokedAt) {
       await client.query('UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL', [revokedAt, id])
+    },
+    async updateCredentialsAndRevokeSessions(id, credentials, updatedAt) {
+      await transaction(async (connection) => {
+        await connection.query('UPDATE users SET password_hash = $1, password_salt = $2, updated_at = $3 WHERE id = $4', [credentials.passwordHash, credentials.passwordSalt, updatedAt, id])
+        await connection.query('UPDATE sessions SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL', [updatedAt, id])
+      })
     },
     async listSupportAgents() {
       const result = await client.query<UserRow>(`SELECT ${userColumns} FROM users WHERE role IN ('admin', 'support_agent') ORDER BY lower(display_name)`)

@@ -24,6 +24,7 @@ export interface AuthRepository {
   findCredentialsByUserId(id: number): StoredCredentials | undefined
   updateCredentials(id: number, credentials: StoredCredentials, updatedAt: string): void
   revokeUserSessions(id: number, revokedAt: string): void
+  updateCredentialsAndRevokeSessions(id: number, credentials: StoredCredentials, updatedAt: string): void
   listSupportAgents(): StoredAuthUser[]
   listUsers(): StoredAuthUser[]
 }
@@ -60,6 +61,18 @@ export const sqliteAuthRepository: AuthRepository = {
   findCredentialsByUserId: (id) => db.prepare('SELECT password_hash AS passwordHash, password_salt AS passwordSalt FROM users WHERE id = ?').get(id) as StoredCredentials | undefined,
   updateCredentials: (id, credentials, updatedAt) => { db.prepare('UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?').run(credentials.passwordHash, credentials.passwordSalt, updatedAt, id) },
   revokeUserSessions: (id, revokedAt) => { db.prepare('UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL').run(revokedAt, id) },
+  updateCredentialsAndRevokeSessions: (id, credentials, updatedAt) => {
+    const savepoint = 'aria_auth_password_change'
+    db.exec(`SAVEPOINT ${savepoint}`)
+    try {
+      db.prepare('UPDATE users SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?').run(credentials.passwordHash, credentials.passwordSalt, updatedAt, id)
+      db.prepare('UPDATE sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL').run(updatedAt, id)
+      db.exec(`RELEASE SAVEPOINT ${savepoint}`)
+    } catch (error) {
+      try { db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`) } finally { db.exec(`RELEASE SAVEPOINT ${savepoint}`) }
+      throw error
+    }
+  },
   listSupportAgents: () => db.prepare("SELECT id, email, display_name AS displayName, role FROM users WHERE role IN ('admin', 'support_agent') ORDER BY display_name COLLATE NOCASE").all() as StoredAuthUser[],
   listUsers: () => db.prepare('SELECT id, email, display_name AS displayName, role FROM users ORDER BY role, display_name COLLATE NOCASE').all() as StoredAuthUser[],
 }
