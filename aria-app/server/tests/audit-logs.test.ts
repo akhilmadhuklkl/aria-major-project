@@ -4,11 +4,21 @@ import { db } from '../database.js'
 import { ensureAuthSchema } from '../auth.js'
 import { sqliteAuditRepository } from '../repositories/sqlite-audit-repository.js'
 import { createRuntimeRepositories } from '../runtime-repositories.js'
+import { runAuditRepositoryContract } from './contracts/repository-contracts.js'
 
 const { createAuditLog, listAuditLogs } = sqliteAuditRepository
 
 // Audit records reference users even when the actor is anonymous.
 ensureAuthSchema()
+
+test('SQLite audit repository satisfies the shared cross-engine contract', async () => {
+  db.exec('BEGIN')
+  try {
+    await runAuditRepositoryContract(sqliteAuditRepository, `sqlite-audit-${Date.now()}`)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
 
 test('audit logs persist action metadata without sensitive content', () => {
   const entry = createAuditLog({

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresAuditRepository } from '../../repositories/postgres-audit-repository.js'
+import { runAuditRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL audit round-trips metadata, defaults, and actor deletion', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -19,6 +20,13 @@ test('PostgreSQL audit round-trips metadata, defaults, and actor deletion', asyn
         INSERT INTO pg_temp.users VALUES (7);
       `)
       const repository = createPostgresAuditRepository(client)
+      await client.query('SAVEPOINT audit_repository_contract')
+      try {
+        await runAuditRepositoryContract(repository, `postgres-audit-${Date.now()}`)
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT audit_repository_contract')
+        await client.query('RELEASE SAVEPOINT audit_repository_contract')
+      }
       assert.deepEqual(await repository.listAuditLogs(), [])
       const metadata = { nested: { events: ['knowledge.indexed'] }, active: false, count: 0 }
       const entry = await repository.createAuditLog({ actorUserId: 7, actorEmail: 'agent@example.com', action: 'webhook.paused', entityType: 'webhook', entityId: 0, metadata })

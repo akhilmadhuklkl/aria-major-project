@@ -4,12 +4,39 @@ import type { AsyncFeedbackRepository, FeedbackRecord, FeedbackRepository } from
 import type { AsyncGraphRepository, GraphRepository } from '../../repositories/graph-repository.js'
 import type { AsyncKnowledgeRepository, KnowledgeRepository } from '../../repositories/knowledge-repository.js'
 import type { AsyncNotificationRepository, NotificationRepository } from '../../repositories/notification-repository.js'
+import type { AsyncAuditRepository, AuditRepository } from '../../repositories/audit-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
+type AuditContractRepository = AuditRepository | AsyncAuditRepository
 type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
 type NotificationContractRepository = NotificationRepository | AsyncNotificationRepository
+
+export async function runAuditRepositoryContract(repository: AuditContractRepository, prefix: string) {
+  const metadata = { active: false, count: 0, events: ['contract.created'], details: { attempts: 3 } }
+  const entry = await repository.createAuditLog({
+    actorEmail: `${prefix}@example.com`, action: `${prefix}.created`, entityType: 'contract', entityId: 0, metadata,
+  })
+  const stored = (await repository.listAuditLogs(100)).find((item) => item.id === entry.id)
+  assert.ok(stored)
+  assert.equal(stored.actorUserId, null)
+  assert.equal(stored.actorEmail, `${prefix}@example.com`)
+  assert.equal(stored.action, `${prefix}.created`)
+  assert.equal(stored.entityType, 'contract')
+  assert.equal(stored.entityId, '0')
+  assert.deepEqual(stored.metadata, metadata)
+  assert.equal(stored.createdAt, entry.createdAt)
+
+  const minimal = await repository.createAuditLog({ action: `${prefix}.minimal`, entityType: 'contract' })
+  const defaults = (await repository.listAuditLogs(100)).find((item) => item.id === minimal.id)
+  assert.ok(defaults)
+  assert.equal(defaults.actorUserId, null)
+  assert.equal(defaults.actorEmail, 'local-demo')
+  assert.equal(defaults.entityId, null)
+  assert.deepEqual(defaults.metadata, {})
+  assert.equal((await repository.listAuditLogs(1)).length, 1)
+}
 
 export async function runFeedbackRepositoryContract(
   repository: FeedbackContractRepository,
