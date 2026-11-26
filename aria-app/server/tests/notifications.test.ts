@@ -3,6 +3,16 @@ import test from 'node:test'
 import { db } from '../database.js'
 import { sqliteNotificationRepository } from '../repositories/sqlite-notification-repository.js'
 import { createRuntimeRepositories } from '../runtime-repositories.js'
+import { runNotificationRepositoryContract } from './contracts/repository-contracts.js'
+
+test('SQLite notification repository satisfies the shared cross-engine contract', async () => {
+  db.exec('BEGIN')
+  try {
+    await runNotificationRepositoryContract(sqliteNotificationRepository, `sqlite-notification-${Date.now()}`)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
 
 const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = sqliteNotificationRepository
 

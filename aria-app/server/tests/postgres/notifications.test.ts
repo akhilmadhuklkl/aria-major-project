@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresNotificationRepository } from '../../repositories/postgres-notification-repository.js'
+import { runNotificationRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL notification lifecycle persists and updates read state', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -16,6 +17,13 @@ test('PostgreSQL notification lifecycle persists and updates read state', async 
         read_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL
       ) ON COMMIT DROP`)
       const repository = createPostgresNotificationRepository(client)
+      await client.query('SAVEPOINT notification_repository_contract')
+      try {
+        await runNotificationRepositoryContract(repository, `postgres-notification-${Date.now()}`)
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT notification_repository_contract')
+        await client.query('RELEASE SAVEPOINT notification_repository_contract')
+      }
       assert.deepEqual(await repository.listNotifications(), [])
       const first = await repository.createNotification({ kind: 'test', title: 'First', message: 'Integration test' })
       const second = await repository.createNotification({ kind: 'test', title: 'Second', message: 'Integration test' })

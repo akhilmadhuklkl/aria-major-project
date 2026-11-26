@@ -3,11 +3,13 @@ import type { AsyncConversationRepository, ConversationRepository } from '../../
 import type { AsyncFeedbackRepository, FeedbackRecord, FeedbackRepository } from '../../repositories/feedback-repository.js'
 import type { AsyncGraphRepository, GraphRepository } from '../../repositories/graph-repository.js'
 import type { AsyncKnowledgeRepository, KnowledgeRepository } from '../../repositories/knowledge-repository.js'
+import type { AsyncNotificationRepository, NotificationRepository } from '../../repositories/notification-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
 type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
+type NotificationContractRepository = NotificationRepository | AsyncNotificationRepository
 
 export async function runFeedbackRepositoryContract(
   repository: FeedbackContractRepository,
@@ -45,6 +47,31 @@ export async function runFeedbackRepositoryContract(
       editedResponse: entry.editedResponse ?? null,
     })
   }
+}
+
+export async function runNotificationRepositoryContract(repository: NotificationContractRepository, prefix: string) {
+  await repository.markAllNotificationsRead()
+  const first = await repository.createNotification({ kind: `${prefix}:info`, title: `${prefix}:first`, message: 'First contract notification' })
+  const second = await repository.createNotification({ kind: `${prefix}:warning`, title: `${prefix}:second`, message: 'Second contract notification' })
+
+  assert.equal(first.readAt, null)
+  assert.ok(Number.isFinite(Date.parse(first.createdAt)))
+  assert.equal(second.readAt, null)
+  assert.ok(Number.isFinite(Date.parse(second.createdAt)))
+
+  const listed = await repository.listNotifications(100)
+  assert.ok(listed.some((item) => item.id === first.id && item.title === first.title && item.message === first.message))
+  assert.ok(listed.some((item) => item.id === second.id && item.title === second.title && item.message === second.message))
+
+  assert.equal(await repository.markNotificationRead(first.id), true)
+  const firstReadAt = (await repository.listNotifications(100)).find((item) => item.id === first.id)?.readAt
+  assert.ok(firstReadAt)
+  assert.equal(await repository.markNotificationRead(-1), false)
+  assert.equal(Number(await repository.markAllNotificationsRead()), 1)
+  const updated = await repository.listNotifications(100)
+  assert.equal(updated.find((item) => item.id === first.id)?.readAt, firstReadAt)
+  assert.ok(updated.find((item) => item.id === second.id)?.readAt)
+  assert.equal(Number(await repository.markAllNotificationsRead()), 0)
 }
 
 export async function runConversationRepositoryContract(repository: ConversationContractRepository, prefix: string) {
