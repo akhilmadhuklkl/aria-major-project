@@ -8,12 +8,14 @@ import type { AsyncAuditRepository, AuditRepository } from '../../repositories/a
 import type { AsyncAuthRepository, AuthRepository } from '../../repositories/auth-repository.js'
 import type { AnalyticsRepository, AsyncAnalyticsRepository } from '../../repositories/analytics-repository.js'
 import type { AsyncSystemRepository, SystemRepository } from '../../repositories/system-repository.js'
+import type { AsyncWebhookRepository, WebhookRepository } from '../../repositories/webhook-repository.js'
 
 type ConversationContractRepository = ConversationRepository | AsyncConversationRepository
 type AuditContractRepository = AuditRepository | AsyncAuditRepository
 type AuthContractRepository = AuthRepository | AsyncAuthRepository
 type AnalyticsContractRepository = AnalyticsRepository | AsyncAnalyticsRepository
 type SystemContractRepository = SystemRepository | AsyncSystemRepository
+type WebhookContractRepository = WebhookRepository | AsyncWebhookRepository
 type FeedbackContractRepository = FeedbackRepository | AsyncFeedbackRepository
 type GraphContractRepository = GraphRepository | AsyncGraphRepository
 type KnowledgeContractRepository = KnowledgeRepository | AsyncKnowledgeRepository
@@ -153,6 +155,52 @@ export async function runSystemRepositoryContract(
   assert.deepEqual(await repository.getRecordCounts(), { conversations: 0, feedbackRecords: 0 })
   await seed()
   assert.deepEqual(await repository.getRecordCounts(), { conversations: 2, feedbackRecords: 1 })
+}
+
+export async function runWebhookRepositoryContract(repository: WebhookContractRepository, prefix: string) {
+  const createdAt = '2026-01-01T00:00:00.000Z'
+  const updatedAt = '2026-01-01T00:01:00.000Z'
+  const input = {
+    name: `${prefix} webhook`, url: `https://example.com/${prefix}`, secret: `${prefix}-secret`,
+    events: ['knowledge.indexed', 'graph.updated'], createdAt, updatedAt,
+  }
+  const id = await repository.insertSubscription(input)
+  try {
+    const subscription = (await repository.listSubscriptionsWithSecrets()).find((item) => item.id === id)
+    assert.deepEqual(subscription ? { ...subscription } : subscription, { id, ...input, active: true })
+
+    const pausedAt = '2026-01-01T00:02:00.000Z'
+    assert.equal(await repository.updateSubscription(id, false, pausedAt), true)
+    const paused = (await repository.listSubscriptionsWithSecrets()).find((item) => item.id === id)
+    assert.equal(paused?.active, false)
+    assert.equal(paused?.updatedAt, pausedAt)
+
+    await repository.insertDelivery({
+      webhookId: id, event: 'knowledge.indexed', status: 'failed', responseStatus: 503,
+      attempts: 3, error: 'HTTP 503', createdAt,
+    })
+    await repository.insertDelivery({
+      webhookId: id, event: 'graph.updated', status: 'delivered', responseStatus: 200,
+      attempts: 1, error: null, createdAt: '2026-01-01T00:03:00.000Z',
+    })
+    const deliveries = (await repository.listDeliveries(100)).filter((item) => item.webhookId === id)
+    assert.equal(deliveries.length, 2)
+    const failed = deliveries.find((item) => item.status === 'failed')
+    assert.deepEqual(failed ? { ...failed } : failed, {
+      id: failed?.id, webhookId: id, name: input.name, event: 'knowledge.indexed',
+      status: 'failed', responseStatus: 503, attempts: 3, error: 'HTTP 503', createdAt,
+    })
+    assert.equal('secret' in (deliveries[0] ?? {}), false)
+    assert.equal((await repository.listDeliveries(1)).length, 1)
+
+    assert.equal(await repository.deleteSubscription(id), true)
+    assert.equal(await repository.deleteSubscription(id), false)
+    assert.equal(await repository.updateSubscription(id, true, updatedAt), false)
+    assert.equal((await repository.listSubscriptionsWithSecrets()).some((item) => item.id === id), false)
+    assert.equal((await repository.listDeliveries(100)).some((item) => item.webhookId === id), false)
+  } finally {
+    await repository.deleteSubscription(id)
+  }
 }
 
 export async function runFeedbackRepositoryContract(

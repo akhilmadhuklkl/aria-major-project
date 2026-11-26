@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Pool } from 'pg'
 import { createPostgresWebhookRepository } from '../../repositories/postgres-webhook-repository.js'
+import { runWebhookRepositoryContract } from '../contracts/repository-contracts.js'
 
 test('PostgreSQL webhook repository preserves subscriptions, deliveries, and cascade deletion', async () => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required for PostgreSQL integration tests')
@@ -18,6 +19,14 @@ test('PostgreSQL webhook repository preserves subscriptions, deliveries, and cas
       SET search_path TO pg_temp;
     `)
     const repository = createPostgresWebhookRepository(pool)
+    await pool.query('BEGIN')
+    await pool.query('SAVEPOINT webhook_repository_contract')
+    try {
+      await runWebhookRepositoryContract(repository, `postgres-webhook-${Date.now()}`)
+    } finally {
+      await pool.query('ROLLBACK TO SAVEPOINT webhook_repository_contract')
+      await pool.query('RELEASE SAVEPOINT webhook_repository_contract')
+    }
     const now = '2026-01-01T00:00:00.000Z'
     const input = { name: 'Integration webhook', url: `https://example.com/${crypto.randomUUID()}`, secret: 'integration-secret', events: ['knowledge.indexed'], createdAt: now, updatedAt: now }
     const id = await repository.insertSubscription(input)
@@ -33,6 +42,7 @@ test('PostgreSQL webhook repository preserves subscriptions, deliveries, and cas
     assert.equal(await repository.deleteSubscription(id), false)
     const remaining = await pool.query('SELECT COUNT(*)::int AS count FROM webhook_delivery_logs WHERE webhook_id = $1', [id])
     assert.equal(remaining.rows[0].count, 0)
+    await pool.query('ROLLBACK')
   } finally {
     await pool.end()
   }

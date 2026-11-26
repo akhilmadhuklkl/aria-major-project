@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { db } from '../database.js'
 import { sqliteWebhookRepository as repository } from '../repositories/sqlite-webhook-repository.js'
+import { runWebhookRepositoryContract } from './contracts/repository-contracts.js'
 
 test('webhook repository preserves subscription and delivery fields and cascades deletion', () => {
   db.exec('BEGIN')
@@ -29,6 +30,15 @@ test('webhook repository preserves subscription and delivery fields and cascades
     assert.equal(repository.updateSubscription(id, true, now), false)
     const remaining = db.prepare('SELECT COUNT(*) AS count FROM webhook_delivery_logs WHERE webhook_id = ?').get(id) as { count: number }
     assert.equal(remaining.count, 0)
+  } finally {
+    db.exec('ROLLBACK')
+  }
+})
+
+test('SQLite webhook repository satisfies the shared cross-engine contract', async () => {
+  db.exec('BEGIN')
+  try {
+    await runWebhookRepositoryContract(repository, `sqlite-webhook-${Date.now()}`)
   } finally {
     db.exec('ROLLBACK')
   }
