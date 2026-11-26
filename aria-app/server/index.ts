@@ -9,15 +9,7 @@ import multer from 'multer'
 import { createAgentService, getAgentProvider } from './agent-service.js'
 import {
   calculateQualityScore,
-  getGraphNode,
   inferTopic,
-  listGraphNodes,
-  listGraphRelationships,
-  queryGraphPaths,
-  createGraphRelationship,
-  deleteGraphNode,
-  deleteGraphRelationship,
-  upsertGraphNode,
 } from './database.js'
 import { calculateFeedbackAdjustment, FeedbackAdaptationRanker, neutralQualityScore } from './feedback-adaptation.js'
 import { HybridKnowledgeRetriever } from './hybrid-retrieval.js'
@@ -54,6 +46,7 @@ const notificationRepository = runtimeRepositories.notifications
 const auditRepository = runtimeRepositories.audit
 const knowledgeRepository: AsyncKnowledgeRepository = runtimeRepositories.knowledge
 const analyticsRepository = runtimeRepositories.analytics
+const graphRepository = runtimeRepositories.graph
 const webhookService = createWebhookService(runtimeRepositories.webhooks)
 const authService = createAuthService(runtimeRepositories.auth)
 await authService.ensureAuthSchema()
@@ -92,7 +85,9 @@ const hybridRetriever = new HybridKnowledgeRetriever(
   (query, limit) => searchKnowledge(knowledgeRepository, query, limit),
   new SemanticKnowledgeRetriever(undefined, () => knowledgeRepository.listEmbeddedKnowledge()),
   new FeedbackAdaptationRanker(() => knowledgeRepository.getKnowledgeSourceFeedbackStats()),
-  neo4jGraphStore ? (query) => neo4jGraphStore.findKnowledgeTitles(query) : undefined,
+  neo4jGraphStore
+    ? (query) => neo4jGraphStore.findKnowledgeTitles(query)
+    : (query) => graphRepository.findGraphKnowledgeTitles(query),
 )
 const agent = createAgentService(hybridRetriever.retrieve)
 const llmProvider = mastraModel.startsWith('google/')
@@ -249,24 +244,24 @@ app.post('/api/notifications/:id/read', async (request, response) => {
 })
 
 app.get('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), async (_request, response) => {
-  response.json(neo4jGraphStore ? await neo4jGraphStore.listNodes() : listGraphNodes())
+  response.json(neo4jGraphStore ? await neo4jGraphStore.listNodes() : await graphRepository.listGraphNodes())
 })
 
 app.get('/api/knowledge-graph', roleGuard('admin', 'support_agent'), async (_request, response) => {
   response.json({
-    nodes: neo4jGraphStore ? await neo4jGraphStore.listNodes() : listGraphNodes(),
-    relationships: neo4jGraphStore ? await neo4jGraphStore.listRelationships() : listGraphRelationships(),
+    nodes: neo4jGraphStore ? await neo4jGraphStore.listNodes() : await graphRepository.listGraphNodes(),
+    relationships: neo4jGraphStore ? await neo4jGraphStore.listRelationships() : await graphRepository.listGraphRelationships(),
   })
 })
 
 app.get('/api/knowledge-graph/paths/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = String(request.params.id)
-  const node = neo4jGraphStore ? await neo4jGraphStore.getNode(id) : getGraphNode(id)
+  const node = neo4jGraphStore ? await neo4jGraphStore.getNode(id) : await graphRepository.getGraphNode(id)
   if (!node) {
     response.status(404).json({ error: 'graph node was not found' })
     return
   }
-  response.json({ node, paths: neo4jGraphStore ? await neo4jGraphStore.queryPaths(id, Number(request.query.hops ?? 2)) : queryGraphPaths(id, Number(request.query.hops ?? 2)) })
+  response.json({ node, paths: neo4jGraphStore ? await neo4jGraphStore.queryPaths(id, Number(request.query.hops ?? 2)) : await graphRepository.queryGraphPaths(id, Number(request.query.hops ?? 2)) })
 })
 
 app.post('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), async (request, response) => {
@@ -279,7 +274,7 @@ app.post('/api/knowledge-graph/nodes', roleGuard('admin', 'support_agent'), asyn
   }
   response.status(201).json(neo4jGraphStore
     ? await neo4jGraphStore.upsertNode({ id, type, properties })
-    : upsertGraphNode({ id, type: type as Parameters<typeof upsertGraphNode>[0]['type'], properties }))
+    : await graphRepository.upsertGraphNode({ id, type: type as Parameters<typeof graphRepository.upsertGraphNode>[0]['type'], properties }))
   await recordAudit(request, { action: 'graph.node.created', entityType: 'graph_node', entityId: id, metadata: { type } })
 })
 
@@ -287,15 +282,15 @@ app.post('/api/knowledge-graph/relationships', roleGuard('admin', 'support_agent
   const sourceId = String(request.body?.sourceId ?? '').trim()
   const targetId = String(request.body?.targetId ?? '').trim()
   const type = String(request.body?.type ?? '').trim()
-  const sourceNode = neo4jGraphStore ? await neo4jGraphStore.getNode(sourceId) : getGraphNode(sourceId)
-  const targetNode = neo4jGraphStore ? await neo4jGraphStore.getNode(targetId) : getGraphNode(targetId)
+  const sourceNode = neo4jGraphStore ? await neo4jGraphStore.getNode(sourceId) : await graphRepository.getGraphNode(sourceId)
+  const targetNode = neo4jGraphStore ? await neo4jGraphStore.getNode(targetId) : await graphRepository.getGraphNode(targetId)
   if (!sourceId || !targetId || !type || !sourceNode || !targetNode) {
     response.status(400).json({ error: 'existing source and target nodes plus relationship type are required' })
     return
   }
   const created = neo4jGraphStore
     ? await neo4jGraphStore.createRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
-    : createGraphRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
+    : await graphRepository.createGraphRelationship({ sourceId, targetId, type, properties: request.body?.properties ?? {} })
   await recordAudit(request, { action: 'graph.relationship.created', entityType: 'graph_relationship', entityId: `${sourceId}:${type}:${targetId}`, metadata: { sourceId, targetId, type } })
   response.status(201).json(created)
 })
@@ -310,7 +305,7 @@ app.delete('/api/knowledge-graph/relationships', roleGuard('admin', 'support_age
   }
   const deleted = neo4jGraphStore
     ? await neo4jGraphStore.deleteRelationship({ sourceId, targetId, type })
-    : deleteGraphRelationship({ sourceId, targetId, type })
+    : await graphRepository.deleteGraphRelationship({ sourceId, targetId, type })
   if (!deleted) {
     response.status(404).json({ error: 'graph relationship was not found' })
     return
@@ -321,7 +316,7 @@ app.delete('/api/knowledge-graph/relationships', roleGuard('admin', 'support_age
 
 app.delete('/api/knowledge-graph/nodes/:id', roleGuard('admin', 'support_agent'), async (request, response) => {
   const id = String(request.params.id).trim()
-  const deleted = neo4jGraphStore ? await neo4jGraphStore.deleteNode(id) : deleteGraphNode(id)
+  const deleted = neo4jGraphStore ? await neo4jGraphStore.deleteNode(id) : await graphRepository.deleteGraphNode(id)
   if (!deleted) {
     response.status(404).json({ error: 'graph node was not found' })
     return

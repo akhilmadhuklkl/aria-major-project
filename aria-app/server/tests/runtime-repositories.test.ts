@@ -27,6 +27,7 @@ test('runtime repository factory keeps SQLite explicit and does not create a Pos
   assert.equal(typeof runtime.analytics.getAnalyticsMetrics, 'function')
   assert.equal(typeof runtime.system.verifyConnection, 'function')
   assert.equal(typeof runtime.system.getRecordCounts, 'function')
+  assert.equal(typeof runtime.graph.listGraphNodes, 'function')
   await runtime.system.verifyConnection()
   await assert.doesNotReject(runtime.close())
 })
@@ -48,6 +49,7 @@ test('runtime repository factory assembles every PostgreSQL adapter and owns poo
   assert.equal(runtime.webhooks, runtime.postgres.webhooks)
   assert.equal(runtime.analytics, runtime.postgres.analytics)
   assert.equal(runtime.system, runtime.postgres.system)
+  assert.equal(runtime.graph, runtime.postgres.graph)
   assert.equal(runtime.pool, pool)
   assert.deepEqual(Object.keys(runtime.postgres).sort(), ['analytics', 'audit', 'auth', 'conversations', 'feedback', 'graph', 'knowledge', 'notifications', 'system', 'webhooks'])
   await runtime.close()
@@ -95,6 +97,34 @@ test('async runtime analytics adapter returns SQLite metrics', async () => {
     assert.ok(Number.isFinite(metrics.feedbackStats.averageQuality))
     assert.ok(Array.isArray(metrics.qualityTrend))
   } finally {
+    await runtime.close()
+  }
+})
+
+test('async runtime graph adapter preserves SQLite graph behavior', async () => {
+  const runtime = createRuntimeRepositories('sqlite')
+  const sourceId = `runtime-graph-source-${Date.now()}`
+  const targetId = `runtime-graph-target-${Date.now()}`
+
+  try {
+    await runtime.graph.upsertGraphNode({
+      id: sourceId,
+      type: 'SupportIssue',
+      properties: { title: 'Runtime refund issue' },
+    })
+    await runtime.graph.upsertGraphNode({
+      id: targetId,
+      type: 'KnowledgeDocument',
+      properties: { title: 'Runtime refund policy' },
+    })
+    await runtime.graph.createGraphRelationship({ sourceId, type: 'SUPPORTED_BY', targetId })
+    assert.equal((await runtime.graph.getGraphNode(sourceId))?.properties.title, 'Runtime refund issue')
+    assert.ok((await runtime.graph.queryGraphPaths(sourceId, 2)).some((path) => path.nodes.includes(targetId)))
+    assert.ok((await runtime.graph.findGraphKnowledgeTitles('refund')).includes('Runtime refund policy'))
+    assert.equal(await runtime.graph.deleteGraphRelationship({ sourceId, type: 'SUPPORTED_BY', targetId }), true)
+  } finally {
+    await runtime.graph.deleteGraphNode(sourceId)
+    await runtime.graph.deleteGraphNode(targetId)
     await runtime.close()
   }
 })

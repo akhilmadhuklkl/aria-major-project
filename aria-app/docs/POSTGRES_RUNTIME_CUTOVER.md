@@ -50,6 +50,8 @@ Webhook persistence and delivery history are now the sixth feature boundary. Sub
 
 Analytics is now the seventh feature boundary. The summary endpoint reads conversation, feedback, retrieval, provider, confidence, latency, escalation, and quality-trend metrics through the runtime-selected analytics repository.
 
+Knowledge graph persistence is now the eighth feature boundary. Graph node and relationship CRUD, bounded path queries, and graph-assisted knowledge-title lookup use the runtime-selected graph repository; the optional Neo4j path remains available when `GRAPH_STORE=neo4j` is configured.
+
 ## Cutover Stages
 
 1. Define repository interfaces for authentication, conversations, messages, knowledge, feedback, notifications, webhooks, graph data, and audit logs.
