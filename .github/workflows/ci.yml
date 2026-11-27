@@ -41,6 +41,14 @@ jobs:
         run: npm run test:e2e
       - name: Build production container
         run: docker build --tag aria-app:ci .
+      - name: Validate PostgreSQL Compose profile
+        env:
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_CONTAINER_DATABASE_URL: postgresql://aria:ci-password@postgres:5432/aria
+          NEO4J_PASSWORD: ci-neo4j-password
+        run: |
+          cp .env.example .env
+          docker compose --file docker-compose.yml --profile postgres-runtime config --quiet
       - name: Start API smoke-test process
         run: npm run start:server > /tmp/aria-api.log 2>&1 &
       - name: Verify API readiness

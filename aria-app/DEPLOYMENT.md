@@ -51,6 +51,23 @@ DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run 
 The verification checks required tables, columns, and production indexes for authentication, conversations, retrieval, notifications, webhooks, and Knowledge Graph storage.
 GitHub Actions also provisions PostgreSQL in a dedicated CI job and runs the preflight, migration, and verification commands against a clean database on every push and pull request.
 
+To run the API container against PostgreSQL after migration and verification, add these values to `.env`:
+
+```env
+POSTGRES_PASSWORD=use-a-strong-local-or-managed-password
+POSTGRES_CONTAINER_DATABASE_URL=postgresql://aria:use-a-strong-local-or-managed-password@postgres:5432/aria
+DATABASE_ENGINE=postgres
+AUTH_REQUIRED=true
+```
+
+Then start the production-shaped Compose profile:
+
+```bash
+docker compose --profile postgres-runtime up --build
+```
+
+The `aria-api-postgres` service waits for the PostgreSQL health check and reports PostgreSQL through `/api/ready`. Run the migration and verification commands against the host-side PostgreSQL URL before starting this profile. The default `aria-api` service remains SQLite-backed for local demo use.
+
 ## PostgreSQL backup and restore
 
 Create and validate a native PostgreSQL custom-format backup:

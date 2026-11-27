@@ -211,6 +211,14 @@ npm run preview
 
 The backend must still be running separately for API-backed workflows.
 
+For a PostgreSQL-backed container deployment, complete the migration and verification steps in [`DEPLOYMENT.md`](./DEPLOYMENT.md), set `POSTGRES_CONTAINER_DATABASE_URL` to use the Compose service host `postgres`, and start:
+
+```bash
+docker compose --profile postgres-runtime up --build
+```
+
+The regular `aria-api` service remains the SQLite-backed local/demo path.
+
 ## Git Safety
 
 The following must stay uncommitted:
