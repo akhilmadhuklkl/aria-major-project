@@ -114,6 +114,27 @@ jobs:
         env:
           POSTGRES_BACKUP_PATH: backups/aria-ci.dump
         run: npm run backup:postgres
+      - name: Create disposable PostgreSQL restore database
+        env:
+          PGPASSWORD: ci-password
+        run: createdb --host=localhost --username=aria --no-password aria_restore
+      - name: Restore PostgreSQL backup to disposable database
+        env:
+          DATABASE_URL: postgresql://aria:ci-password@localhost:5432/aria_restore
+          DB_SSL: false
+          POSTGRES_BACKUP_PATH: backups/aria-ci.dump
+          POSTGRES_RESTORE_CONFIRM: YES
+        run: npm run restore:postgres
+      - name: Verify restored PostgreSQL database
+        env:
+          DATABASE_URL: postgresql://aria:ci-password@localhost:5432/aria_restore
+          DB_SSL: false
+        run: npm run verify:postgres
+      - name: Remove disposable PostgreSQL restore database
+        if: always()
+        env:
+          PGPASSWORD: ci-password
+        run: dropdb --host=localhost --username=aria --no-password --if-exists aria_restore
       - name: Run PostgreSQL repository integration tests
         run: npm run test:postgres
       - name: Start PostgreSQL runtime API
