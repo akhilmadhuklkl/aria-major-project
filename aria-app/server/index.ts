@@ -27,9 +27,11 @@ import { createWebhookService, normalizeWebhookEvents, validateWebhookUrl, webho
 import { Neo4jGraphStore } from './neo4j-graph-store.js'
 import { getRuntimeMetrics, recordRequest } from './metrics.js'
 import { databaseEngine } from './database-runtime.js'
+import { db } from './database.js'
 import { checkDatabaseReadiness } from './readiness.js'
 import { createRuntimeRepositories } from './runtime-repositories.js'
 import { calculateQualityScore, inferTopic } from './support-domain.js'
+import { errorMessage, logEvent } from './observability.js'
 import type { NewAuditLog } from './repositories/audit-repository.js'
 import type { AsyncKnowledgeRepository } from './repositories/knowledge-repository.js'
 import type { AsyncNotificationRepository } from './repositories/notification-repository.js'
@@ -151,9 +153,20 @@ app.use(helmet())
 app.use(cors({ origin: allowedOrigins.length ? allowedOrigins : true }))
 app.use(express.json({ limit: '1mb' }))
 app.use((_request, response, next) => {
-  response.setHeader('X-Request-ID', crypto.randomUUID())
+  const requestId = crypto.randomUUID()
+  response.setHeader('X-Request-ID', requestId)
   const startedAt = performance.now()
-  response.on('finish', () => recordRequest({ method: _request.method, route: _request.route?.path ?? _request.path, status: response.statusCode, latencyMs: Math.round(performance.now() - startedAt) }))
+  response.on('finish', () => {
+    const latencyMs = Math.round(performance.now() - startedAt)
+    recordRequest({ method: _request.method, route: _request.route?.path ?? _request.path, status: response.statusCode, latencyMs })
+    logEvent(response.statusCode >= 500 ? 'error' : response.statusCode >= 400 ? 'warn' : 'info', 'http.request', {
+      requestId,
+      method: _request.method,
+      route: _request.route?.path ?? _request.path,
+      status: response.statusCode,
+      latencyMs,
+    })
+  })
   next()
 })
 app.use('/api/auth', authLimiter)
@@ -1113,12 +1126,36 @@ if (process.env.NODE_ENV === 'production' && existsSync(frontendDist)) {
 app.use((error: unknown, request: express.Request, response: express.Response, _next: express.NextFunction) => {
   void _next
   const requestId = String(response.getHeader('X-Request-ID') ?? 'unknown')
-  const message = error instanceof Error ? error.message : 'Unknown server error'
-  console.error(`[${requestId}] ${request.method} ${request.originalUrl} failed: ${message}`)
+  const message = errorMessage(error)
+  logEvent('error', 'http.error', { requestId, method: request.method, route: request.originalUrl, message })
   if (response.headersSent) return
   response.status(500).json({ error: 'internal server error', requestId })
 })
 
-app.listen(port, () => {
-  console.log(`ARIA API listening on http://127.0.0.1:${port}`)
+const server = app.listen(port, () => {
+  logEvent('info', 'server.started', { address: `http://127.0.0.1:${port}`, database: databaseEngine, graphStore: neo4jGraphStore ? 'neo4j' : 'sqlite' })
 })
+
+let shuttingDown = false
+
+async function shutdown(signal: NodeJS.Signals) {
+  if (shuttingDown) return
+  shuttingDown = true
+  logEvent('info', 'server.shutdown.start', { signal })
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve())
+    })
+    await runtimeRepositories.close()
+    await neo4jGraphStore?.close()
+    if (databaseEngine === 'sqlite') db.close()
+    logEvent('info', 'server.shutdown.complete', { signal })
+  } catch (error) {
+    logEvent('error', 'server.shutdown.failed', { signal, message: errorMessage(error) })
+    process.exitCode = 1
+  }
+}
+
+process.once('SIGINT', () => void shutdown('SIGINT'))
+process.once('SIGTERM', () => void shutdown('SIGTERM'))

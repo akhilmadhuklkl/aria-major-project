@@ -68,6 +68,15 @@ docker compose --profile postgres-runtime up --build
 
 The `aria-api-postgres` service waits for the PostgreSQL health check and reports PostgreSQL through `/api/ready`. Run the migration and verification commands against the host-side PostgreSQL URL before starting this profile. The default `aria-api` service remains SQLite-backed for local demo use.
 
+Production logs can be emitted as structured JSON for a log collector:
+
+```env
+LOG_FORMAT=json
+LOG_LEVEL=info
+```
+
+Each request includes the `X-Request-ID` response header and emits method, route, status, and latency metadata without logging request bodies or provider credentials. The API closes its HTTP listener, database pool, optional Neo4j driver, and SQLite handle during `SIGINT` or `SIGTERM` shutdown.
+
 ## PostgreSQL backup and restore
 
 Create and validate a native PostgreSQL custom-format backup:
