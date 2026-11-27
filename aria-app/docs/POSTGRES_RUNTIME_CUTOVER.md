@@ -2,9 +2,9 @@
 
 ## Current State
 
-ARIA currently runs on SQLite through Node's synchronous `DatabaseSync` API. The live request handlers now depend on the runtime repository factory, while PostgreSQL support is prepared for migration, preflight checks, schema verification, row-count validation, and CI validation.
+ARIA defaults to SQLite through Node's synchronous `DatabaseSync` API. The live request handlers depend on the runtime repository factory, and an explicit `DATABASE_ENGINE=postgres` selection now uses the PostgreSQL repository set after migration and schema verification.
 
-`DATABASE_ENGINE=sqlite` is therefore the only supported runtime setting. The server fails fast for other values so a deployment cannot appear to use PostgreSQL while silently writing to SQLite.
+SQLite remains the safe local/demo default. PostgreSQL runtime selection requires `DATABASE_URL`, a completed migration, and a successful readiness/API smoke check; the server fails fast for any other engine value.
 
 ## Adapter Progress
 
@@ -32,7 +32,7 @@ The asynchronous PostgreSQL system repository now supports connectivity probes a
 
 The asynchronous PostgreSQL graph repository now supports typed node upserts, JSONB properties, directed relationship upserts, bounded path queries, one-hop knowledge-title lookup, and foreign-key cascade deletion. Its behavior is covered against real PostgreSQL temporary tables and is exposed through the runtime factory.
 
-The runtime repository factory now assembles all asynchronous PostgreSQL adapters behind one explicit `createRuntimeRepositories('postgres', ...)` boundary and owns pool shutdown. SQLite remains the active server runtime; the factory is intentionally not wired into feature request handlers until their synchronous calls are converted to async repository calls and cross-engine contract tests pass.
+The runtime repository factory assembles all asynchronous PostgreSQL adapters behind one explicit `createRuntimeRepositories('postgres', ...)` boundary and owns pool shutdown. The CI pipeline now starts the API against the migrated PostgreSQL database and runs readiness plus read-only API smoke checks before PostgreSQL can be considered for deployment.
 
 The first controlled runtime integration now routes `/api/ready` and `/api/system-status` through the factory's async system repository. The SQLite implementation is wrapped without changing its behavior, while the PostgreSQL implementation is selected automatically by the same dependency boundary when PostgreSQL runtime support is enabled.
 

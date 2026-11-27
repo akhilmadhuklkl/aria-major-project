@@ -112,3 +112,22 @@ jobs:
         run: npm run verify:postgres
       - name: Run PostgreSQL repository integration tests
         run: npm run test:postgres
+      - name: Start PostgreSQL runtime API
+        env:
+          DATABASE_ENGINE: postgres
+          PORT: 8787
+        run: npm run start:server > /tmp/aria-postgres-api.log 2>&1 &
+      - name: Verify PostgreSQL runtime readiness
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8787/api/ready | grep --quiet '"database":"postgres"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/aria-postgres-api.log
+          exit 1
+      - name: Run PostgreSQL runtime API smoke check
+        env:
+          VALIDATION_API_URL: http://127.0.0.1:8787/api
+        run: npm run check:api

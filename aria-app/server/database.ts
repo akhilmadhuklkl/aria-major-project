@@ -12,13 +12,14 @@ import { databaseEngine } from './database-runtime.js'
 export { calculateQualityScore, inferTopic } from './support-domain.js'
 
 void databaseEngine
+const sqliteBootstrapEnabled = databaseEngine === 'sqlite'
 
 const databasePath = resolve('data', 'aria.db')
 mkdirSync(dirname(databasePath), { recursive: true })
 
 export const db = new DatabaseSync(databasePath)
 
-db.exec(`
+if (sqliteBootstrapEnabled) db.exec(`
   PRAGMA foreign_keys = ON;
 
   CREATE TABLE IF NOT EXISTS conversations (
@@ -79,15 +80,17 @@ db.exec(`
   );
 `)
 
-ensureColumn('messages', 'source_scores', 'TEXT')
-ensureColumn('messages', 'retrieval_method', 'TEXT')
-ensureColumn('messages', 'generation_provider', 'TEXT')
-ensureColumn('messages', 'latency_ms', 'INTEGER')
-runMigrations()
+if (sqliteBootstrapEnabled) {
+  ensureColumn('messages', 'source_scores', 'TEXT')
+  ensureColumn('messages', 'retrieval_method', 'TEXT')
+  ensureColumn('messages', 'generation_provider', 'TEXT')
+  ensureColumn('messages', 'latency_ms', 'INTEGER')
+  runMigrations()
+}
 
 export const { upsertGraphNode, getGraphNode, listGraphNodes, createGraphRelationship, listGraphRelationships, deleteGraphRelationship, deleteGraphNode, queryGraphPaths, findGraphKnowledgeTitles } = createSqliteGraphRepository(db)
 
-seedDatabase()
+if (sqliteBootstrapEnabled) seedDatabase()
 
 function runMigrations() {
   db.exec(`
