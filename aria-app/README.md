@@ -173,7 +173,7 @@ npm run evaluate:adaptation
 
 The frontend always calls ARIA's backend API. This means the UI does not need to change when switching between local fallback generation, local Mastra, or a future Mastra Cloud endpoint.
 
-Local Mastra server mode:
+Embedded Mastra server mode (also routes the main `/api/chat` flow through the registered agent):
 
 ```env
 ENABLE_MASTRA_SERVER=true
@@ -193,7 +193,7 @@ Connect chat generation to a Mastra endpoint:
 MASTRA_AGENT_URL=http://localhost:8787/api/agents/aria-support-agent/generate
 ```
 
-If Mastra or Gemini is unavailable, ARIA keeps the demo stable through the local knowledge fallback.
+If the embedded Mastra call or Gemini is unavailable, ARIA keeps the demo stable through the local knowledge fallback.
 
 ## Production Build
 

@@ -543,6 +543,7 @@ app.get('/api/interim-status', (_request, response) => {
       'Containerized production build with CI and browser/API verification',
       'Mastra-compatible remote agent endpoint configured through MASTRA_AGENT_URL',
       'Local Mastra server can be enabled with ENABLE_MASTRA_SERVER=true',
+      'Embedded Mastra agent can serve the main chat flow with automatic local fallback',
       'Signed webhook integrations with delivery retries, testing, audit logs, and pause/resume controls',
       'PostgreSQL runtime selection with migration, backup/restore, and CI smoke verification',
       'Hosted PostgreSQL configuration preflight, verification, and rollback runbook',

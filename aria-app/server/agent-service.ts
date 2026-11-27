@@ -146,6 +146,40 @@ export class LocalAgentService implements AgentService {
   }
 }
 
+export class EmbeddedMastraAgentService implements AgentService {
+  private readonly fallback: AgentService
+  private readonly retrieveKnowledge: KnowledgeRetriever
+
+  constructor(fallback: AgentService, retrieveKnowledge: KnowledgeRetriever = async () => []) {
+    this.fallback = fallback
+    this.retrieveKnowledge = retrieveKnowledge
+  }
+
+  async generateResponse(query: string, language = 'en'): Promise<AgentResponse> {
+    try {
+      const knowledge = await this.retrieveKnowledge(query)
+      const prompt = buildMastraPrompt(query, language, knowledge)
+      const { mastra } = await import('../src/mastra/index.js')
+      const result = await mastra.getAgent('ariaSupportAgent').generate(prompt)
+      const text = extractMastraText(result as unknown as Record<string, unknown>)
+      if (!text) throw new Error('Embedded Mastra agent did not return text')
+
+      const confidence = knowledge.length > 0 ? 0.88 : 0.62
+      return {
+        answer: text,
+        confidence,
+        sources: knowledge.length > 0 ? knowledge.map((item) => item.title) : ['Mastra agent'],
+        sourceScores: formatSourceScores(knowledge),
+        retrievalMethod: knowledge[0]?.retrievalMethod ?? 'none',
+        generationProvider: 'mastra-gemini',
+        shouldEscalate: confidence < getConfidenceThreshold(),
+      }
+    } catch {
+      return this.fallback.generateResponse(query, language)
+    }
+  }
+}
+
 export class RemoteMastraAgentService implements AgentService {
   private readonly endpoint: string
   private readonly fallback: AgentService
@@ -160,19 +194,7 @@ export class RemoteMastraAgentService implements AgentService {
   async generateResponse(query: string, language = 'en'): Promise<AgentResponse> {
     try {
       const knowledge = await this.retrieveKnowledge(query)
-      const knowledgeContext = knowledge.length > 0
-        ? knowledge.map((item) => `- ${item.title} (${item.category}): ${item.content}${item.graphEvidence?.length ? ` Graph evidence: ${item.graphEvidence.join('; ')}` : ''}`).join('\n')
-        : '- No matching knowledge record was found.'
-      const prompt = `
-Customer question:
-${query}
-
-Verified ARIA knowledge base:
-${knowledgeContext}
-
-Answer using only the verified knowledge above. If the knowledge is missing or unclear, ask for more details or recommend escalation.
-Respond in the customer's selected language: ${language}.
-`
+      const prompt = buildMastraPrompt(query, language, knowledge)
 
       const response = await fetch(this.endpoint, {
         method: 'POST',
@@ -208,13 +230,15 @@ export function createAgentService(retrieveKnowledge: KnowledgeRetriever) {
   const provider = process.env.AI_PROVIDER?.trim().toLowerCase() ?? 'auto'
 
   if (provider !== 'local' && mastraEndpoint) return new RemoteMastraAgentService(mastraEndpoint, fallback, retrieveKnowledge)
+  if (provider !== 'local' && process.env.ENABLE_MASTRA_SERVER === 'true') return new EmbeddedMastraAgentService(fallback, retrieveKnowledge)
   return fallback
 }
 
 export function getAgentProvider() {
   const provider = process.env.AI_PROVIDER?.trim().toLowerCase() ?? 'auto'
   if (provider === 'local') return 'local-knowledge-agent'
-  return process.env.MASTRA_AGENT_URL?.trim() ? 'mastra-remote' : 'local-knowledge-agent'
+  if (process.env.MASTRA_AGENT_URL?.trim()) return 'mastra-remote'
+  return process.env.ENABLE_MASTRA_SERVER === 'true' ? 'mastra-embedded' : 'local-knowledge-agent'
 }
 
 export function getConfidenceThreshold() {
@@ -227,6 +251,22 @@ function extractMastraText(body: Record<string, unknown>) {
   const result = body.result as Record<string, unknown> | undefined
   if (typeof result?.text === 'string') return result.text
   return ''
+}
+
+function buildMastraPrompt(query: string, language: string, knowledge: KnowledgeSnippet[]) {
+  const knowledgeContext = knowledge.length > 0
+    ? knowledge.map((item) => `- ${item.title} (${item.category}): ${item.content}${item.graphEvidence?.length ? ` Graph evidence: ${item.graphEvidence.join('; ')}` : ''}`).join('\n')
+    : '- No matching knowledge record was found.'
+  return `
+Customer question:
+${query}
+
+Verified ARIA knowledge base:
+${knowledgeContext}
+
+Answer using only the verified knowledge above. If the knowledge is missing or unclear, ask for more details or recommend escalation.
+Respond in the customer's selected language: ${language}.
+`
 }
 
 function formatSourceScores(knowledge: KnowledgeSnippet[]): SourceScore[] {

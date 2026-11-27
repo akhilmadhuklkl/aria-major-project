@@ -7,7 +7,7 @@
 - `server/agent-service.ts`: provider-neutral agent boundary.
 - `LocalAgentService`: deterministic knowledge-backed development agent that works without API keys.
 - `RemoteMastraAgentService`: optional Mastra endpoint adapter enabled with `MASTRA_AGENT_URL`.
-- `server/mastra-agent-service.ts`: final-phase Mastra integration scaffold.
+- `EmbeddedMastraAgentService`: optional in-process Mastra agent enabled with `ENABLE_MASTRA_SERVER=true`.
 - `server/database.ts`: SQLite schema, seed data, topic inference, and quality scoring.
 - `data/aria.db`: local persistent database created automatically at runtime.
 
@@ -37,7 +37,7 @@
 
 The project now has a Mastra-compatible `AgentService` boundary.
 For the interim demo, the local fallback keeps the system usable without live provider keys.
-For the final demo, set `MASTRA_AGENT_URL` to a Mastra agent endpoint such as:
+For an in-process Mastra run, set `ENABLE_MASTRA_SERVER=true`. For a hosted Mastra run, set `MASTRA_AGENT_URL` to an agent endpoint such as:
 
 ```bash
 MASTRA_AGENT_URL=http://localhost:4111/api/agents/aria-support-agent/generate

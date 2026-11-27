@@ -88,7 +88,7 @@ Response fields:
 | --- | --- |
 | `service` | Backend service name. |
 | `status` | API status, expected as `operational`. |
-| `agentProvider` | Active response path, such as local fallback or Mastra remote. |
+| `agentProvider` | Active response path, such as local fallback, Mastra embedded, or Mastra remote. |
 | `database` | Database engine, currently `sqlite`. |
 | `mastraReady` | Whether the backend has Mastra-ready integration points. |
 | `mastraServerEnabled` | Whether the local Mastra Express adapter is enabled. |
@@ -535,7 +535,7 @@ Response:
 | --- | --- | --- |
 | `PORT` | No | Backend port. Defaults to `8787`. |
 | `VITE_API_URL` | No | Frontend API base URL. Defaults to `http://localhost:8787/api`. |
-| `ENABLE_MASTRA_SERVER` | No | Enables the local Mastra Express adapter when set to `true`. |
+| `ENABLE_MASTRA_SERVER` | No | Enables the local Mastra Express adapter and embedded chat agent when set to `true`. |
 | `MASTRA_AGENT_URL` | No | Routes chat generation through a Mastra-compatible endpoint. |
 | `MASTRA_MODEL` | No | Model name used by Mastra/Gemini setup. |
 | `LLM_PROVIDER` | No | Provider preference, such as `google-gemini` or `openai`. |
