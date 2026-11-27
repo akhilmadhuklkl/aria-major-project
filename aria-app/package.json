@@ -11,6 +11,7 @@
     "test:postgres": "node --disable-warning=ExperimentalWarning --import tsx --test --test-concurrency=1 server/tests/postgres/*.test.ts",
     "start:server": "node --disable-warning=ExperimentalWarning --import tsx server/index.ts",
     "check:api": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/check-api.ts",
+    "preflight:production": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/preflight-production.ts",
     "audit:production": "npm audit --omit=dev --audit-level=critical",
     "backup:sqlite": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/backup-sqlite.ts",
     "backup:postgres": "node --disable-warning=ExperimentalWarning --import tsx server/scripts/backup-postgres.ts",

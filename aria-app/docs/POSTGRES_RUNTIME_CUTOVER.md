@@ -50,7 +50,7 @@ Webhook persistence and delivery history are now the sixth feature boundary. Sub
 
 Analytics is now the seventh feature boundary. The summary endpoint reads conversation, feedback, retrieval, provider, confidence, latency, escalation, and quality-trend metrics through the runtime-selected analytics repository.
 
-Knowledge graph persistence is now the eighth feature boundary. Graph node and relationship CRUD, bounded path queries, and graph-assisted knowledge-title lookup use the runtime-selected graph repository; the optional Neo4j path remains available when `GRAPH_STORE=neo4j` is configured. All eight request-handler boundaries now use the factory. PostgreSQL selection is explicit and verified; the remaining operational step is configuring a hosted PostgreSQL deployment and monitoring its rollout.
+Knowledge graph persistence is now the eighth feature boundary. Graph node and relationship CRUD, bounded path queries, and graph-assisted knowledge-title lookup use the runtime-selected graph repository; the optional Neo4j path remains available when `GRAPH_STORE=neo4j` is configured. All eight request-handler boundaries now use the factory. PostgreSQL selection is explicit and verified. A non-mutating hosted deployment preflight now rejects missing TLS, authentication, explicit CORS, database, graph, and AI-provider configuration before rollout. The remaining operational step is executing the managed deployment and monitoring its rollout.
 
 ## Cutover Stages
 
@@ -61,7 +61,8 @@ Knowledge graph persistence is now the eighth feature boundary. Graph node and r
 5. Complete: run SQLite and PostgreSQL contract tests against the same fixtures.
 6. Complete: add explicit `DATABASE_ENGINE` selection; SQLite remains the default and invalid values fail fast.
 7. Complete in CI: run migration, schema/index and row-count verification, backup/restore rehearsal, readiness checks, and read-only API smoke checks against PostgreSQL.
-8. Remaining for hosted rollout: configure managed PostgreSQL secrets, run the final production migration and backup, deploy the PostgreSQL runtime profile or equivalent service, monitor `/api/ready`, and document rollback ownership.
+8. Complete: add `npm run preflight:production` and document the hosted migration, backup, readiness, monitoring, and rollback sequence.
+9. Remaining for hosted rollout: configure managed PostgreSQL secrets, run the final production migration and backup, deploy the PostgreSQL runtime profile or equivalent service, monitor `/api/ready`, and assign rollback ownership.
 
 ## Completion Criteria
 
@@ -73,4 +74,4 @@ Knowledge graph persistence is now the eighth feature boundary. Graph node and r
 - The `postgres-runtime` Compose profile requires an explicit PostgreSQL password and container database URL, waits for PostgreSQL health, and exposes a readiness health check for the API container.
 - The default SQLite demo path remains available for local development.
 
-The current migration, backup, restore, and Compose runtime commands are documented in `DEPLOYMENT.md`. This document records the completed cross-engine runtime work and the remaining hosted deployment decision.
+The current migration, backup, restore, preflight, and Compose runtime commands are documented in `DEPLOYMENT.md`. This document records the completed cross-engine runtime work and the remaining hosted deployment execution.

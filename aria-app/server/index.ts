@@ -545,9 +545,10 @@ app.get('/api/interim-status', (_request, response) => {
       'Local Mastra server can be enabled with ENABLE_MASTRA_SERVER=true',
       'Signed webhook integrations with delivery retries, testing, audit logs, and pause/resume controls',
       'PostgreSQL runtime selection with migration, backup/restore, and CI smoke verification',
+      'Hosted PostgreSQL configuration preflight and rollback runbook',
     ],
     pendingForFinal: [
-      'Hosted PostgreSQL deployment and operational rollout',
+      'Managed PostgreSQL deployment execution and monitored rollout',
       'Optional external channel integrations and full Mastra Studio workflows',
     ],
   })

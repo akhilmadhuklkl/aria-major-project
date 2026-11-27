@@ -71,7 +71,8 @@ try {
       && implementationStatus.completed.includes('Persisted customer conversation memory with recent history in Agent Workspace')
       && implementationStatus.completed.includes('Signed webhook integrations with delivery retries, testing, audit logs, and pause/resume controls')
       && implementationStatus.completed.includes('PostgreSQL runtime selection with migration, backup/restore, and CI smoke verification')
-      && implementationStatus.pendingForFinal.includes('Hosted PostgreSQL deployment and operational rollout')
+      && implementationStatus.completed.includes('Hosted PostgreSQL configuration preflight and rollback runbook')
+      && implementationStatus.pendingForFinal.includes('Managed PostgreSQL deployment execution and monitored rollout')
       && !implementationStatus.pendingForFinal.includes('Long-term conversation memory')
       && !implementationStatus.pendingForFinal.some((item) => /authentication|adapter cutover|extended testing/i.test(item)),
     `completed=${implementationStatus.completed.length}, pending=${implementationStatus.pendingForFinal.length}`,

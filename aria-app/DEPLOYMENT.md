@@ -98,6 +98,22 @@ The restore command validates the archive before applying it, uses a single tran
 
 ## Production checklist
 
+Run the non-mutating hosted deployment preflight before migrating or exposing the API publicly:
+
+```bash
+npm run preflight:production
+```
+
+The preflight requires PostgreSQL runtime selection, a credentialed `DATABASE_URL`, TLS, protected API routes, explicit CORS origins, an AI provider or remote Mastra endpoint, a complete Neo4j configuration when selected, and a valid port. It never prints secrets and never changes application data.
+
+For a managed rollout, use this order:
+
+1. Provision the managed PostgreSQL database and store deployment secrets in the host secret manager.
+2. Run `npm run preflight:production`, `npm run preflight:postgres`, `npm run migrate:postgres`, `npm run verify:postgres`, and `npm run backup:postgres` against the target database.
+3. Deploy the image with `DATABASE_ENGINE=postgres`, `AUTH_REQUIRED=true`, `DB_SSL=true`, and exact `CORS_ORIGINS` values.
+4. Route traffic only after `/api/ready` returns HTTP 200 and `database=postgres`; then run `npm run check:api` with `VALIDATION_API_URL` and `SMOKE_API_TOKEN`.
+5. For rollback, stop traffic, redeploy the previous known-good image, verify `/api/ready`, and restore a database backup only after explicitly approving data rollback.
+
 - Set `AUTH_REQUIRED=true`.
 - Set `CORS_ORIGINS` to the exact production frontend origin(s); do not leave permissive CORS enabled publicly.
 - Use a strong PostgreSQL password and `DB_SSL=true` for hosted PostgreSQL.
