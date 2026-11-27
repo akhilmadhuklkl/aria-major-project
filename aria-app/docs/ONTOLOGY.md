@@ -116,6 +116,6 @@ export type GraphRelationship = {
 }
 ```
 
-## Next Backend Task
+## Implementation Status
 
-Implement a small graph-storage adapter and seed it with the example facts. The adapter should support creating nodes, creating relationships, and querying one- or two-hop paths without changing the existing chat endpoint yet.
+The graph-storage adapter, seeded ontology facts, graph explorer API, CRUD operations, bounded path queries, and graph-aware hybrid retrieval are implemented. SQLite is the default graph store; Neo4j is available through `GRAPH_STORE=neo4j` for larger deployments. The next graph-specific step is an optional hosted Neo4j rollout with migration, parity verification, and backup/restore rehearsal.

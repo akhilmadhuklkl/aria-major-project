@@ -70,9 +70,10 @@ try {
       && implementationStatus.completed.includes('Containerized production build with CI and browser/API verification')
       && implementationStatus.completed.includes('Persisted customer conversation memory with recent history in Agent Workspace')
       && implementationStatus.completed.includes('Signed webhook integrations with delivery retries, testing, audit logs, and pause/resume controls')
-      && implementationStatus.pendingForFinal.includes('PostgreSQL runtime database adapter cutover')
+      && implementationStatus.completed.includes('PostgreSQL runtime selection with migration, backup/restore, and CI smoke verification')
+      && implementationStatus.pendingForFinal.includes('Hosted PostgreSQL deployment and operational rollout')
       && !implementationStatus.pendingForFinal.includes('Long-term conversation memory')
-      && !implementationStatus.pendingForFinal.some((item) => /authentication|deployment|extended testing/i.test(item)),
+      && !implementationStatus.pendingForFinal.some((item) => /authentication|adapter cutover|extended testing/i.test(item)),
     `completed=${implementationStatus.completed.length}, pending=${implementationStatus.pendingForFinal.length}`,
   )
 

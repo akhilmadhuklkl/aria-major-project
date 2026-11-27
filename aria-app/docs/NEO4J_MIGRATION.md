@@ -75,7 +75,7 @@ The Neo4j adapter is implemented and writes the current ontology model using:
 - `graph_relationships` -> typed directed relationships
 - `properties` -> sanitized node and relationship properties
 
-The graph API and hybrid retrieval support the `GRAPH_STORE=sqlite|neo4j` setting. SQLite remains the default. Before switching a deployment to Neo4j, migrate the existing nodes and relationships, verify path-query parity, validate graph-aware retrieval, and test backup/restore procedures. The conversations, messages, knowledge documents, embeddings, feedback, authentication, notifications, webhooks, and analytics tables still use SQLite; PostgreSQL runtime cutover is a separate pending enhancement.
+The graph API and hybrid retrieval support the `GRAPH_STORE=sqlite|neo4j` setting. SQLite remains the default graph store. Before switching a deployment to Neo4j, migrate the existing nodes and relationships, verify path-query parity, validate graph-aware retrieval, and test backup/restore procedures. The other application data boundaries support the explicit `DATABASE_ENGINE=postgres` runtime selection; hosted PostgreSQL deployment remains a separate operational rollout decision.
 
 ## Security rules
 
