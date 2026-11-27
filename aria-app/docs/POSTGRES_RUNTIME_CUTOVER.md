@@ -68,7 +68,7 @@ Knowledge graph persistence is now the eighth feature boundary. Graph node and r
 - PostgreSQL and SQLite pass the same backend contract tests.
 - `/api/health` and `/api/ready` report the selected runtime engine.
 - Migration verification confirms schema, indexes, completion marker, and source/target row counts.
-- Backup and restore procedures are documented for the selected production database.
+- Backup and restore procedures are documented and the backup archive is validated in CI.
 - The default SQLite demo path remains available for local development.
 
 The current migration commands are documented in `DEPLOYMENT.md`. This document records the remaining runtime-adapter work separately from the already completed migration preparation.

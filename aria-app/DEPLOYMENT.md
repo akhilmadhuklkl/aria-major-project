@@ -21,7 +21,7 @@ npm run backup:sqlite
 Backups are written to the ignored `backups/` directory. To choose a specific output path, set `SQLITE_BACKUP_PATH`; to choose a directory while retaining timestamped filenames, set `SQLITE_BACKUP_DIR`. The command refuses to overwrite an existing backup and runs SQLite integrity verification before reporting success.
 
 The default container uses SQLite with the `/app/data` volume. Do not commit `.env` or provider keys.
-Set `DATABASE_ENGINE=sqlite` explicitly for the current runtime. The application fails fast for unsupported runtime values instead of silently falling back to SQLite.
+Set `DATABASE_ENGINE=sqlite` explicitly for the local runtime. PostgreSQL can be selected only with `DATABASE_ENGINE=postgres`, a migrated schema, and a valid `DATABASE_URL`; the application fails fast for unsupported runtime values instead of silently falling back to SQLite.
 
 ## PostgreSQL migration preparation
 
@@ -40,7 +40,7 @@ DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run 
 
 The preflight performs a PostgreSQL `SELECT 1`, checks SQLite integrity, and prints source row counts. It does not create, update, or delete PostgreSQL data.
 
-The migration script imports the current SQLite records, embeddings, sessions, conversation metadata, knowledge-document versions, notifications, webhook subscriptions, and Knowledge Graph nodes/relationships inside a transaction. The application still requires a separate database-adapter cutover before PostgreSQL can be used as its runtime database. See `docs/POSTGRES_RUNTIME_CUTOVER.md` for the adapter stages and completion criteria.
+The migration script imports the current SQLite records, embeddings, sessions, conversation metadata, knowledge-document versions, notifications, webhook subscriptions, and Knowledge Graph nodes/relationships inside a transaction. After migration and verification, run the PostgreSQL runtime smoke check before deployment. See `docs/POSTGRES_RUNTIME_CUTOVER.md` for the adapter stages and completion criteria.
 
 After migration, verify the target schema without changing data:
 
@@ -50,6 +50,25 @@ DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run 
 
 The verification checks required tables, columns, and production indexes for authentication, conversations, retrieval, notifications, webhooks, and Knowledge Graph storage.
 GitHub Actions also provisions PostgreSQL in a dedicated CI job and runs the preflight, migration, and verification commands against a clean database on every push and pull request.
+
+## PostgreSQL backup and restore
+
+Create and validate a native PostgreSQL custom-format backup:
+
+```bash
+DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run backup:postgres
+```
+
+Use `POSTGRES_BACKUP_PATH` for a specific filename or `POSTGRES_BACKUP_DIR` for a timestamped backup directory. The command refuses to overwrite an existing file and validates the archive with `pg_restore --list`. Keep generated files in the ignored `backups/` directory and protect them as production data.
+
+Restore is intentionally destructive and requires an explicit confirmation variable. Restore into a maintenance window or a separate verification database, then run `npm run verify:postgres`:
+
+```bash
+POSTGRES_RESTORE_CONFIRM=YES DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run restore:postgres -- backups/aria-postgres-20261127T000000Z.dump
+DATABASE_URL=postgresql://aria:change-me-before-use@localhost:5432/aria npm run verify:postgres
+```
+
+The restore command validates the archive before applying it, uses a single transaction, and does not print database credentials.
 
 ## Production checklist
 

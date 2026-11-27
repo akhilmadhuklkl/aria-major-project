@@ -110,6 +110,10 @@ jobs:
         run: npm run migrate:postgres
       - name: Verify PostgreSQL schema and indexes
         run: npm run verify:postgres
+      - name: Create and validate PostgreSQL backup archive
+        env:
+          POSTGRES_BACKUP_PATH: backups/aria-ci.dump
+        run: npm run backup:postgres
       - name: Run PostgreSQL repository integration tests
         run: npm run test:postgres
       - name: Start PostgreSQL runtime API
