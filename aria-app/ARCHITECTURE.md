@@ -8,6 +8,7 @@
 - `LocalAgentService`: deterministic knowledge-backed development agent that works without API keys.
 - `RemoteMastraAgentService`: optional Mastra endpoint adapter enabled with `MASTRA_AGENT_URL`.
 - `EmbeddedMastraAgentService`: optional in-process Mastra agent enabled with `ENABLE_MASTRA_SERVER=true`.
+- `supportResponseWorkflow`: registered Mastra workflow for Studio discovery and explicit agent execution.
 - `server/database.ts`: SQLite schema, seed data, topic inference, and quality scoring.
 - `data/aria.db`: local persistent database created automatically at runtime.
 
@@ -50,6 +51,11 @@ This keeps the frontend and API stable while Mastra adds:
 - Conversation memory
 - Tools and workflows
 - Scoring and evaluation
+
+The embedded Mastra server also registers `support-response-workflow`. Its graph is
+available through the Mastra workflow routes when `ENABLE_MASTRA_SERVER=true`, while
+the main `/api/chat` route continues to own persistence, retrieval, confidence
+scoring, and local fallback behavior.
 
 ## Development Commands
 

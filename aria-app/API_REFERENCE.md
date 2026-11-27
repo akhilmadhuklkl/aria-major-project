@@ -58,6 +58,11 @@ flowchart LR
 | POST | `/knowledge-graph/nodes` | Adds an ontology node for an administrator or support agent. | Knowledge Graph Explorer |
 | POST | `/knowledge-graph/relationships` | Connects two ontology nodes. | Knowledge Graph Explorer |
 
+When `ENABLE_MASTRA_SERVER=true`, the embedded Mastra adapter additionally exposes
+Mastra's workflow discovery and execution routes, including the registered
+`support-response-workflow`. These routes are optional infrastructure endpoints;
+the frontend continues to use ARIA's stable `/chat` contract.
+
 ## Common Response Behavior
 
 Successful responses return JSON. Validation failures return `400 Bad Request` with an `error` field. Duplicate knowledge titles return `409 Conflict`.

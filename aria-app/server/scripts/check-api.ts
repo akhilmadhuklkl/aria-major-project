@@ -73,6 +73,7 @@ try {
       && implementationStatus.completed.includes('PostgreSQL runtime selection with migration, backup/restore, and CI smoke verification')
       && implementationStatus.completed.includes('Hosted PostgreSQL configuration preflight, verification, and rollback runbook')
       && implementationStatus.completed.includes('Embedded Mastra agent can serve the main chat flow with automatic local fallback')
+      && implementationStatus.completed.includes('Registered Mastra support-response workflow for Studio discovery and execution')
       && implementationStatus.pendingForFinal.includes('Managed PostgreSQL deployment execution and monitored rollout')
       && !implementationStatus.pendingForFinal.includes('Long-term conversation memory')
       && !implementationStatus.pendingForFinal.some((item) => /authentication|adapter cutover|extended testing/i.test(item)),

@@ -544,13 +544,14 @@ app.get('/api/interim-status', (_request, response) => {
       'Mastra-compatible remote agent endpoint configured through MASTRA_AGENT_URL',
       'Local Mastra server can be enabled with ENABLE_MASTRA_SERVER=true',
       'Embedded Mastra agent can serve the main chat flow with automatic local fallback',
+      'Registered Mastra support-response workflow for Studio discovery and execution',
       'Signed webhook integrations with delivery retries, testing, audit logs, and pause/resume controls',
       'PostgreSQL runtime selection with migration, backup/restore, and CI smoke verification',
       'Hosted PostgreSQL configuration preflight, verification, and rollback runbook',
     ],
     pendingForFinal: [
       'Managed PostgreSQL deployment execution and monitored rollout',
-      'Optional external channel integrations and full Mastra Studio workflows',
+      'Optional external channel integrations and hosted Mastra Studio operations',
     ],
   })
 })
